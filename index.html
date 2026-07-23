@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>Kasir Sederhana</title>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial;
+}
+
+body{
+background:#f2f2f2;
+padding:15px;
+}
+
+.page{
+display:none;
+}
+
+.page.active{
+display:block;
+}
+
+button{
+padding:10px 15px;
+border:none;
+border-radius:6px;
+cursor:pointer;
+margin:3px;
+}
+
+input{
+padding:10px;
+width:100%;
+margin:5px 0;
+}
+
+.card{
+background:white;
+padding:15px;
+margin-top:10px;
+border-radius:8px;
+box-shadow:0 2px 5px rgba(0,0,0,.1);
+}
+
+.menuItem{
+
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:10px;
+border-bottom:1px solid #ddd;
+
+}
+
+.qtyBox{
+display:flex;
+align-items:center;
+gap:8px;
+}
+
+.qtyBtn{
+width:30px;
+height:30px;
+border-radius:50%;
+}
+
+.nav{
+margin-bottom:15px;
+}
+
+#receipt{
+
+width:58mm;
+background:white;
+padding:10px;
+font-size:12px;
+display:none;
+
+}
+
+.center{
+text-align:center;
+}
+
+.right{
+text-align:right;
+}
+
+.line{
+
+border-top:1px dashed black;
+margin:6px 0;
+
+}
+
+@media print{
+
+body *{
+visibility:hidden;
+}
+
+#receipt,
+#receipt *{
+visibility:visible;
+}
+
+#receipt{
+position:absolute;
+left:0;
+top:0;
+width:58mm;
+}
+
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="nav">
+
+<button onclick="showPage('menuPage')">
+Kelola Menu
+</button>
+
+<button onclick="showPage('cashierPage');renderCashier();">
+Kasir
+</button>
+
+</div>
+
+<!-- ================= MENU ================= -->
+
+<div id="menuPage" class="page active">
+
+<div class="card">
+
+<h2>Tambah Menu</h2>
+
+<input
+id="nama"
+placeholder="Nama Barang">
+
+<input
+id="harga"
+type="number"
+placeholder="Harga">
+
+<button onclick="addMenu()">
+Tambah
+</button>
+
+</div>
+
+<div class="card">
+
+<h3>Daftar Menu</h3>
+
+<div id="menuList"></div>
+
+</div>
+
+</div>
+
+<!-- ================= KASIR ================= -->
+
+<div id="cashierPage" class="page">
+
+<div class="card">
+
+<h2>Kasir</h2>
+
+<div id="cashierList"></div>
+
+<h2 id="grandTotal">
+Total : Rp0
+</h2>
+
+<button onclick="generateReceipt()">
+Generate Nota
+</button>
+
+</div>
+
+</div>
+
+<!-- ================= NOTA ================= -->
+
+<div id="receipt">
+
+<div class="center">
+
+<b>TOKO SAYA</b><br>
+
+Jl. Contoh
+
+</div>
+
+<div class="line"></div>
+
+<div id="receiptInfo"></div>
+
+<div class="line"></div>
+
+<div id="receiptItems"></div>
+
+<div class="line"></div>
+
+<div class="right">
+
+<b id="receiptTotal"></b>
+
+</div>
+
+<div class="line"></div>
+
+<div class="center">
+
+Terima Kasih
+
+</div>
+
+<br>
+
+<button onclick="window.print()">
+
+Print
+
+</button>
+
+</div>
+
+<script>
+
+let menus=
+JSON.parse(localStorage.getItem("menus"))||[];
+
+let cart={};
+
+let nota=
+parseInt(localStorage.getItem("nota"))||1;
+
+function save(){
+
+localStorage.setItem(
+"menus",
+JSON.stringify(menus)
+);
+
+}
+
+function showPage(id){
+
+document
+.querySelectorAll(".page")
+.forEach(p=>p.classList.remove("active"));
+
+document
+.getElementById(id)
+.classList.add("active");
+
+}
+
+function rupiah(n){
+
+return "Rp"+
+Number(n).toLocaleString("id-ID");
+
+}
+
+function addMenu(){
+
+let nama=document.getElementById("nama").value.trim();
+let harga=parseInt(document.getElementById("harga").value);
+
+if(nama==""||isNaN(harga)){
+alert("Lengkapi data");
+return;
+}
+
+menus.push({
+nama:nama,
+harga:harga
+});
+
+save();
+
+document.getElementById("nama").value="";
+document.getElementById("harga").value="";
+
+renderMenu();
+
+}
+
+function deleteMenu(index){
+
+if(!confirm("Hapus menu?")) return;
+
+menus.splice(index,1);
+
+save();
+
+renderMenu();
+
+}
+
+function editMenu(index){
+
+let nama=prompt(
+"Nama Barang",
+menus[index].nama
+);
+
+if(nama===null) return;
+
+let harga=prompt(
+"Harga",
+menus[index].harga
+);
+
+if(harga===null) return;
+
+menus[index].nama=nama;
+menus[index].harga=parseInt(harga);
+
+save();
+
+renderMenu();
+
+}
+
+function renderMenu(){
+
+let html="";
+
+menus.forEach((m,i)=>{
+
+html+=`
+
+<div class="menuItem">
+
+<div>
+
+<b>${m.nama}</b><br>
+
+${rupiah(m.harga)}
+
+</div>
+
+<div>
+
+<button onclick="editMenu(${i})">
+Edit
+</button>
+
+<button onclick="deleteMenu(${i})">
+Hapus
+</button>
+
+</div>
+
+</div>
+
+`;
+
+});
+
+document.getElementById("menuList").innerHTML=html;
+
+}
+
+function renderCashier(){
+
+cart={};
+
+let html="";
+
+menus.forEach((m,i)=>{
+
+cart[i]=0;
+
+html+=`
+
+<div class="menuItem">
+
+<div>
+
+<b>${m.nama}</b><br>
+
+${rupiah(m.harga)}
+
+</div>
+
+<div class="qtyBox">
+
+<button
+class="qtyBtn"
+onclick="minusQty(${i})">
+-
+</button>
+
+<span id="qty${i}">
+0
+</span>
+
+<button
+class="qtyBtn"
+onclick="plusQty(${i})">
++
+</button>
+
+</div>
+
+</div>
+
+`;
+
+});
+
+document.getElementById("cashierList").innerHTML=html;
+
+updateTotal();
+
+}
+
+function plusQty(index){
+
+    cart[index]++;
+
+    document.getElementById("qty"+index).innerText=cart[index];
+
+    updateTotal();
+
+}
+
+function minusQty(index){
+
+    if(cart[index]>0){
+
+        cart[index]--;
+
+        document.getElementById("qty"+index).innerText=cart[index];
+
+        updateTotal();
+
+    }
+
+}
+
+function updateTotal(){
+
+    let total=0;
+
+    menus.forEach((m,i)=>{
+
+        total+=m.harga*cart[i];
+
+    });
+
+    document.getElementById("grandTotal").innerHTML=
+    "Total : <b>"+rupiah(total)+"</b>";
+
+}
+
+function generateReceipt(){
+
+    let itemHtml="";
+
+    let total=0;
+
+    menus.forEach((m,i)=>{
+
+        if(cart[i]>0){
+
+            let sub=m.harga*cart[i];
+
+            total+=sub;
+
+            itemHtml+=`
+            <div style="margin-bottom:6px;">
+                <div><b>${m.nama}</b></div>
+
+                <div style="display:flex;justify-content:space-between;">
+                    <span>${cart[i]} x ${rupiah(m.harga)}</span>
+                    <span>${rupiah(sub)}</span>
+                </div>
+            </div>
+            `;
+
+        }
+
+    });
+
+    if(total==0){
+
+        alert("Belum ada barang dipilih");
+
+        return;
+
+    }
+
+    let now=new Date();
+
+    let tanggal=
+        now.toLocaleDateString("id-ID");
+
+    let jam=
+        now.toLocaleTimeString("id-ID");
+
+    document.getElementById("receiptInfo").innerHTML=
+    `
+    No Nota : ${String(nota).padStart(4,"0")}<br>
+    ${tanggal}<br>
+    ${jam}
+    `;
+
+    document.getElementById("receiptItems").innerHTML=itemHtml;
+
+    document.getElementById("receiptTotal").innerHTML=
+    "TOTAL : "+rupiah(total);
+
+    document.getElementById("receipt").style.display="block";
+
+    localStorage.setItem("nota",nota+1);
+
+    nota++;
+
+}
+
+// =======================
+// Inisialisasi Aplikasi
+// =======================
+
+renderMenu();
+
+// Jika belum ada menu, tampilkan contoh
+if(menus.length===0){
+
+    menus.push(
+        {
+            nama:"Menu A",
+            harga:15000
+        },
+        {
+            nama:"Menu B",
+            harga:18000
+        },
+        {
+            nama:"Es Teh",
+            harga:5000
+        }
+    );
+
+    save();
+
+    renderMenu();
+
+}
+
+</script>
+
+</body>
+</html>
