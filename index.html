@@ -231,7 +231,7 @@ Terima Kasih
 
 <br>
 
-<button onclick="window.print()">
+<button onclick="printReceipt()">
 
 Print
 
@@ -240,6 +240,148 @@ Print
 </div>
 
 <script>
+async function printReceipt(){
+
+    let total = 0;
+    let content = [];
+
+    content.push({
+        type:"text",
+        text:"TOKO SAYA",
+        align:"center",
+        bold:true,
+        size:"large"
+    });
+
+    content.push({
+        type:"text",
+        text:"Jl. Contoh",
+        align:"center"
+    });
+
+    content.push({type:"divider"});
+
+    content.push({
+        type:"text",
+        text:"No Nota : " + String(nota - 1).padStart(4,"0")
+    });
+
+    let now = new Date();
+
+    content.push({
+        type:"text",
+        text:
+            now.toLocaleDateString("id-ID") +
+            " " +
+            now.toLocaleTimeString("id-ID")
+    });
+
+    content.push({type:"divider"});
+
+    menus.forEach((m,i)=>{
+
+        if(cart[i] > 0){
+
+            let sub = m.harga * cart[i];
+
+            total += sub;
+
+            content.push({
+                type:"text",
+                text:m.nama,
+                bold:true
+            });
+
+            content.push({
+                type:"row",
+                left:cart[i] + " x " + rupiah(m.harga),
+                right:rupiah(sub)
+            });
+        }
+
+    });
+
+    if(total === 0){
+        alert("Belum ada barang dipilih");
+        return;
+    }
+
+    content.push({type:"divider"});
+
+    content.push({
+        type:"row",
+        left:"TOTAL",
+        right:rupiah(total),
+        bold:true
+    });
+
+    content.push({
+        type:"feed",
+        lines:1
+    });
+
+    content.push({
+        type:"text",
+        text:"Terima Kasih",
+        align:"center"
+    });
+
+    content.push({
+        type:"feed",
+        lines:3
+    });
+
+    try{
+
+        const response = await fetch(
+            "http://localhost:9100/print",
+            {
+                method:"POST",
+                headers:{
+                    "Content-Type":"application/json"
+                },
+                body:JSON.stringify({
+                    cut:true,
+                    content:content
+                }),
+                signal:AbortSignal.timeout(5000)
+            }
+        );
+
+        if(!response.ok){
+            throw new Error("Cleanter error " + response.status);
+        }
+
+        const result = await response.json();
+
+        if(result.status === "printed"){
+
+            alert("Nota berhasil dicetak");
+
+        }else{
+
+            alert(
+                "Print gagal: " +
+                JSON.stringify(result)
+            );
+
+        }
+
+    }catch(error){
+
+        console.error(error);
+
+        alert(
+            "Printer tidak terhubung.\n\n" +
+            "Pastikan:\n" +
+            "1. RPP02N sudah Bluetooth paired\n" +
+            "2. Cleanter sudah terpasang\n" +
+            "3. RPP02N dipilih sebagai printer di Cleanter"
+        );
+
+    }
+
+}
 
 let menus=
 JSON.parse(localStorage.getItem("menus"))||[];
