@@ -2,398 +2,115 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laporan Penjualan - Kukikoe (Google Sheets)</title>
+    <title>Laporan Penjualan Kukikoe</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <style>
-        :root {
-            --primary-color: #0d6efd;
-            --bg-color: #f5f6f8;
-        }
-        body {
-            background-color: var(--bg-color);
-            font-family: Arial, sans-serif;
-            padding: 16px;
-            color: #212529;
-        }
-        .container-custom {
-            max-width: 950px;
-            margin: 0 auto;
-        }
-        .card-custom {
-            background: #fff;
-            border: 0;
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 16px;
-            box-shadow: 0 3px 12px rgba(0,0,0,0.06);
-        }
-        .stat-card {
-            border-radius: 14px;
-            padding: 16px;
-            color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .stat-card.total { background: linear-gradient(135deg, #0d6efd, #0a58ca); }
-        .stat-card.cash { background: linear-gradient(135deg, #198754, #146c43); }
-        .stat-card.qris { background: linear-gradient(135deg, #0dcaf0, #0aa2c0); color: #000; }
-        .stat-card.tx { background: linear-gradient(135deg, #6c757d, #495057); }
-        
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin-top: 4px;
-        }
-        .stat-label {
-            font-size: 0.85rem;
-            opacity: 0.9;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .stat-icon {
-            font-size: 2.2rem;
-            opacity: 0.75;
-        }
-
-        .table-responsive {
-            border-radius: 12px;
-            overflow: hidden;
-        }
-        .table {
-            margin-bottom: 0;
-        }
-        .table thead {
-            background-color: #f8f9fa;
-        }
-        .badge-cash {
-            background-color: #d1e7dd;
-            color: #0f5132;
-        }
-        .badge-qris {
-            background-color: #cff4fc;
-            color: #055160;
-        }
-        
-        .sync-spinner {
-            display: inline-block;
-            width: 1rem;
-            height: 1rem;
-            border: 0.2em solid currentColor;
-            border-right-color: transparent;
-            border-radius: 50%;
-            animation: spinner-border .75s linear infinite;
-        }
-
-        @media print {
-            .no-print { display: none !important; }
-            body { background: white; padding: 0; }
-            .card-custom { box-shadow: none; padding: 0; margin-bottom: 20px; }
-            .stat-card { border: 1px solid #ccc; color: #000 !important; background: none !important; }
-            .stat-value { color: #000 !important; }
-            .stat-card.qris { color: #000 !important; }
-        }
-    </style>
 </head>
-<body>
+<body class="bg-light p-4">
 
-<div class="container-custom">
-    
-    <!-- HEADER -->
-    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
-        <div>
-            <h3 class="fw-bold mb-0">Laporan Penjualan</h3>
-            <span class="text-muted small">Kukikoe (Sumber: Google Sheets)</span>
-        </div>
-        <div class="d-flex gap-2">
-            <button class="btn btn-outline-primary btn-sm" onclick="fetchDataFromGoogleSheets()">
-                <i class="bi bi-arrow-clockwise me-1" id="refreshIcon"></i> Muat Ulang Data
-            </button>
-            <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
-                <i class="bi bi-printer me-1"></i> Cetak Laporan
-            </button>
-        </div>
+<div class="container bg-white p-4 rounded shadow-sm" style="max-width: 850px;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="m-0 fw-bold">Laporan Penjualan Kukikoe</h4>
+        <button class="btn btn-primary btn-sm" onclick="muatData()">Muat Ulang Data</button>
     </div>
 
-    <!-- FILTER PERIODE TANGGAL -->
-    <div class="card-custom no-print">
-        <h6 class="fw-bold mb-3"><i class="bi bi-funnel me-1"></i> Filter Tanggal Transaksi</h6>
-        <div class="row g-2 align-items-end">
-            <div class="col-6 col-md-4">
-                <label class="form-label small text-muted mb-1">Dari Tanggal</label>
-                <input type="date" id="startDate" class="form-control" onchange="filterData()">
+    <!-- KARTU RINGKASAN -->
+    <div class="row g-2 mb-4 text-center">
+        <div class="col-4">
+            <div class="p-3 bg-primary text-white rounded">
+                <small>Total Omset</small>
+                <h5 class="m-0 fw-bold" id="totalOmset">Rp0</h5>
             </div>
-            <div class="col-6 col-md-4">
-                <label class="form-label small text-muted mb-1">Sampai Tanggal</label>
-                <input type="date" id="endDate" class="form-control" onchange="filterData()">
+        </div>
+        <div class="col-4">
+            <div class="p-3 bg-success text-white rounded">
+                <small>Total Cash</small>
+                <h5 class="m-0 fw-bold" id="totalCash">Rp0</h5>
             </div>
-            <div class="col-12 col-md-4 d-flex gap-2 mt-2 mt-md-0">
-                <button class="btn btn-primary w-100" onclick="filterData()">
-                    <i class="bi bi-search me-1"></i> Tampilkan
-                </button>
-                <button class="btn btn-light border" onclick="resetFilter()">Hari Ini</button>
+        </div>
+        <div class="col-4">
+            <div class="p-3 bg-info text-white rounded">
+                <small>Total QRIS</small>
+                <h5 class="m-0 fw-bold" id="totalQris">Rp0</h5>
             </div>
         </div>
     </div>
 
-    <!-- STATUS LOADING / ERROR -->
-    <div id="statusBox" class="alert alert-info no-print" style="display:none;">
-        <span id="statusText">Mengambil data transaksi dari Google Sheets...</span>
+    <!-- TABEL DATA -->
+    <div class="table-responsive">
+        <table class="table table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Nota</th>
+                    <th>Tanggal / Jam</th>
+                    <th>Metode</th>
+                    <th>Rincian</th>
+                    <th class="text-end">Total</th>
+                </tr>
+            </thead>
+            <tbody id="tabelData">
+                <tr><td colspan="5" class="text-center text-muted">Sedang mengambil data dari Google Sheets...</td></tr>
+            </tbody>
+        </table>
     </div>
-
-    <!-- STATISTIK RINGKASAN -->
-    <div class="row g-3 mb-3">
-        <div class="col-12 col-sm-6 col-md-3">
-            <div class="stat-card total">
-                <div>
-                    <div class="stat-label">Total Omset</div>
-                    <div class="stat-value" id="totalOmset">Rp0</div>
-                </div>
-                <div class="stat-icon"><i class="bi bi-cash-stack"></i></div>
-            </div>
-        </div>
-        <div class="col-12 col-sm-6 col-md-3">
-            <div class="stat-card cash">
-                <div>
-                    <div class="stat-label">Total Cash</div>
-                    <div class="stat-value" id="totalCash">Rp0</div>
-                </div>
-                <div class="stat-icon"><i class="bi bi-wallet2"></i></div>
-            </div>
-        </div>
-        <div class="col-12 col-sm-6 col-md-3">
-            <div class="stat-card qris">
-                <div>
-                    <div class="stat-label">Total QRIS</div>
-                    <div class="stat-value" id="totalQris">Rp0</div>
-                </div>
-                <div class="stat-icon"><i class="bi bi-qr-code-scan"></i></div>
-            </div>
-        </div>
-        <div class="col-12 col-sm-6 col-md-3">
-            <div class="stat-card tx">
-                <div>
-                    <div class="stat-label">Total Transaksi</div>
-                    <div class="stat-value" id="totalTx">0</div>
-                </div>
-                <div class="stat-icon"><i class="bi bi-receipt"></i></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- RINCIAN TRANSAKSI -->
-    <div class="card-custom">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="fw-bold mb-0">Rincian Transaksi</h5>
-            <span class="badge bg-light text-dark border" id="periodeInfo">Periode: Semua Tanggal</span>
-        </div>
-
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th>No. Nota</th>
-                        <th>Waktu</th>
-                        <th>Metode</th>
-                        <th>Rincian Produk</th>
-                        <th class="text-end">Total</th>
-                    </tr>
-                </thead>
-                <tbody id="transactionTable"></tbody>
-            </table>
-        </div>
-
-        <div id="emptyMessage" class="text-center py-4 text-muted" style="display:none;">
-            <i class="bi bi-inbox fs-2 d-block mb-2"></i>
-            Tidak ada transaksi ditemukan pada rentang tanggal ini.
-        </div>
-    </div>
-
 </div>
 
 <script>
-// URL Web App Google Apps Script Anda
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwyKe1AdCJG-rRFJqQlM9u5odQKUSPUirskaqPriC63vVm7IEIgaEXkeKnm1nUdap47/exec";
-
-let rawTransactions = [];
+// LINK APPS SCRIPT ANDA
+const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbzTmbc4ohQyj51JFaiDFyJUdDNyQWK5eNHeC18amt7BARyM8FyenuyXGj6t03eRH6Na/exec";
 
 function rupiah(n) {
     return "Rp" + Number(n).toLocaleString("id-ID");
 }
 
-function parseIndonesianDate(dateStr) {
-    if (!dateStr) return null;
-    let parts = String(dateStr).split('/');
-    if (parts.length === 3) {
-        return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
-    }
-    return new Date(dateStr);
-}
-
-function formatDateToInput(d) {
-    let month = '' + (d.getMonth() + 1);
-    let day = '' + d.getDate();
-    let year = d.getFullYear();
-    if (month.length < 2) month = '0' + month;
-    if (day.length < 2) day = '0' + day;
-    return [year, month, day].join('-');
-}
-
-async function fetchDataFromGoogleSheets() {
-    const statusBox = document.getElementById("statusBox");
-    const statusText = document.getElementById("statusText");
-    const refreshIcon = document.getElementById("refreshIcon");
-
-    statusBox.style.display = "block";
-    statusBox.className = "alert alert-info no-print";
-    statusText.innerText = "Mengambil data transaksi terbaru dari Google Sheets...";
-    refreshIcon.className = "sync-spinner me-1";
-
+async function muatData() {
+    document.getElementById("tabelData").innerHTML = '<tr><td colspan="5" class="text-center text-muted">Sedang mengambil data dari Google Sheets...</td></tr>';
+    
     try {
-        let response = await fetch(GOOGLE_SCRIPT_URL + "?action=getReport");
-        if (!response.ok) throw new Error("Gagal mengambil data dari Google Sheets.");
+        let response = await fetch(URL_SCRIPT);
+        let resData = await response.json();
 
-        let result = await response.json();
-        
-        if (Array.isArray(result)) {
-            rawTransactions = result;
-            statusBox.style.display = "none";
-        } else if (result.status === "success" && Array.isArray(result.data)) {
-            rawTransactions = result.data;
-            statusBox.style.display = "none";
-        } else {
-            throw new Error("Format data tidak sesuai");
-        }
+        // Mengakomodasi format data baik berupa Array langsung maupun Object { status: "success", data: [...] }
+        let data = Array.isArray(resData) ? resData : (resData.data || []);
 
-        filterData();
-    } catch (error) {
-        console.error(error);
-        statusBox.className = "alert alert-warning no-print";
-        statusText.innerText = "Gagal memuat data live. Memeriksa data lokal...";
-        
-        let localData = JSON.parse(localStorage.getItem("pendingTransactions")) || [];
-        if (localData.length > 0) {
-            rawTransactions = localData;
-        } else {
-            statusBox.className = "alert alert-danger no-print";
-            statusText.innerText = "Tidak dapat terhubung ke Google Sheets & tidak ada data lokal.";
-        }
-        filterData();
-    } finally {
-        refreshIcon.className = "bi bi-arrow-clockwise me-1";
+        let totalOmset = 0, totalCash = 0, totalQris = 0;
+        let html = "";
+
+        data.forEach(item => {
+            let total = Number(item.total) || 0;
+            totalOmset += total;
+
+            let metode = (item.pembayaran || "").toLowerCase();
+            if (metode === "cash") {
+                totalCash += total;
+            } else {
+                totalQris += total;
+            }
+
+            html += `
+                <tr>
+                    <td><b>#${item.nota || '-'}</b></td>
+                    <td>${item.tanggal || '-'} <br><small class="text-muted">${item.jam || ''}</small></td>
+                    <td><span class="badge ${metode === 'cash' ? 'bg-success' : 'bg-info'}">${item.pembayaran || 'QRIS'}</span></td>
+                    <td>${item.rincian || item.items || '-'}</td>
+                    <td class="text-end fw-bold">${rupiah(total)}</td>
+                </tr>
+            `;
+        });
+
+        document.getElementById("totalOmset").innerText = rupiah(totalOmset);
+        document.getElementById("totalCash").innerText = rupiah(totalCash);
+        document.getElementById("totalQris").innerText = rupiah(totalQris);
+        document.getElementById("tabelData").innerHTML = html || '<tr><td colspan="5" class="text-center">Data kosong</td></tr>';
+
+    } catch (err) {
+        console.error(err);
+        document.getElementById("tabelData").innerHTML = '<tr><td colspan="5" class="text-center text-danger">Gagal terhubung ke Google Sheets. Pastikan spreadsheet terisi dan izin script diset ke "Anyone".</td></tr>';
     }
 }
 
-function filterData() {
-    let startVal = document.getElementById("startDate").value;
-    let endVal = document.getElementById("endDate").value;
-
-    let startDate = startVal ? new Date(startVal + "T00:00:00") : null;
-    let endDate = endVal ? new Date(endVal + "T23:59:59") : null;
-
-    let filtered = rawTransactions.filter(item => {
-        let itemDate = parseIndonesianDate(item.tanggal);
-        if (!itemDate) return true;
-        if (startDate && itemDate < startDate) return false;
-        if (endDate && itemDate > endDate) return false;
-        return true;
-    });
-
-    filtered.sort((a, b) => (parseIndonesianDate(b.tanggal) || 0) - (parseIndonesianDate(a.tanggal) || 0));
-
-    renderReport(filtered);
-    updatePeriodeBadge(startVal, endVal);
-}
-
-function updatePeriodeBadge(start, end) {
-    let badge = document.getElementById("periodeInfo");
-    if (!start && !end) badge.innerText = "Periode: Semua Tanggal";
-    else if (start && end && start === end) badge.innerText = "Periode: " + start;
-    else badge.innerText = "Periode: " + (start || "Awal") + " s/d " + (end || "Hari Ini");
-}
-
-function renderReport(data) {
-    let totalOmset = 0, totalCash = 0, totalQris = 0, totalTx = data.length;
-    let tableHtml = "";
-
-    data.forEach(tx => {
-        let totalVal = Number(tx.total) || 0;
-        totalOmset += totalVal;
-        
-        let isCash = (tx.pembayaran || "").toLowerCase() === "cash";
-        if (isCash) totalCash += totalVal;
-        else totalQris += totalVal;
-
-        let itemsSummary = Array.isArray(tx.items) 
-            ? tx.items.map(i => `${i.nama} (${i.qty}x)`).join(", ")
-            : (tx.items || tx.rincian || "-");
-
-        let badgeClass = isCash ? "badge-cash" : "badge-qris";
-
-        tableHtml += `
-            <tr>
-                <td><b>#${tx.nota}</b></td>
-                <td>
-                    <div class="fw-bold">${tx.tanggal}</div>
-                    <div class="small text-muted">${tx.jam || ''}</div>
-                </td>
-                <td><span class="badge ${badgeClass}">${tx.pembayaran}</span></td>
-                <td><small class="text-secondary">${itemsSummary}</small></td>
-                <td class="text-end fw-bold">${rupiah(totalVal)}</td>
-            </tr>
-        `;
-    });
-
-    document.getElementById("totalOmset").innerText = rupiah(totalOmset);
-    document.getElementById("totalCash").innerText = rupiah(totalCash);
-    document.getElementById("totalQris").innerText = rupiah(totalQris);
-    document.getElementById("totalTx").innerText = totalTx;
-
-    document.getElementById("transactionTable").innerHTML = tableHtml;
-    document.getElementById("emptyMessage").style.display = totalTx === 0 ? "block" : "none";
-}
-
-function resetFilter() {
-    let today = formatDateToInput(new Date());
-    document.getElementById("startDate").value = today;
-    document.getElementById("endDate").value = today;
-    filterData();
-}
-
-window.addEventListener("DOMContentLoaded", () => {
-    let today = formatDateToInput(new Date());
-    document.getElementById("startDate").value = today;
-    document.getElementById("endDate").value = today;
-    fetchDataFromGoogleSheets();
-});
-
-function doGet(e) {
-  var action = e.parameter.action;
-  
-  if (action === "getReport") {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Penjualan"); // Sesuaikan nama sheet
-    var data = sheet.getDataRange().getValues();
-    
-    var result = [];
-    // Asumsi baris 1 adalah Header (Nota, Tanggal, Jam, Pembayaran, Items, Total)
-    for (var i = 1; i < data.length; i++) {
-      result.push({
-        nota: data[i][0],
-        tanggal: data[i][1],
-        jam: data[i][2],
-        pembayaran: data[i][3],
-        rincian: data[i][4],
-        total: data[i][5]
-      });
-    }
-    
-    return ContentService.createTextOutput(JSON.stringify({ status: "success", data: result }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
+// Jalankan otomatis
+muatData();
 </script>
+
 </body>
 </html>
