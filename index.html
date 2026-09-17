@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -36,7 +37,7 @@ cursor:pointer;
 margin:3px;
 }
 
-input{
+input, select{
 padding:10px;
 width:100%;
 margin:5px 0;
@@ -51,13 +52,11 @@ box-shadow:0 2px 5px rgba(0,0,0,.1);
 }
 
 .menuItem{
-
 display:flex;
 justify-content:space-between;
 align-items:center;
 padding:10px;
 border-bottom:1px solid #ddd;
-
 }
 
 .qtyBox{
@@ -77,13 +76,11 @@ margin-bottom:15px;
 }
 
 #receipt{
-
 width:58mm;
 background:white;
 padding:10px;
 font-size:12px;
 display:none;
-
 }
 
 .center{
@@ -95,10 +92,27 @@ text-align:right;
 }
 
 .line{
-
 border-top:1px dashed black;
 margin:6px 0;
+}
 
+.paymentBox{
+margin-top:15px;
+padding-top:15px;
+border-top:1px solid #ddd;
+}
+
+.change{
+font-size:18px;
+font-weight:bold;
+margin-top:8px;
+}
+
+.success{
+padding:10px;
+background:#e8f5e9;
+border-radius:6px;
+margin-top:10px;
 }
 
 @media print{
@@ -138,6 +152,7 @@ Kasir
 
 </div>
 
+
 <!-- ================= MENU ================= -->
 
 <div id="menuPage" class="page active">
@@ -171,6 +186,7 @@ Tambah
 
 </div>
 
+
 <!-- ================= KASIR ================= -->
 
 <div id="cashierPage" class="page">
@@ -185,13 +201,58 @@ Tambah
 Total : Rp0
 </h2>
 
-<button onclick="generateReceipt()">
-Generate Nota
+<div class="paymentBox">
+
+<h3>Pembayaran</h3>
+
+<select id="paymentMethod" onchange="paymentChanged()">
+
+<option value="cash">
+Cash
+</option>
+
+<option value="qris">
+QRIS
+</option>
+
+</select>
+
+<div id="cashPayment">
+
+<label>
+Uang diterima
+</label>
+
+<input
+id="cashReceived"
+type="number"
+placeholder="Masukkan uang"
+oninput="calculateChange()">
+
+<div id="changeDisplay" class="change">
+Kembalian : Rp0
+</div>
+
+</div>
+
+<div id="qrisPayment" style="display:none;">
+
+<p>
+Pembayaran melalui QRIS
+</p>
+
+</div>
+
+<button onclick="completeTransaction()">
+Selesaikan & Simpan
 </button>
 
 </div>
 
 </div>
+
+</div>
+
 
 <!-- ================= NOTA ================= -->
 
@@ -223,6 +284,10 @@ Jl. Contoh
 
 <div class="line"></div>
 
+<div id="receiptPayment"></div>
+
+<div class="line"></div>
+
 <div class="center">
 
 Terima Kasih
@@ -232,164 +297,40 @@ Terima Kasih
 <br>
 
 <button onclick="printReceipt()">
-
 Print
-
 </button>
 
 </div>
 
+
 <script>
-async function printReceipt(){
 
-    let total = 0;
-    let content = [];
+/* =====================================================
+   GOOGLE SHEETS
+   ===================================================== */
 
-    content.push({
-        type:"text",
-        text:"TOKO SAYA",
-        align:"center",
-        bold:true,
-        size:"large"
-    });
+const GOOGLE_SCRIPT_URL =
+"https://script.google.com/macros/s/AKfycbwyKe1AdCJG-rRFJqQlM9u5odQKUSPUirskaqPriC63vVm7IEIgaEXkeKnm1nUdap47/exec";
 
-    content.push({
-        type:"text",
-        text:"Jl. Contoh",
-        align:"center"
-    });
 
-    content.push({type:"divider"});
+/* =====================================================
+   DATA
+   ===================================================== */
 
-    content.push({
-        type:"text",
-        text:"No Nota : " + String(nota - 1).padStart(4,"0")
-    });
+let menus =
+JSON.parse(localStorage.getItem("menus")) || [];
 
-    let now = new Date();
+let cart = {};
 
-    content.push({
-        type:"text",
-        text:
-            now.toLocaleDateString("id-ID") +
-            " " +
-            now.toLocaleTimeString("id-ID")
-    });
+let nota =
+parseInt(localStorage.getItem("nota")) || 1;
 
-    content.push({type:"divider"});
+let currentTransaction = null;
 
-    menus.forEach((m,i)=>{
 
-        if(cart[i] > 0){
-
-            let sub = m.harga * cart[i];
-
-            total += sub;
-
-            content.push({
-                type:"text",
-                text:m.nama,
-                bold:true
-            });
-
-            content.push({
-                type:"row",
-                left:cart[i] + " x " + rupiah(m.harga),
-                right:rupiah(sub)
-            });
-        }
-
-    });
-
-    if(total === 0){
-        alert("Belum ada barang dipilih");
-        return;
-    }
-
-    content.push({type:"divider"});
-
-    content.push({
-        type:"row",
-        left:"TOTAL",
-        right:rupiah(total),
-        bold:true
-    });
-
-    content.push({
-        type:"feed",
-        lines:1
-    });
-
-    content.push({
-        type:"text",
-        text:"Terima Kasih",
-        align:"center"
-    });
-
-    content.push({
-        type:"feed",
-        lines:3
-    });
-
-    try{
-
-        const response = await fetch(
-            "http://localhost:9100/print",
-            {
-                method:"POST",
-                headers:{
-                    "Content-Type":"application/json"
-                },
-                body:JSON.stringify({
-                    cut:true,
-                    content:content
-                }),
-                signal:AbortSignal.timeout(5000)
-            }
-        );
-
-        if(!response.ok){
-            throw new Error("Cleanter error " + response.status);
-        }
-
-        const result = await response.json();
-
-        if(result.status === "printed"){
-
-            alert("Nota berhasil dicetak");
-
-        }else{
-
-            alert(
-                "Print gagal: " +
-                JSON.stringify(result)
-            );
-
-        }
-
-    }catch(error){
-
-        console.error(error);
-
-        alert(
-            "Printer tidak terhubung.\n\n" +
-            "Pastikan:\n" +
-            "1. RPP02N sudah Bluetooth paired\n" +
-            "2. Cleanter sudah terpasang\n" +
-            "3. RPP02N dipilih sebagai printer di Cleanter"
-        );
-
-    }
-
-}
-
-let menus=
-JSON.parse(localStorage.getItem("menus"))||[];
-
-let cart={};
-
-let nota=
-parseInt(localStorage.getItem("nota"))||1;
+/* =====================================================
+   SAVE MENU
+   ===================================================== */
 
 function save(){
 
@@ -399,6 +340,11 @@ JSON.stringify(menus)
 );
 
 }
+
+
+/* =====================================================
+   PAGE
+   ===================================================== */
 
 function showPage(id){
 
@@ -412,6 +358,11 @@ document
 
 }
 
+
+/* =====================================================
+   RUPIAH
+   ===================================================== */
+
 function rupiah(n){
 
 return "Rp"+
@@ -419,14 +370,25 @@ Number(n).toLocaleString("id-ID");
 
 }
 
+
+/* =====================================================
+   MENU
+   ===================================================== */
+
 function addMenu(){
 
-let nama=document.getElementById("nama").value.trim();
-let harga=parseInt(document.getElementById("harga").value);
+let nama =
+document.getElementById("nama").value.trim();
 
-if(nama==""||isNaN(harga)){
+let harga =
+parseInt(document.getElementById("harga").value);
+
+if(nama=="" || isNaN(harga)){
+
 alert("Lengkapi data");
+
 return;
+
 }
 
 menus.push({
@@ -443,6 +405,7 @@ renderMenu();
 
 }
 
+
 function deleteMenu(index){
 
 if(!confirm("Hapus menu?")) return;
@@ -454,6 +417,7 @@ save();
 renderMenu();
 
 }
+
 
 function editMenu(index){
 
@@ -471,14 +435,26 @@ menus[index].harga
 
 if(harga===null) return;
 
-menus[index].nama=nama;
-menus[index].harga=parseInt(harga);
+harga=parseInt(harga);
+
+if(nama.trim()=="" || isNaN(harga)){
+
+alert("Data tidak valid");
+
+return;
+
+}
+
+menus[index].nama=nama.trim();
+
+menus[index].harga=harga;
 
 save();
 
 renderMenu();
 
 }
+
 
 function renderMenu(){
 
@@ -492,7 +468,7 @@ html+=`
 
 <div>
 
-<b>${m.nama}</b><br>
+<b>${escapeHtml(m.nama)}</b><br>
 
 ${rupiah(m.harga)}
 
@@ -520,6 +496,11 @@ document.getElementById("menuList").innerHTML=html;
 
 }
 
+
+/* =====================================================
+   KASIR
+   ===================================================== */
+
 function renderCashier(){
 
 cart={};
@@ -536,7 +517,7 @@ html+=`
 
 <div>
 
-<b>${m.nama}</b><br>
+<b>${escapeHtml(m.nama)}</b><br>
 
 ${rupiah(m.harga)}
 
@@ -570,141 +551,776 @@ onclick="plusQty(${i})">
 
 document.getElementById("cashierList").innerHTML=html;
 
+document.getElementById("cashReceived").value="";
+
+document.getElementById("changeDisplay").innerText=
+"Kembalian : Rp0";
+
 updateTotal();
 
 }
 
+
 function plusQty(index){
 
-    cart[index]++;
+cart[index]++;
 
-    document.getElementById("qty"+index).innerText=cart[index];
+document.getElementById("qty"+index).innerText=
+cart[index];
 
-    updateTotal();
+updateTotal();
 
 }
+
 
 function minusQty(index){
 
-    if(cart[index]>0){
+if(cart[index]>0){
 
-        cart[index]--;
+cart[index]--;
 
-        document.getElementById("qty"+index).innerText=cart[index];
+document.getElementById("qty"+index).innerText=
+cart[index];
 
-        updateTotal();
-
-    }
+updateTotal();
 
 }
+
+}
+
+
+/* =====================================================
+   TOTAL
+   ===================================================== */
+
+function getTotal(){
+
+let total=0;
+
+menus.forEach((m,i)=>{
+
+total+=m.harga*(cart[i]||0);
+
+});
+
+return total;
+
+}
+
 
 function updateTotal(){
 
-    let total=0;
+let total=getTotal();
 
-    menus.forEach((m,i)=>{
+document.getElementById("grandTotal").innerHTML=
+"Total : <b>"+rupiah(total)+"</b>";
 
-        total+=m.harga*cart[i];
-
-    });
-
-    document.getElementById("grandTotal").innerHTML=
-    "Total : <b>"+rupiah(total)+"</b>";
+calculateChange();
 
 }
 
-function generateReceipt(){
 
-    let itemHtml="";
+/* =====================================================
+   PEMBAYARAN
+   ===================================================== */
 
-    let total=0;
+function paymentChanged(){
 
-    menus.forEach((m,i)=>{
+let method =
+document.getElementById("paymentMethod").value;
 
-        if(cart[i]>0){
+if(method==="cash"){
 
-            let sub=m.harga*cart[i];
+document.getElementById("cashPayment")
+.style.display="block";
 
-            total+=sub;
+document.getElementById("qrisPayment")
+.style.display="none";
 
-            itemHtml+=`
-            <div style="margin-bottom:6px;">
-                <div><b>${m.nama}</b></div>
+}else{
 
-                <div style="display:flex;justify-content:space-between;">
-                    <span>${cart[i]} x ${rupiah(m.harga)}</span>
-                    <span>${rupiah(sub)}</span>
-                </div>
-            </div>
-            `;
+document.getElementById("cashPayment")
+.style.display="none";
 
-        }
-
-    });
-
-    if(total==0){
-
-        alert("Belum ada barang dipilih");
-
-        return;
-
-    }
-
-    let now=new Date();
-
-    let tanggal=
-        now.toLocaleDateString("id-ID");
-
-    let jam=
-        now.toLocaleTimeString("id-ID");
-
-    document.getElementById("receiptInfo").innerHTML=
-    `
-    No Nota : ${String(nota).padStart(4,"0")}<br>
-    ${tanggal}<br>
-    ${jam}
-    `;
-
-    document.getElementById("receiptItems").innerHTML=itemHtml;
-
-    document.getElementById("receiptTotal").innerHTML=
-    "TOTAL : "+rupiah(total);
-
-    document.getElementById("receipt").style.display="block";
-
-    localStorage.setItem("nota",nota+1);
-
-    nota++;
+document.getElementById("qrisPayment")
+.style.display="block";
 
 }
 
-// =======================
-// Inisialisasi Aplikasi
-// =======================
+}
+
+
+function calculateChange(){
+
+let total=getTotal();
+
+let received =
+parseInt(
+document.getElementById("cashReceived").value
+) || 0;
+
+let change=received-total;
+
+if(change<0){
+change=0;
+}
+
+document.getElementById("changeDisplay").innerText=
+"Kembalian : "+rupiah(change);
+
+}
+
+
+/* =====================================================
+   SELESAIKAN TRANSAKSI
+   ===================================================== */
+
+async function completeTransaction(){
+
+let total=getTotal();
+
+if(total<=0){
+
+alert("Belum ada barang dipilih");
+
+return;
+
+}
+
+let paymentMethod =
+document.getElementById("paymentMethod").value;
+
+let cashReceived=0;
+let change=0;
+
+if(paymentMethod==="cash"){
+
+cashReceived =
+parseInt(
+document.getElementById("cashReceived").value
+) || 0;
+
+if(cashReceived<total){
+
+alert(
+"Uang diterima kurang.\n\n"+
+"Total: "+rupiah(total)
+);
+
+return;
+
+}
+
+change=cashReceived-total;
+
+}
+
+
+/* =========================
+   BUAT ITEM
+   ========================= */
+
+let items=[];
+
+menus.forEach((m,i)=>{
+
+if(cart[i]>0){
+
+let subtotal =
+m.harga*cart[i];
+
+items.push({
+
+nama:m.nama,
+
+qty:cart[i],
+
+harga:m.harga,
+
+subtotal:subtotal
+
+});
+
+}
+
+});
+
+
+/* =========================
+   WAKTU
+   ========================= */
+
+let now=new Date();
+
+let tanggal =
+now.toLocaleDateString("id-ID");
+
+let jam =
+now.toLocaleTimeString("id-ID");
+
+
+/* =========================
+   NOMOR NOTA
+   ========================= */
+
+let nomorNota =
+String(nota).padStart(4,"0");
+
+
+/* =========================
+   DATA TRANSAKSI
+   ========================= */
+
+let transaction={
+
+tanggal:tanggal,
+
+jam:jam,
+
+nota:nomorNota,
+
+pembayaran:
+paymentMethod==="cash"
+?"Cash"
+:"QRIS",
+
+cashReceived:cashReceived,
+
+change:change,
+
+total:total,
+
+items:items
+
+};
+
+currentTransaction=transaction;
+
+
+/* =========================
+   SIMPAN GOOGLE SHEETS
+   ========================= */
+
+try{
+
+await saveToGoogleSheets(transaction);
+
+}catch(error){
+
+console.error(error);
+
+let lanjut=confirm(
+"Transaksi gagal dikirim ke Google Sheets.\n\n"+
+"Apakah tetap ingin menyelesaikan transaksi?"
+);
+
+if(!lanjut){
+
+return;
+
+}
+
+}
+
+
+/* =========================
+   GENERATE NOTA
+   ========================= */
+
+generateReceipt(transaction);
+
+
+/* =========================
+   NOMOR NOTA NAIK
+   ========================= */
+
+nota++;
+
+localStorage.setItem(
+"nota",
+nota
+);
+
+
+/* =========================
+   RESET KERANJANG
+   ========================= */
+
+cart={};
+
+alert(
+"Transaksi berhasil disimpan.\n"+
+"No Nota: "+nomorNota
+);
+
+}
+
+
+/* =====================================================
+   GOOGLE SHEETS
+   ===================================================== */
+
+async function saveToGoogleSheets(data){
+
+/*
+   mode: no-cors dipakai agar browser Android/iOS
+   tidak memblokir request ke Google Apps Script.
+*/
+
+await fetch(
+GOOGLE_SCRIPT_URL,
+{
+method:"POST",
+
+mode:"no-cors",
+
+headers:{
+"Content-Type":"text/plain;charset=utf-8"
+},
+
+body:JSON.stringify(data)
+
+}
+);
+
+}
+
+
+/* =====================================================
+   GENERATE RECEIPT
+   ===================================================== */
+
+function generateReceipt(transaction){
+
+let itemHtml="";
+
+transaction.items.forEach(item=>{
+
+itemHtml+=`
+
+<div style="margin-bottom:6px;">
+
+<div>
+<b>${escapeHtml(item.nama)}</b>
+</div>
+
+<div style="display:flex;justify-content:space-between;">
+
+<span>
+${item.qty} x ${rupiah(item.harga)}
+</span>
+
+<span>
+${rupiah(item.subtotal)}
+</span>
+
+</div>
+
+</div>
+
+`;
+
+});
+
+
+document.getElementById("receiptInfo").innerHTML=
+`
+No Nota : ${transaction.nota}<br>
+${transaction.tanggal}<br>
+${transaction.jam}
+`;
+
+
+document.getElementById("receiptItems")
+.innerHTML=itemHtml;
+
+
+document.getElementById("receiptTotal")
+.innerHTML=
+"TOTAL : "+rupiah(transaction.total);
+
+
+let paymentHtml="";
+
+if(transaction.pembayaran==="Cash"){
+
+paymentHtml=`
+
+Pembayaran : Cash<br>
+Diterima : ${rupiah(transaction.cashReceived)}<br>
+Kembalian : ${rupiah(transaction.change)}
+
+`;
+
+}else{
+
+paymentHtml=`
+
+Pembayaran : QRIS
+
+`;
+
+}
+
+document.getElementById("receiptPayment")
+.innerHTML=paymentHtml;
+
+
+document.getElementById("receipt")
+.style.display="block";
+
+}
+
+
+/* =====================================================
+   PRINT RPP02N VIA CLEANTER
+   ===================================================== */
+
+async function printReceipt(){
+
+if(!currentTransaction){
+
+alert("Belum ada transaksi");
+
+return;
+
+}
+
+let transaction=currentTransaction;
+
+let content=[];
+
+
+/* =========================
+   HEADER
+   ========================= */
+
+content.push({
+
+type:"text",
+
+text:"TOKO SAYA",
+
+align:"center",
+
+bold:true,
+
+size:"large"
+
+});
+
+
+content.push({
+
+type:"text",
+
+text:"Jl. Contoh",
+
+align:"center"
+
+});
+
+
+content.push({
+type:"divider"
+});
+
+
+/* =========================
+   INFO
+   ========================= */
+
+content.push({
+
+type:"text",
+
+text:"No Nota : "+transaction.nota
+
+});
+
+
+content.push({
+
+type:"text",
+
+text:
+transaction.tanggal+
+" "+
+transaction.jam
+
+});
+
+
+content.push({
+type:"divider"
+});
+
+
+/* =========================
+   ITEM
+   ========================= */
+
+transaction.items.forEach(item=>{
+
+content.push({
+
+type:"text",
+
+text:item.nama,
+
+bold:true
+
+});
+
+
+content.push({
+
+type:"row",
+
+left:
+item.qty+
+" x "+
+rupiah(item.harga),
+
+right:
+rupiah(item.subtotal)
+
+});
+
+});
+
+
+content.push({
+type:"divider"
+});
+
+
+/* =========================
+   TOTAL
+   ========================= */
+
+content.push({
+
+type:"row",
+
+left:"TOTAL",
+
+right:rupiah(transaction.total),
+
+bold:true
+
+});
+
+
+content.push({
+type:"divider"
+});
+
+
+/* =========================
+   PEMBAYARAN
+   ========================= */
+
+content.push({
+
+type:"text",
+
+text:"Pembayaran : "+
+transaction.pembayaran
+
+});
+
+
+if(transaction.pembayaran==="Cash"){
+
+content.push({
+
+type:"text",
+
+text:"Diterima : "+
+rupiah(transaction.cashReceived)
+
+});
+
+content.push({
+
+type:"text",
+
+text:"Kembalian : "+
+rupiah(transaction.change)
+
+});
+
+}
+
+
+content.push({
+
+type:"feed",
+
+lines:1
+
+});
+
+
+content.push({
+
+type:"text",
+
+text:"Terima Kasih",
+
+align:"center"
+
+});
+
+
+content.push({
+
+type:"feed",
+
+lines:3
+
+});
+
+
+/* =========================
+   SEND TO CLEANTER
+   ========================= */
+
+try{
+
+const response=await fetch(
+
+"http://localhost:9100/print",
+
+{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+cut:true,
+
+content:content
+
+}),
+
+signal:AbortSignal.timeout(5000)
+
+}
+
+);
+
+
+if(!response.ok){
+
+throw new Error(
+"Cleanter error "+response.status
+);
+
+}
+
+
+let result=await response.json();
+
+
+if(result.status==="printed"){
+
+alert("Nota berhasil dicetak");
+
+}else{
+
+alert(
+"Print gagal: "+
+JSON.stringify(result)
+);
+
+}
+
+
+}catch(error){
+
+console.error(error);
+
+alert(
+
+"Printer tidak terhubung.\n\n"+
+
+"Pastikan:\n"+
+
+"1. RPP02N sudah Bluetooth paired\n"+
+
+"2. Cleanter sudah terpasang\n"+
+
+"3. RPP02N dipilih sebagai printer di Cleanter"
+
+);
+
+}
+
+}
+
+
+/* =====================================================
+   ESCAPE HTML
+   ===================================================== */
+
+function escapeHtml(text){
+
+return String(text)
+
+.replace(/&/g,"&amp;")
+
+.replace(/</g,"&lt;")
+
+.replace(/>/g,"&gt;")
+
+.replace(/"/g,"&quot;")
+
+.replace(/'/g,"&#039;");
+
+}
+
+
+/* =====================================================
+   INISIALISASI
+   ===================================================== */
 
 renderMenu();
 
-// Jika belum ada menu, tampilkan contoh
+
+/* =========================
+   MENU CONTOH
+   ========================= */
+
 if(menus.length===0){
 
-    menus.push(
-        {
-            nama:"Menu A",
-            harga:15000
-        },
-        {
-            nama:"Menu B",
-            harga:18000
-        },
-        {
-            nama:"Es Teh",
-            harga:5000
-        }
-    );
+menus.push(
 
-    save();
+{
+nama:"Menu A",
+harga:15000
+},
 
-    renderMenu();
+{
+nama:"Menu B",
+harga:18000
+},
+
+{
+nama:"Es Teh",
+harga:5000
+}
+
+);
+
+save();
+
+renderMenu();
 
 }
 
@@ -712,3 +1328,4 @@ if(menus.length===0){
 
 </body>
 </html>
+```
