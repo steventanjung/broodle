@@ -18,6 +18,10 @@ rel="stylesheet">
 
 <style>
 
+/* =========================
+   LOADING
+   ========================= */
+
 .loadingBox{
 display:none;
 text-align:center;
@@ -34,7 +38,7 @@ height:40px;
 border:4px solid #dee2e6;
 border-top:4px solid #0d6efd;
 border-radius:50%;
-animation:spin 0.8s linear infinite;
+animation:spin .8s linear infinite;
 margin:0 auto 12px;
 }
 
@@ -53,6 +57,11 @@ font-size:13px;
 color:#6c757d;
 margin-top:4px;
 }
+
+
+/* =========================
+   GENERAL
+   ========================= */
 
 *{
 box-sizing:border-box;
@@ -83,6 +92,11 @@ margin-bottom:14px;
 box-shadow:0 3px 12px rgba(0,0,0,.07);
 }
 
+
+/* =========================
+   MENU ITEM
+   ========================= */
+
 .menuItem{
 display:flex;
 justify-content:space-between;
@@ -98,6 +112,11 @@ margin-bottom:8px;
 .menuItem b{
 font-size:15px;
 }
+
+
+/* =========================
+   QTY
+   ========================= */
 
 .qtyBox{
 display:flex;
@@ -124,6 +143,11 @@ text-align:center;
 font-weight:bold;
 }
 
+
+/* =========================
+   PAYMENT
+   ========================= */
+
 .paymentBox{
 margin-top:16px;
 padding-top:16px;
@@ -142,6 +166,11 @@ border-radius:10px;
 #grandTotal{
 margin:0;
 }
+
+
+/* =========================
+   RECEIPT
+   ========================= */
 
 #receipt{
 width:58mm;
@@ -167,6 +196,11 @@ margin:6px 0;
 .hidden{
 display:none !important;
 }
+
+
+/* =========================
+   PRINT
+   ========================= */
 
 @media print{
 
@@ -329,7 +363,9 @@ Total : Rp0
 
 
 
-<!-- PEMBAYARAN -->
+<!-- =========================
+     PEMBAYARAN
+     ========================= -->
 
 <div class="paymentBox">
 
@@ -413,27 +449,44 @@ sebelum menyelesaikan transaksi.
 
 
 
-<!-- TOMBOL SELESAIKAN -->
+<!-- =========================
+     TOMBOL TRANSAKSI
+     ========================= -->
 
 <button
 id="completeButton"
 class="btn btn-primary btn-lg w-100 mt-3"
 onclick="completeTransaction()">
 
-PRINT
+🧾 Selesaikan & Print
 
 </button>
 
-<div id="loadingBox" class="loadingBox">
+
+<!-- =========================
+     LOADING
+     ========================= -->
+
+<div
+id="loadingBox"
+class="loadingBox">
 
 <div class="spinner"></div>
 
-<div id="loadingText" class="loadingText">
+<div
+id="loadingText"
+class="loadingText">
+
 Memproses transaksi...
+
 </div>
 
-<div id="loadingSub" class="loadingSub">
+<div
+id="loadingSub"
+class="loadingSub">
+
 Mohon tunggu
+
 </div>
 
 </div>
@@ -457,6 +510,7 @@ Mohon tunggu
 <div class="center">
 
 <b>KUKIKOE</b>
+
 <br>
 
 Mooncake Festival
@@ -467,7 +521,7 @@ Mooncake Festival
 <div class="line"></div>
 
 
-<!-- NOMOR NOTA / TANGGAL / JAM -->
+<!-- INFO NOTA -->
 
 <div
 id="receiptInfo"
@@ -514,18 +568,6 @@ Terima Kasih
 </div>
 
 
-<br>
-
-
-<button
-class="btn btn-success btn-sm w-100"
-onclick="printReceipt()">
-
-🖨️ Print Nota
-
-</button>
-
-
 </div>
 
 
@@ -546,14 +588,16 @@ const GOOGLE_SCRIPT_URL =
    DATA
    ===================================================== */
 
-let cart = {};
+let cart={};
 
 let nota =
-parseInt(localStorage.getItem("nota")) || 1;
+parseInt(
+localStorage.getItem("nota")
+) || 1;
 
-let currentTransaction = null;
+let currentTransaction=null;
 
-let transactionProcessing = false;
+let transactionProcessing=false;
 
 
 
@@ -561,15 +605,10 @@ let transactionProcessing = false;
    MENU VERSION
    ===================================================== */
 
-/*
-   Naikkan angka versi jika ingin
-   mengganti daftar menu default.
-*/
-
-const MENU_VERSION = "2";
+const MENU_VERSION="2";
 
 
-const DEFAULT_MENUS = [
+const DEFAULT_MENUS=[
 
 {
 nama:"Cheesecake A",
@@ -605,7 +644,9 @@ harga:40000
 
 
 let menus =
-JSON.parse(localStorage.getItem("menus"));
+JSON.parse(
+localStorage.getItem("menus")
+);
 
 
 let savedMenuVersion =
@@ -614,7 +655,7 @@ localStorage.getItem("menuVersion");
 
 
 /* =====================================================
-   UPDATE MENU JIKA VERSI BERBEDA
+   UPDATE MENU
    ===================================================== */
 
 if(
@@ -622,12 +663,14 @@ savedMenuVersion !== MENU_VERSION
 ){
 
 menus =
-DEFAULT_MENUS.map(menu => ({
+DEFAULT_MENUS.map(
+menu=>({
 
 nama:menu.nama,
 harga:menu.harga
 
-}));
+})
+);
 
 
 localStorage.setItem(
@@ -646,21 +689,23 @@ MENU_VERSION
 
 
 /* =====================================================
-   JIKA MENU KOSONG / RUSAK
+   JIKA MENU KOSONG
    ===================================================== */
 
 if(
 !Array.isArray(menus) ||
-menus.length === 0
+menus.length===0
 ){
 
 menus =
-DEFAULT_MENUS.map(menu => ({
+DEFAULT_MENUS.map(
+menu=>({
 
 nama:menu.nama,
 harga:menu.harga
 
-}));
+})
+);
 
 
 localStorage.setItem(
@@ -679,7 +724,7 @@ MENU_VERSION
 
 
 /* =====================================================
-   SAVE MENU
+   SAVE
    ===================================================== */
 
 function save(){
@@ -742,16 +787,20 @@ document
 
 let harga =
 parseInt(
-document.getElementById("harga").value
+document
+.getElementById("harga")
+.value
 );
 
 
 if(
-nama === "" ||
+nama==="" ||
 isNaN(harga)
 ){
 
-alert("Lengkapi data");
+alert(
+"Lengkapi data"
+);
 
 return;
 
@@ -769,9 +818,14 @@ harga:harga
 save();
 
 
-document.getElementById("nama").value="";
+document
+.getElementById("nama")
+.value="";
 
-document.getElementById("harga").value="";
+
+document
+.getElementById("harga")
+.value="";
 
 
 renderMenu();
@@ -779,6 +833,10 @@ renderMenu();
 }
 
 
+
+/* =====================================================
+   DELETE MENU
+   ===================================================== */
 
 function deleteMenu(index){
 
@@ -791,7 +849,11 @@ return;
 }
 
 
-menus.splice(index,1);
+menus.splice(
+index,
+1
+);
+
 
 save();
 
@@ -800,6 +862,10 @@ renderMenu();
 }
 
 
+
+/* =====================================================
+   EDIT MENU
+   ===================================================== */
 
 function editMenu(index){
 
@@ -810,7 +876,9 @@ menus[index].nama
 );
 
 
-if(nama === null){
+if(
+nama===null
+){
 
 return;
 
@@ -824,7 +892,9 @@ menus[index].harga
 );
 
 
-if(harga === null){
+if(
+harga===null
+){
 
 return;
 
@@ -836,11 +906,13 @@ parseInt(harga);
 
 
 if(
-nama.trim() === "" ||
+nama.trim()==="" ||
 isNaN(harga)
 ){
 
-alert("Data tidak valid");
+alert(
+"Data tidak valid"
+);
 
 return;
 
@@ -874,7 +946,7 @@ let html="";
 menus.forEach(
 (m,i)=>{
 
-html += `
+html+=`
 
 <div class="menuItem">
 
@@ -928,7 +1000,7 @@ document
 
 
 /* =====================================================
-   KASIR
+   RENDER KASIR
    ===================================================== */
 
 function renderCashier(){
@@ -944,7 +1016,7 @@ menus.forEach(
 cart[i]=0;
 
 
-html += `
+html+=`
 
 <div class="menuItem">
 
@@ -1020,12 +1092,27 @@ document
 .getElementById("completeButton")
 .disabled=false;
 
+
+document
+.getElementById("loadingBox")
+.classList.remove("active");
+
+
+/* KEMBALIKAN METODE KE CASH */
+
+document
+.getElementById("paymentMethod")
+.value="cash";
+
+
+paymentChanged();
+
 }
 
 
 
 /* =====================================================
-   PLUS QTY
+   PLUS
    ===================================================== */
 
 function plusQty(index){
@@ -1046,13 +1133,13 @@ updateTotal();
 
 
 /* =====================================================
-   MINUS QTY
+   MINUS
    ===================================================== */
 
 function minusQty(index){
 
 if(
-cart[index] > 0
+cart[index]>0
 ){
 
 cart[index]--;
@@ -1099,13 +1186,13 @@ return total;
 
 function updateTotal(){
 
-let total =
+let total=
 getTotal();
 
 
 document
 .getElementById("grandTotal")
-.innerHTML =
+.innerHTML=
 "Total : <b>"+
 rupiah(total)+
 "</b>";
@@ -1123,14 +1210,14 @@ calculateChange();
 
 function paymentChanged(){
 
-let method =
+let method=
 document
 .getElementById("paymentMethod")
 .value;
 
 
 if(
-method === "cash"
+method==="cash"
 ){
 
 document
@@ -1164,16 +1251,16 @@ document
 
 
 /* =====================================================
-   HITUNG KEMBALIAN
+   KEMBALIAN
    ===================================================== */
 
 function calculateChange(){
 
-let total =
+let total=
 getTotal();
 
 
-let received =
+let received=
 parseInt(
 document
 .getElementById("cashReceived")
@@ -1181,12 +1268,12 @@ document
 ) || 0;
 
 
-let change =
+let change=
 received-total;
 
 
 if(
-change < 0
+change<0
 ){
 
 change=0;
@@ -1196,7 +1283,7 @@ change=0;
 
 document
 .getElementById("changeDisplay")
-.innerText =
+.innerText=
 "Kembalian : "+
 rupiah(change);
 
@@ -1205,87 +1292,132 @@ rupiah(change);
 
 
 /* =====================================================
-   SELESAIKAN TRANSAKSI
+   SELESAIKAN + PRINT
    ===================================================== */
 
 async function completeTransaction(){
 
-if(transactionProcessing){
+
+/* ANTI DOUBLE CLICK */
+
+if(
+transactionProcessing
+){
+
 return;
+
 }
+
 
 transactionProcessing=true;
 
-const button =
-document.getElementById("completeButton");
+
+const button=
+document
+.getElementById("completeButton");
 
 button.disabled=true;
 
 
-/* =====================================================
-   VALIDASI
-   ===================================================== */
 
-let total=getTotal();
+/* =========================
+   VALIDASI TOTAL
+   ========================= */
 
-if(total<=0){
-
-transactionProcessing=false;
-button.disabled=false;
-
-alert("Belum ada barang dipilih");
-
-return;
-
-}
+let total=
+getTotal();
 
 
-let paymentMethod =
-document.getElementById("paymentMethod").value;
-
-let cashReceived=0;
-let change=0;
-
-
-if(paymentMethod==="cash"){
-
-cashReceived =
-parseInt(
-document.getElementById("cashReceived").value
-) || 0;
-
-
-if(cashReceived<total){
+if(
+total<=0
+){
 
 transactionProcessing=false;
+
 button.disabled=false;
 
 alert(
-"Uang diterima kurang.\n\n"+
-"Total: "+rupiah(total)
+"Belum ada barang dipilih"
 );
 
 return;
 
 }
 
-change=cashReceived-total;
+
+
+/* =========================
+   PEMBAYARAN
+   ========================= */
+
+let paymentMethod=
+document
+.getElementById("paymentMethod")
+.value;
+
+
+let cashReceived=0;
+
+let change=0;
+
+
+if(
+paymentMethod==="cash"
+){
+
+cashReceived=
+parseInt(
+document
+.getElementById("cashReceived")
+.value
+) || 0;
+
+
+if(
+cashReceived<total
+){
+
+transactionProcessing=false;
+
+button.disabled=false;
+
+alert(
+
+"Uang diterima kurang.\n\n"+
+"Total: "+
+rupiah(total)
+
+);
+
+return;
 
 }
 
 
-/* =====================================================
-   BUAT ITEM
-   ===================================================== */
+change=
+cashReceived-total;
+
+}
+
+
+
+/* =========================
+   ITEM
+   ========================= */
 
 let items=[];
 
-menus.forEach((m,i)=>{
 
-if(cart[i]>0){
+menus.forEach(
+(m,i)=>{
+
+if(
+cart[i]>0
+){
 
 let subtotal=
 m.harga*cart[i];
+
 
 items.push({
 
@@ -1304,30 +1436,41 @@ subtotal:subtotal
 });
 
 
-/* =====================================================
-   WAKTU
-   ===================================================== */
 
-let now=new Date();
+/* =========================
+   WAKTU
+   ========================= */
+
+let now=
+new Date();
+
 
 let tanggal=
-now.toLocaleDateString("id-ID");
+now.toLocaleDateString(
+"id-ID"
+);
+
 
 let jam=
-now.toLocaleTimeString("id-ID");
+now.toLocaleTimeString(
+"id-ID"
+);
 
 
-/* =====================================================
+
+/* =========================
    NOMOR NOTA
-   ===================================================== */
+   ========================= */
 
 let nomorNota=
-String(nota).padStart(4,"0");
+String(nota)
+.padStart(4,"0");
 
 
-/* =====================================================
-   DATA TRANSAKSI
-   ===================================================== */
+
+/* =========================
+   TRANSAKSI
+   ========================= */
 
 let transaction={
 
@@ -1342,83 +1485,56 @@ paymentMethod==="cash"
 ?"Cash"
 :"QRIS",
 
-cashReceived:cashReceived,
+cashReceived:
+cashReceived,
 
-change:change,
+change:
+change,
 
-total:total,
+total:
+total,
 
-items:items
+items:
+items
 
 };
 
-currentTransaction=transaction;
+
+currentTransaction=
+transaction;
+
 
 
 /* =====================================================
-   TAMPILKAN LOADING
+   LOADING
    ===================================================== */
 
-const loadingBox =
-document.getElementById("loadingBox");
+const loadingBox=
+document
+.getElementById("loadingBox");
 
-const loadingText =
-document.getElementById("loadingText");
 
-const loadingSub =
-document.getElementById("loadingSub");
+const loadingText=
+document
+.getElementById("loadingText");
 
-loadingBox.classList.add("active");
+
+const loadingSub=
+document
+.getElementById("loadingSub");
+
+
+loadingBox
+.classList
+.add("active");
+
 
 loadingText.innerText=
 "Mengirim transaksi...";
 
+
 loadingSub.innerText=
 "Menyimpan data ke Google Sheets";
-
-
-/* =====================================================
-   GOOGLE SHEETS
-   ===================================================== */
-
-try{
-
-await saveToGoogleSheets(transaction);
-
-}catch(error){
-
-console.error(error);
-
-let lanjut=confirm(
-
-"Transaksi gagal dikirim ke Google Sheets.\n\n"+
-"Apakah tetap ingin mencetak nota?"
-
-);
-
-if(!lanjut){
-
-loadingBox.classList.remove("active");
-
-transactionProcessing=false;
-button.disabled=false;
-
-return;
-
-}
-
-}
-
-
-/* =====================================================
-   UPDATE LOADING
-   ===================================================== */
-
-loadingText.innerText=
-"Mencetak nota...";
-
-loadingSub.innerText=
-"Mengirim
 
 
 
@@ -1437,11 +1553,11 @@ transaction
 console.error(error);
 
 
-let lanjut =
+let lanjut=
 confirm(
 
 "Transaksi gagal dikirim ke Google Sheets.\n\n"+
-"Apakah tetap ingin menyelesaikan transaksi?"
+"Apakah tetap ingin mencetak nota?"
 
 );
 
@@ -1450,13 +1566,14 @@ if(
 !lanjut
 ){
 
+loadingBox
+.classList
+.remove("active");
+
+
 transactionProcessing=false;
 
-
-document
-.getElementById("completeButton")
-.disabled=false;
-
+button.disabled=false;
 
 return;
 
@@ -1467,12 +1584,52 @@ return;
 
 
 /* =====================================================
+   SIAP PRINT
+   ===================================================== */
+
+loadingText.innerText=
+"Mencetak nota...";
+
+
+loadingSub.innerText=
+"Mengirim nota ke printer";
+
+
+
+/* =====================================================
    GENERATE NOTA
    ===================================================== */
 
 generateReceipt(
 transaction
 );
+
+
+
+/* =====================================================
+   PRINT OTOMATIS
+   ===================================================== */
+
+let printSuccess=
+await printReceipt();
+
+
+if(
+!printSuccess
+){
+
+loadingBox
+.classList
+.remove("active");
+
+
+transactionProcessing=false;
+
+button.disabled=false;
+
+return;
+
+}
 
 
 
@@ -1491,15 +1648,21 @@ nota
 
 
 /* =====================================================
-   RESET CART
+   RESET
    ===================================================== */
 
-cart={};
+document
+.getElementById("receipt")
+.style.display=
+"none";
+
+
+renderCashier();
 
 
 alert(
 
-"Transaksi berhasil disimpan.\n"+
+"Transaksi berhasil.\n"+
 "No Nota: "+
 nomorNota
 
@@ -1559,7 +1722,7 @@ let itemHtml="";
 transaction.items.forEach(
 item=>{
 
-itemHtml += `
+itemHtml+=`
 
 <div style="margin-bottom:6px;">
 
@@ -1603,11 +1766,13 @@ ${rupiah(item.subtotal)}
 
 
 
-/* INFO NOTA RATA TENGAH */
+/* =========================
+   INFO RATA TENGAH
+   ========================= */
 
 document
 .getElementById("receiptInfo")
-.innerHTML = `
+.innerHTML=`
 
 <div class="center">
 
@@ -1627,37 +1792,44 @@ ${transaction.jam}
 
 
 
-/* ITEM */
+/* =========================
+   ITEM
+   ========================= */
 
 document
 .getElementById("receiptItems")
-.innerHTML =
+.innerHTML=
 itemHtml;
 
 
 
-/* TOTAL */
+/* =========================
+   TOTAL
+   ========================= */
 
 document
 .getElementById("receiptTotal")
-.innerHTML =
+.innerHTML=
 "TOTAL : "+
 rupiah(transaction.total);
 
 
 
-/* PEMBAYARAN */
+/* =========================
+   PEMBAYARAN
+   ========================= */
 
 let paymentHtml="";
 
 
 if(
-transaction.pembayaran === "Cash"
+transaction.pembayaran==="Cash"
 ){
 
-paymentHtml = `
+paymentHtml=`
 
 Pembayaran : Cash
+
 <br>
 
 Diterima :
@@ -1672,7 +1844,7 @@ ${rupiah(transaction.change)}
 
 }else{
 
-paymentHtml = `
+paymentHtml=`
 
 Pembayaran : QRIS
 
@@ -1683,16 +1855,13 @@ Pembayaran : QRIS
 
 document
 .getElementById("receiptPayment")
-.innerHTML =
+.innerHTML=
 paymentHtml;
 
 
-
-/* TAMPILKAN NOTA */
-
 document
 .getElementById("receipt")
-.style.display =
+.style.display=
 "block";
 
 }
@@ -1713,12 +1882,12 @@ alert(
 "Belum ada transaksi"
 );
 
-return;
+return false;
 
 }
 
 
-let transaction =
+let transaction=
 currentTransaction;
 
 
@@ -1726,9 +1895,9 @@ let content=[];
 
 
 
-/* =====================================================
+/* =========================
    HEADER
-   ===================================================== */
+   ========================= */
 
 content.push({
 
@@ -1764,9 +1933,9 @@ type:"divider"
 
 
 
-/* =====================================================
-   INFO NOTA
-   ===================================================== */
+/* =========================
+   INFO
+   ========================= */
 
 content.push({
 
@@ -1813,13 +1982,12 @@ type:"divider"
 
 
 
-/* =====================================================
+/* =========================
    ITEM
-   ===================================================== */
+   ========================= */
 
 transaction.items.forEach(
 item=>{
-
 
 content.push({
 
@@ -1858,9 +2026,9 @@ type:"divider"
 
 
 
-/* =====================================================
+/* =========================
    TOTAL
-   ===================================================== */
+   ========================= */
 
 content.push({
 
@@ -1884,9 +2052,9 @@ type:"divider"
 
 
 
-/* =====================================================
+/* =========================
    PEMBAYARAN
-   ===================================================== */
+   ========================= */
 
 content.push({
 
@@ -1900,7 +2068,7 @@ transaction.pembayaran
 
 
 if(
-transaction.pembayaran === "Cash"
+transaction.pembayaran==="Cash"
 ){
 
 content.push({
@@ -1932,9 +2100,9 @@ transaction.change
 
 
 
-/* =====================================================
+/* =========================
    FOOTER
-   ===================================================== */
+   ========================= */
 
 content.push({
 
@@ -1972,7 +2140,7 @@ lines:3
 
 try{
 
-const response =
+const response=
 await fetch(
 
 "http://localhost:9100/print",
@@ -2020,32 +2188,16 @@ response.status
 
 
 
-let result =
+let result=
 await response.json();
 
 
 
 if(
-result.status === "printed"
+result.status==="printed"
 ){
 
-/* HILANGKAN NOTA */
-
-document
-.getElementById("receipt")
-.style.display =
-"none";
-
-
-/* RESET KASIR */
-
-renderCashier();
-
-
-alert(
-"Nota berhasil dicetak"
-);
-
+return true;
 
 }else{
 
@@ -2055,6 +2207,8 @@ alert(
 JSON.stringify(result)
 
 );
+
+return false;
 
 }
 
@@ -2078,6 +2232,9 @@ alert(
 "3. RPP02N dipilih sebagai printer di Cleanter"
 
 );
+
+
+return false;
 
 }
 
@@ -2123,7 +2280,7 @@ return String(text)
 
 
 /* =====================================================
-   INISIALISASI APLIKASI
+   START APPLICATION
    ===================================================== */
 
 renderMenu();
