@@ -1466,9 +1466,14 @@ now.toLocaleDateString(
 );
 
 
-let jam=
+let jam =
 now.toLocaleTimeString(
-"id-ID"
+    "id-ID",
+    {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+    }
 );
 
 
@@ -1795,16 +1800,11 @@ No Nota : ${transaction.nota}
 
 <br>
 
-${transaction.tanggal}
-
-<br>
-
-${transaction.jam}
+${transaction.tanggal} • ${transaction.jam}
 
 </div>
 
 `;
-
 
 
 /* =========================
