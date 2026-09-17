@@ -322,9 +322,9 @@ Tambah
 
 <div class="center">
 
-<b>TOKO SAYA</b><br>
+<b>KUKIKOE</b><br>
 
-Jl. Contoh
+Mooncake Festival
 
 </div>
 
@@ -1005,12 +1005,11 @@ ${rupiah(item.subtotal)}
 
 
 document.getElementById("receiptInfo").innerHTML=
-`
+`<div class="center">
 No Nota : ${transaction.nota}<br>
 ${transaction.tanggal}<br>
 ${transaction.jam}
-`;
-
+</div>`;
 
 document.getElementById("receiptItems")
 .innerHTML=itemHtml;
