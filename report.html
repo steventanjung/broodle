@@ -42,7 +42,7 @@
         </div>
     </div>
 
-    <!-- KARTU RINGKASAN OMSOSET -->
+    <!-- KARTU RINGKASAN OMSET -->
     <div class="row g-2 mb-3 text-center">
         <div class="col-4">
             <div class="p-2 p-md-3 bg-primary text-white rounded">
@@ -84,7 +84,6 @@
 </div>
 
 <script>
-// V MASUKKAN URL APPS SCRIPT ANDA DI SINI V
 const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbzTmbc4ohQyj51JFaiDFyJUdDNyQWK5eNHeC18amt7BARyM8FyenuyXGj6t03eRH6Na/exec";
 
 let semuaData = [];
@@ -93,7 +92,6 @@ function rupiah(n) {
     return "Rp" + Number(n).toLocaleString("id-ID");
 }
 
-// Konversi tanggal ke format YYYY-MM-DD
 function toYMD(dateObj) {
     let d = new Date(dateObj);
     let month = '' + (d.getMonth() + 1);
@@ -104,12 +102,10 @@ function toYMD(dateObj) {
     return [year, month, day].join('-');
 }
 
-// Format string tanggal dari Google Sheets ke standar Date JavaScript
 function parseTanggal(str) {
     if (!str) return null;
     let parts = String(str).trim().split('/');
     if (parts.length === 3) {
-        // Asumsi format DD/MM/YYYY
         return new Date(parts[2], parts[1] - 1, parts[0]);
     }
     return new Date(str);
@@ -123,7 +119,6 @@ async function muatData() {
         let data = await response.json();
         semuaData = Array.isArray(data) ? data : (data.data || []);
         
-        // Default tampilkan data Hari Ini saat pertama dibuka
         setQuickDate('today');
     } catch (err) {
         console.error(err);
@@ -210,7 +205,6 @@ function resetFilter() {
     terapkanFilter();
 }
 
-// Jalankan saat pertama dibuka
 muatData();
 </script>
 
