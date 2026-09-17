@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>Kasir Sederhana</title>
+<title>Kukikoe - Mooncake</title>
 
 <style>
 
@@ -142,12 +142,13 @@ width:58mm;
 <div class="nav">
 
 <button
-style="display:none;"
+class="hidden"
 onclick="showPage('menuPage')">
 Kelola Menu
 </button>
 
-<button onclick="showPage('cashierPage');renderCashier();">
+<button class="hidden"
+onclick="showPage('cashierPage');renderCashier();">
 Kasir
 </button>
 
@@ -157,7 +158,7 @@ Kasir
 
 <!-- ================= MENU ================= -->
 
-<div id="menuPage" class="page active">
+<div id="menuPage" class="page">
 
 <div class="card">
 
@@ -191,7 +192,7 @@ Tambah
 
 <!-- ================= KASIR ================= -->
 
-<div id="cashierPage" class="page">
+<div id="cashierPage" class="page active">
 
 <div class="card">
 
