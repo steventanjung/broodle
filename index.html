@@ -18,6 +18,42 @@ rel="stylesheet">
 
 <style>
 
+.loadingBox{
+display:none;
+text-align:center;
+padding:20px 10px;
+}
+
+.loadingBox.active{
+display:block;
+}
+
+.spinner{
+width:40px;
+height:40px;
+border:4px solid #dee2e6;
+border-top:4px solid #0d6efd;
+border-radius:50%;
+animation:spin 0.8s linear infinite;
+margin:0 auto 12px;
+}
+
+@keyframes spin{
+to{
+transform:rotate(360deg);
+}
+}
+
+.loadingText{
+font-weight:bold;
+}
+
+.loadingSub{
+font-size:13px;
+color:#6c757d;
+margin-top:4px;
+}
+
 *{
 box-sizing:border-box;
 }
@@ -384,9 +420,23 @@ id="completeButton"
 class="btn btn-primary btn-lg w-100 mt-3"
 onclick="completeTransaction()">
 
-Selesaikan & Simpan
+PRINT
 
 </button>
+
+<div id="loadingBox" class="loadingBox">
+
+<div class="spinner"></div>
+
+<div id="loadingText" class="loadingText">
+Memproses transaksi...
+</div>
+
+<div id="loadingSub" class="loadingSub">
+Mohon tunggu
+</div>
+
+</div>
 
 
 </div>
@@ -1160,111 +1210,68 @@ rupiah(change);
 
 async function completeTransaction(){
 
-
-/* ANTI DOUBLE CLICK */
-
-if(
-transactionProcessing
-){
-
+if(transactionProcessing){
 return;
-
 }
-
 
 transactionProcessing=true;
 
+const button =
+document.getElementById("completeButton");
 
-document
-.getElementById("completeButton")
-.disabled=true;
-
-
-
-/* TOTAL */
-
-let total =
-getTotal();
+button.disabled=true;
 
 
-if(
-total <= 0
-){
+/* =====================================================
+   VALIDASI
+   ===================================================== */
+
+let total=getTotal();
+
+if(total<=0){
 
 transactionProcessing=false;
+button.disabled=false;
 
-
-document
-.getElementById("completeButton")
-.disabled=false;
-
-
-alert(
-"Belum ada barang dipilih"
-);
+alert("Belum ada barang dipilih");
 
 return;
 
 }
 
 
-
-/* PEMBAYARAN */
-
 let paymentMethod =
-document
-.getElementById("paymentMethod")
-.value;
-
+document.getElementById("paymentMethod").value;
 
 let cashReceived=0;
-
 let change=0;
 
 
-
-if(
-paymentMethod === "cash"
-){
+if(paymentMethod==="cash"){
 
 cashReceived =
 parseInt(
-document
-.getElementById("cashReceived")
-.value
+document.getElementById("cashReceived").value
 ) || 0;
 
 
-if(
-cashReceived < total
-){
+if(cashReceived<total){
 
 transactionProcessing=false;
-
-
-document
-.getElementById("completeButton")
-.disabled=false;
-
+button.disabled=false;
 
 alert(
-
 "Uang diterima kurang.\n\n"+
-"Total: "+
-rupiah(total)
-
+"Total: "+rupiah(total)
 );
 
 return;
 
 }
 
-
-change =
-cashReceived-total;
+change=cashReceived-total;
 
 }
-
 
 
 /* =====================================================
@@ -1273,18 +1280,12 @@ cashReceived-total;
 
 let items=[];
 
+menus.forEach((m,i)=>{
 
-menus.forEach(
-(m,i)=>{
+if(cart[i]>0){
 
-if(
-cart[i] > 0
-){
-
-let subtotal =
-m.harga *
-cart[i];
-
+let subtotal=
+m.harga*cart[i];
 
 items.push({
 
@@ -1303,36 +1304,25 @@ subtotal:subtotal
 });
 
 
-
 /* =====================================================
    WAKTU
    ===================================================== */
 
-let now =
-new Date();
+let now=new Date();
 
+let tanggal=
+now.toLocaleDateString("id-ID");
 
-let tanggal =
-now.toLocaleDateString(
-"id-ID"
-);
-
-
-let jam =
-now.toLocaleTimeString(
-"id-ID"
-);
-
+let jam=
+now.toLocaleTimeString("id-ID");
 
 
 /* =====================================================
    NOMOR NOTA
    ===================================================== */
 
-let nomorNota =
-String(nota)
-.padStart(4,"0");
-
+let nomorNota=
+String(nota).padStart(4,"0");
 
 
 /* =====================================================
@@ -1348,27 +1338,87 @@ jam:jam,
 nota:nomorNota,
 
 pembayaran:
-paymentMethod === "cash"
+paymentMethod==="cash"
 ?"Cash"
 :"QRIS",
 
-cashReceived:
-cashReceived,
+cashReceived:cashReceived,
 
-change:
-change,
+change:change,
 
-total:
-total,
+total:total,
 
-items:
-items
+items:items
 
 };
 
+currentTransaction=transaction;
 
-currentTransaction =
-transaction;
+
+/* =====================================================
+   TAMPILKAN LOADING
+   ===================================================== */
+
+const loadingBox =
+document.getElementById("loadingBox");
+
+const loadingText =
+document.getElementById("loadingText");
+
+const loadingSub =
+document.getElementById("loadingSub");
+
+loadingBox.classList.add("active");
+
+loadingText.innerText=
+"Mengirim transaksi...";
+
+loadingSub.innerText=
+"Menyimpan data ke Google Sheets";
+
+
+/* =====================================================
+   GOOGLE SHEETS
+   ===================================================== */
+
+try{
+
+await saveToGoogleSheets(transaction);
+
+}catch(error){
+
+console.error(error);
+
+let lanjut=confirm(
+
+"Transaksi gagal dikirim ke Google Sheets.\n\n"+
+"Apakah tetap ingin mencetak nota?"
+
+);
+
+if(!lanjut){
+
+loadingBox.classList.remove("active");
+
+transactionProcessing=false;
+button.disabled=false;
+
+return;
+
+}
+
+}
+
+
+/* =====================================================
+   UPDATE LOADING
+   ===================================================== */
+
+loadingText.innerText=
+"Mencetak nota...";
+
+loadingSub.innerText=
+"Mengirim
 
 
 
