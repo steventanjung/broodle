@@ -1293,41 +1293,39 @@ return String(text)
    INISIALISASI
    ===================================================== */
 
-renderMenu();
-
-
-/* =========================
-   MENU CONTOH
-   ========================= */
+   // =======================
+// Inisialisasi Aplikasi
+// =======================
 
 if(menus.length===0){
 
-menus.push(
+    menus.push(
+        {
+            nama:"Menu A",
+            harga:15000
+        },
+        {
+            nama:"Menu B",
+            harga:18000
+        },
+        {
+            nama:"Es Teh",
+            harga:5000
+        }
+    );
 
-{
-nama:"Menu A",
-harga:15000
-},
+    save();
 
-{
-nama:"Menu B",
-harga:18000
-},
-
-{
-nama:"Es Teh",
-harga:5000
 }
 
-);
-
-save();
-
+// Tampilkan menu untuk halaman Kelola Menu
 renderMenu();
+
+// Langsung tampilkan halaman Kasir
+showPage("cashierPage");
+
+// Render daftar barang kasir
 renderCashier();
-
-}
-
 </script>
 
 </body>
