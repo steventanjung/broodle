@@ -379,9 +379,10 @@ class="d-flex justify-content-between align-items-center mb-3">
 Daftar Produk
 </h5>
 
-<span class="badge text-bg-secondary">
-Kasir
-</span>
+<div>
+<span id="syncBadge" class="badge text-bg-warning me-1" style="display:none;">0 Pending</span>
+<span id="networkBadge" class="badge text-bg-success">Online</span>
+</div>
 
 </div>
 
@@ -634,6 +635,37 @@ localStorage.getItem("nota")
 let currentTransaction=null;
 
 let transactionProcessing=false;
+
+/* =====================================================
+   OFFLINE QUEUE & NETWORK STATUS
+   ===================================================== */
+
+let pendingTransactions = 
+JSON.parse(localStorage.getItem("pendingTransactions")) || [];
+
+window.addEventListener("online", updateNetworkStatus);
+window.addEventListener("offline", updateNetworkStatus);
+
+function updateNetworkStatus() {
+    const netBadge = document.getElementById("networkBadge");
+    const syncBadge = document.getElementById("syncBadge");
+
+    if (navigator.onLine) {
+        netBadge.className = "badge text-bg-success";
+        netBadge.innerText = "Online";
+        processPendingTransactions();
+    } else {
+        netBadge.className = "badge text-bg-danger";
+        netBadge.innerText = "Offline";
+    }
+
+    if (pendingTransactions.length > 0) {
+        syncBadge.style.display = "inline-block";
+        syncBadge.innerText = pendingTransactions.length + " Pending";
+    } else {
+        syncBadge.style.display = "none";
+    }
+}
 
 
 /* =====================================================
@@ -1665,55 +1697,35 @@ async function completeTransaction(){
     .add("active");
 
 
-    loadingText.innerText =
-    "Mengirim transaksi...";
-
-
-    loadingSub.innerText =
-    "Menyimpan data ke Google Sheets";
-
-
     /* =========================
-       GOOGLE SHEETS
+       OFFLINE CACHE & GOOGLE SHEETS
        ========================= */
 
-    try{
+    // 1. Simpan ke antrean lokal dulu
+    pendingTransactions.push(transaction);
+    localStorage.setItem("pendingTransactions", JSON.stringify(pendingTransactions));
+    updateNetworkStatus();
 
-        await saveToGoogleSheets(
-            transaction
+    // 2. Coba kirim antrean ke Google Sheets
+    loadingText.innerText = "Mengirim transaksi...";
+    loadingSub.innerText = "Menyimpan data ke Google Sheets";
+
+    let isSent = await processPendingTransactions();
+
+    // Jika offline/gagal kirim, tampilkan konfirmasi transaksi offline
+    if (!isSent && !navigator.onLine) {
+        let lanjut = confirm(
+            "Tidak ada koneksi internet.\n\n" +
+            "Data transaksi SUDAH TERSIMPAN DI LOKAL dan akan otomatis terkirim saat online.\n\n" +
+            "Apakah ingin tetap mencetak nota?"
         );
 
-    }catch(error){
-
-        console.error(error);
-
-
-        let lanjut =
-        confirm(
-
-            "Transaksi gagal dikirim ke Google Sheets.\n\n"+
-            "Apakah tetap ingin mencetak nota?"
-
-        );
-
-
-        if(
-            !lanjut
-        ){
-
-            loadingBox
-            .classList
-            .remove("active");
-
-
-            transactionProcessing=false;
-
-            button.disabled=false;
-
+        if (!lanjut) {
+            loadingBox.classList.remove("active");
+            transactionProcessing = false;
+            button.disabled = false;
             return;
-
         }
-
     }
 
 
@@ -1823,6 +1835,38 @@ async function saveToGoogleSheets(data){
 
     );
 
+}
+
+
+/* =====================================================
+   OFFLINE SYNC PROCESSOR
+   ===================================================== */
+
+async function processPendingTransactions(){
+    if(!navigator.onLine || pendingTransactions.length === 0){
+        return false;
+    }
+
+    let remainingQueue = [...pendingTransactions];
+    let success = true;
+
+    for (let txn of pendingTransactions) {
+        try {
+            await saveToGoogleSheets(txn);
+            // Hapus data yang berhasil terkirim dari antrean
+            remainingQueue = remainingQueue.filter(item => item.nota !== txn.nota);
+            localStorage.setItem("pendingTransactions", JSON.stringify(remainingQueue));
+            updateNetworkStatus();
+        } catch (error) {
+            console.error("Gagal mengirim nota " + txn.nota + ":", error);
+            success = false;
+            break; // Hentikan sinkronisasi jika jaringan terputus di tengah jalan
+        }
+    }
+
+    pendingTransactions = remainingQueue;
+    updateNetworkStatus();
+    return success;
 }
 
 
@@ -1984,7 +2028,7 @@ function generateReceipt(
 
 
 /* =====================================================
-   PRINT CLEANter
+   PRINT CLEANTER
    ===================================================== */
 
 async function printReceipt(){
@@ -2344,6 +2388,8 @@ async function printReceipt(){
 renderMenu();
 
 renderCashier();
+
+updateNetworkStatus();
 
 </script>
 
