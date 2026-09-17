@@ -82,9 +82,14 @@ body{
     display:flex;
     align-items:center;
     justify-content:center;
-    color:#adb5bd;
-    font-size:13px;
-    font-weight:bold;
+    overflow:hidden;
+}
+
+.productImage img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
 }
 
 .productInfo{
@@ -1045,7 +1050,10 @@ function renderCashier(){
 
                 <div class="productImage">
 
-                    FOTO PRODUK
+                    <img
+                        src="images/${i+1}.jpg"
+                        alt="${escapeHtml(m.nama)}"
+                    >
 
                 </div>
 
