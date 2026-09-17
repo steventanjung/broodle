@@ -2,34 +2,63 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Laporan Penjualan Kukikoe</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
-<body class="bg-light p-4">
+<body class="bg-light p-3 p-md-4">
 
-<div class="container bg-white p-4 rounded shadow-sm" style="max-width: 850px;">
+<div class="container bg-white p-3 p-md-4 rounded shadow-sm" style="max-width: 900px;">
+    
+    <!-- HEADER -->
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="m-0 fw-bold">Laporan Penjualan Kukikoe</h4>
-        <button class="btn btn-primary btn-sm" onclick="muatData()">Muat Ulang Data</button>
+        <h4 class="m-0 fw-bold"><i class="bi bi-file-earmark-bar-graph me-2"></i>Laporan Penjualan</h4>
+        <button class="btn btn-primary btn-sm" onclick="muatData()">
+            <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+        </button>
     </div>
 
-    <!-- KARTU RINGKASAN -->
-    <div class="row g-2 mb-4 text-center">
+    <!-- PANEL FILTER TANGGAL -->
+    <div class="card bg-light border-0 p-3 mb-3">
+        <div class="row g-2 align-items-center">
+            <div class="col-6 col-md-3">
+                <label class="form-label small fw-bold mb-1">Dari Tanggal</label>
+                <input type="date" id="startDate" class="form-control form-control-sm" onchange="terapkanFilter()">
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label small fw-bold mb-1">Sampai Tanggal</label>
+                <input type="date" id="endDate" class="form-control form-control-sm" onchange="terapkanFilter()">
+            </div>
+            <div class="col-12 col-md-6 d-flex gap-1 align-self-end mt-2 mt-md-0">
+                <button class="btn btn-sm btn-outline-secondary flex-fill" onclick="setQuickDate('today')">Hari Ini</button>
+                <button class="btn btn-sm btn-outline-secondary flex-fill" onclick="setQuickDate('yesterday')">Kemarin</button>
+                <button class="btn btn-sm btn-outline-secondary flex-fill" onclick="setQuickDate('thisMonth')">Bulan Ini</button>
+                <button class="btn btn-sm btn-dark" onclick="resetFilter()"><i class="bi bi-x-circle"></i> Reset</button>
+            </div>
+        </div>
+        <div class="mt-2">
+            <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Cari No. Nota atau Rincian Produk..." onkeyup="terapkanFilter()">
+        </div>
+    </div>
+
+    <!-- KARTU RINGKASAN OMSOSET -->
+    <div class="row g-2 mb-3 text-center">
         <div class="col-4">
-            <div class="p-3 bg-primary text-white rounded">
-                <small>Total Omset</small>
+            <div class="p-2 p-md-3 bg-primary text-white rounded">
+                <small class="d-block text-white-50">Total Omset</small>
                 <h5 class="m-0 fw-bold" id="totalOmset">Rp0</h5>
             </div>
         </div>
         <div class="col-4">
-            <div class="p-3 bg-success text-white rounded">
-                <small>Total Cash</small>
+            <div class="p-2 p-md-3 bg-success text-white rounded">
+                <small class="d-block text-white-50">Total Cash</small>
                 <h5 class="m-0 fw-bold" id="totalCash">Rp0</h5>
             </div>
         </div>
         <div class="col-4">
-            <div class="p-3 bg-info text-white rounded">
-                <small>Total QRIS</small>
+            <div class="p-2 p-md-3 bg-info text-white rounded">
+                <small class="d-block text-white-50">Total QRIS</small>
                 <h5 class="m-0 fw-bold" id="totalQris">Rp0</h5>
             </div>
         </div>
@@ -37,78 +66,151 @@
 
     <!-- TABEL DATA -->
     <div class="table-responsive">
-        <table class="table table-bordered align-middle">
+        <table class="table table-hover table-bordered align-middle">
             <thead class="table-light">
                 <tr>
                     <th>Nota</th>
-                    <th>Tanggal / Jam</th>
+                    <th>Waktu</th>
                     <th>Metode</th>
                     <th>Rincian</th>
                     <th class="text-end">Total</th>
                 </tr>
             </thead>
             <tbody id="tabelData">
-                <tr><td colspan="5" class="text-center text-muted">Sedang mengambil data dari Google Sheets...</td></tr>
+                <tr><td colspan="5" class="text-center text-muted">Sedang mengambil data...</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
 <script>
-// LINK APPS SCRIPT ANDA
+// V MASUKKAN URL APPS SCRIPT ANDA DI SINI V
 const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbzTmbc4ohQyj51JFaiDFyJUdDNyQWK5eNHeC18amt7BARyM8FyenuyXGj6t03eRH6Na/exec";
+
+let semuaData = [];
 
 function rupiah(n) {
     return "Rp" + Number(n).toLocaleString("id-ID");
 }
 
+// Konversi tanggal ke format YYYY-MM-DD
+function toYMD(dateObj) {
+    let d = new Date(dateObj);
+    let month = '' + (d.getMonth() + 1);
+    let day = '' + d.getDate();
+    let year = d.getFullYear();
+    if (month.length < 2) month = '0' + month;
+    if (day.length < 2) day = '0' + day;
+    return [year, month, day].join('-');
+}
+
+// Format string tanggal dari Google Sheets ke standar Date JavaScript
+function parseTanggal(str) {
+    if (!str) return null;
+    let parts = String(str).trim().split('/');
+    if (parts.length === 3) {
+        // Asumsi format DD/MM/YYYY
+        return new Date(parts[2], parts[1] - 1, parts[0]);
+    }
+    return new Date(str);
+}
+
 async function muatData() {
-    document.getElementById("tabelData").innerHTML = '<tr><td colspan="5" class="text-center text-muted">Sedang mengambil data dari Google Sheets...</td></tr>';
+    document.getElementById("tabelData").innerHTML = '<tr><td colspan="5" class="text-center text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Memuat data...</td></tr>';
     
     try {
         let response = await fetch(URL_SCRIPT);
-        let resData = await response.json();
-
-        // Mengakomodasi format data baik berupa Array langsung maupun Object { status: "success", data: [...] }
-        let data = Array.isArray(resData) ? resData : (resData.data || []);
-
-        let totalOmset = 0, totalCash = 0, totalQris = 0;
-        let html = "";
-
-        data.forEach(item => {
-            let total = Number(item.total) || 0;
-            totalOmset += total;
-
-            let metode = (item.pembayaran || "").toLowerCase();
-            if (metode === "cash") {
-                totalCash += total;
-            } else {
-                totalQris += total;
-            }
-
-            html += `
-                <tr>
-                    <td><b>#${item.nota || '-'}</b></td>
-                    <td>${item.tanggal || '-'} <br><small class="text-muted">${item.jam || ''}</small></td>
-                    <td><span class="badge ${metode === 'cash' ? 'bg-success' : 'bg-info'}">${item.pembayaran || 'QRIS'}</span></td>
-                    <td>${item.rincian || item.items || '-'}</td>
-                    <td class="text-end fw-bold">${rupiah(total)}</td>
-                </tr>
-            `;
-        });
-
-        document.getElementById("totalOmset").innerText = rupiah(totalOmset);
-        document.getElementById("totalCash").innerText = rupiah(totalCash);
-        document.getElementById("totalQris").innerText = rupiah(totalQris);
-        document.getElementById("tabelData").innerHTML = html || '<tr><td colspan="5" class="text-center">Data kosong</td></tr>';
-
+        let data = await response.json();
+        semuaData = Array.isArray(data) ? data : (data.data || []);
+        
+        // Default tampilkan data Hari Ini saat pertama dibuka
+        setQuickDate('today');
     } catch (err) {
         console.error(err);
-        document.getElementById("tabelData").innerHTML = '<tr><td colspan="5" class="text-center text-danger">Gagal terhubung ke Google Sheets. Pastikan spreadsheet terisi dan izin script diset ke "Anyone".</td></tr>';
+        document.getElementById("tabelData").innerHTML = '<tr><td colspan="5" class="text-center text-danger">Gagal mengambil data dari Google Sheets.</td></tr>';
     }
 }
 
-// Jalankan otomatis
+function terapkanFilter() {
+    let startVal = document.getElementById("startDate").value;
+    let endVal = document.getElementById("endDate").value;
+    let searchVal = document.getElementById("searchInput").value.toLowerCase();
+
+    let startDate = startVal ? new Date(startVal + "T00:00:00") : null;
+    let endDate = endVal ? new Date(endVal + "T23:59:59") : null;
+
+    let totalOmset = 0, totalCash = 0, totalQris = 0;
+    let html = "";
+
+    let dataFiltered = semuaData.filter(item => {
+        let tgl = parseTanggal(item.tanggal);
+        if (startDate && tgl && tgl < startDate) return false;
+        if (endDate && tgl && tgl > endDate) return false;
+
+        if (searchVal) {
+            let nota = String(item.nota || '').toLowerCase();
+            let rincian = String(item.rincian || '').toLowerCase();
+            if (!nota.includes(searchVal) && !rincian.includes(searchVal)) {
+                return false;
+            }
+        }
+        return true;
+    });
+
+    dataFiltered.forEach(item => {
+        let total = Number(item.total) || 0;
+        totalOmset += total;
+
+        let metode = (item.pembayaran || "").toLowerCase();
+        if (metode === "cash") totalCash += total;
+        else totalQris += total;
+
+        html += `
+            <tr>
+                <td><b>#${item.nota || '-'}</b></td>
+                <td>${item.tanggal || '-'} <br><small class="text-muted">${item.jam || ''}</small></td>
+                <td><span class="badge ${metode === 'cash' ? 'bg-success' : 'bg-info'}">${item.pembayaran || 'QRIS'}</span></td>
+                <td>${item.rincian || '-'}</td>
+                <td class="text-end fw-bold">${rupiah(total)}</td>
+            </tr>
+        `;
+    });
+
+    document.getElementById("totalOmset").innerText = rupiah(totalOmset);
+    document.getElementById("totalCash").innerText = rupiah(totalCash);
+    document.getElementById("totalQris").innerText = rupiah(totalQris);
+    document.getElementById("tabelData").innerHTML = html || '<tr><td colspan="5" class="text-center text-muted">Tidak ada data transaksi pada periode ini.</td></tr>';
+}
+
+function setQuickDate(type) {
+    let now = new Date();
+    if (type === 'today') {
+        let todayStr = toYMD(now);
+        document.getElementById("startDate").value = todayStr;
+        document.getElementById("endDate").value = todayStr;
+    } else if (type === 'yesterday') {
+        let yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        let yestStr = toYMD(yesterday);
+        document.getElementById("startDate").value = yestStr;
+        document.getElementById("endDate").value = yestStr;
+    } else if (type === 'thisMonth') {
+        let firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        let lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        document.getElementById("startDate").value = toYMD(firstDay);
+        document.getElementById("endDate").value = toYMD(lastDay);
+    }
+    terapkanFilter();
+}
+
+function resetFilter() {
+    document.getElementById("startDate").value = "";
+    document.getElementById("endDate").value = "";
+    document.getElementById("searchInput").value = "";
+    terapkanFilter();
+}
+
+// Jalankan saat pertama dibuka
 muatData();
 </script>
 
