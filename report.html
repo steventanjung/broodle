@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Penjualan - Kukikoe</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --bg-color: #f5f6f8;
+        }
+        body {
+            background-color: var(--bg-color);
+            font-family: Arial, sans-serif;
+            padding: 16px;
+            color: #212529;
+        }
+        .container-custom {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .card-custom {
+            background: #fff;
+            border: 0;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.06);
+        }
+        .stat-card {
+            border-radius: 14px;
+            padding: 16px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .stat-card.total { background: linear-gradient(135deg, #0d6efd, #0a58ca); }
+        .stat-card.cash { background: linear-gradient(135deg, #198754, #146c43); }
+        .stat-card.qris { background: linear-gradient(135deg, #0dcaf0, #0aa2c0); color: #000; }
+        .stat-card.tx { background: linear-gradient(135deg, #6c757d, #495057); }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+        .stat-label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-icon {
+            font-size: 2.2rem;
+            opacity: 0.75;
+        }
+
+        .table-responsive {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .table {
+            margin-bottom: 0;
+        }
+        .table thead {
+            background-color: #f8f9fa;
+        }
+        .badge-cash {
+            background-color: #d1e7dd;
+            color: #0f5132;
+        }
+        .badge-qris {
+            background-color: #cff4fc;
+            color: #055160;
+        }
+        
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background: white;
+                padding: 0;
+            }
+            .card-custom {
+                box-shadow: none;
+                padding: 0;
+                margin-bottom: 20px;
+            }
+            .stat-card {
+                border: 1px solid #ccc;
+                color: #000 !important;
+                background: none !important;
+            }
+            .stat-value {
+                color: #000 !important;
+            }
+            .stat-card.qris {
+                color: #000 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-custom">
+    
+    <!-- HEADER & ACTION -->
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+        <div>
+            <h3 class="fw-bold mb-0">Laporan Penjualan</h3>
+            <span class="text-muted small">Kukikoe - Mooncake & Dessert</span>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i> Cetak Laporan
+        </button>
+    </div>
+
+    <!-- FILTER PERIODE TANGGAL -->
+    <div class="card-custom no-print">
+        <h6 class="fw-bold mb-3"><i class="bi bi-funnel me-1"></i> Filter Tanggal Transaksi</h6>
+        <div class="row g-2 align-items-end">
+            <div class="col-6 col-md-4">
+                <label class="form-label small text-muted mb-1">Dari Tanggal</label>
+                <input type="date" id="startDate" class="form-control" onchange="filterData()">
+            </div>
+            <div class="col-6 col-md-4">
+                <label class="form-label small text-muted mb-1">Sampai Tanggal</label>
+                <input type="date" id="endDate" class="form-control" onchange="filterData()">
+            </div>
+            <div class="col-12 col-md-4 d-flex gap-2 mt-2 mt-md-0">
+                <button class="btn btn-primary w-100" onclick="filterData()">
+                    <i class="bi bi-search me-1"></i> Tampilkan
+                </button>
+                <button class="btn btn-light border" onclick="resetFilter()" title="Reset Hari Ini">
+                    Hari Ini
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RINGKASAN STATISTIK -->
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-sm-6 col-md-3">
+            <div class="stat-card total">
+                <div>
+                    <div class="stat-label">Total Omset</div>
+                    <div class="stat-value" id="totalOmset">Rp0</div>
+                </div>
+                <div class="stat-icon"><i class="bi bi-cash-stack"></i></div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-md-3">
+            <div class="stat-card cash">
+                <div>
+                    <div class="stat-label">Total Cash</div>
+                    <div class="stat-value" id="totalCash">Rp0</div>
+                </div>
+                <div class="stat-icon"><i class="bi bi-wallet2"></i></div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-md-3">
+            <div class="stat-card qris">
+                <div>
+                    <div class="stat-label">Total QRIS</div>
+                    <div class="stat-value" id="totalQris">Rp0</div>
+                </div>
+                <div class="stat-icon"><i class="bi bi-qr-code-scan"></i></div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-md-3">
+            <div class="stat-card tx">
+                <div>
+                    <div class="stat-label">Total Transaksi</div>
+                    <div class="stat-value" id="totalTx">0</div>
+                </div>
+                <div class="stat-icon"><i class="bi bi-receipt"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RINCIAN TRANSAKSI -->
+    <div class="card-custom">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0">Rincian Transaksi</h5>
+            <span class="badge bg-light text-dark border" id="periodeInfo">Periode: Semua Tanggal</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>No. Nota</th>
+                        <th>Waktu</th>
+                        <th>Metode</th>
+                        <th>Rincian Produk</th>
+                        <th class="text-end">Total</th>
+                    </tr>
+                </thead>
+                <tbody id="transactionTable">
+                    <!-- Data transaksi disuntik via JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <div id="emptyMessage" class="text-center py-4 text-muted" style="display:none;">
+            <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+            Tidak ada transaksi ditemukan pada rentang tanggal ini.
+        </div>
+    </div>
+
+</div>
+
+<script>
+/* =====================================================
+   HELPER FORMAT
+   ===================================================== */
+function rupiah(n) {
+    return "Rp" + Number(n).toLocaleString("id-ID");
+}
+
+function parseIndonesianDate(dateStr) {
+    if (!dateStr) return null;
+    let parts = dateStr.split('/');
+    if (parts.length === 3) {
+        let day = parseInt(parts[0], 10);
+        let month = parseInt(parts[1], 10) - 1;
+        let year = parseInt(parts[2], 10);
+        return new Date(year, month, day);
+    }
+    return new Date(dateStr);
+}
+
+function formatDateToInput(d) {
+    let month = '' + (d.getMonth() + 1);
+    let day = '' + d.getDate();
+    let year = d.getFullYear();
+
+    if (month.length < 2) month = '0' + month;
+    if (day.length < 2) day = '0' + day;
+
+    return [year, month, day].join('-');
+}
+
+/* =====================================================
+   LOAD DATA DARI LOCALSTORAGE
+   ===================================================== */
+function getAllTransactions() {
+    let pending = JSON.parse(localStorage.getItem("pendingTransactions")) || [];
+    let history = JSON.parse(localStorage.getItem("transactionHistory")) || [];
+    
+    let all = [...pending, ...history];
+
+    let unique = [];
+    let notaSet = new Set();
+    
+    all.forEach(item => {
+        if (!notaSet.has(item.nota)) {
+            notaSet.add(item.nota);
+            unique.push(item);
+        }
+    });
+
+    return unique;
+}
+
+/* =====================================================
+   FILTER & RENDER
+   ===================================================== */
+function filterData() {
+    let allData = getAllTransactions();
+    
+    let startVal = document.getElementById("startDate").value;
+    let endVal = document.getElementById("endDate").value;
+
+    let startDate = startVal ? new Date(startVal + "T00:00:00") : null;
+    let endDate = endVal ? new Date(endVal + "T23:59:59") : null;
+
+    let filtered = allData.filter(item => {
+        let itemDate = parseIndonesianDate(item.tanggal);
+        if (!itemDate) return true;
+
+        if (startDate && itemDate < startDate) return false;
+        if (endDate && itemDate > endDate) return false;
+
+        return true;
+    });
+
+    filtered.sort((a, b) => {
+        let dateA = parseIndonesianDate(a.tanggal) || new Date(0);
+        let dateB = parseIndonesianDate(b.tanggal) || new Date(0);
+        return dateB - dateA;
+    });
+
+    renderReport(filtered);
+    updatePeriodeBadge(startVal, endVal);
+}
+
+function updatePeriodeBadge(start, end) {
+    let badge = document.getElementById("periodeInfo");
+    if (!start && !end) {
+        badge.innerText = "Periode: Semua Tanggal";
+    } else if (start && end && start === end) {
+        badge.innerText = "Periode: " + start;
+    } else {
+        badge.innerText = "Periode: " + (start || "Awal") + " s/d " + (end || "Hari Ini");
+    }
+}
+
+function renderReport(data) {
+    let totalOmset = 0;
+    let totalCash = 0;
+    let totalQris = 0;
+    let totalTx = data.length;
+
+    let tableHtml = "";
+
+    data.forEach(tx => {
+        totalOmset += tx.total || 0;
+        
+        let isCash = (tx.pembayaran || "").toLowerCase() === "cash";
+        if (isCash) {
+            totalCash += tx.total || 0;
+        } else {
+            totalQris += tx.total || 0;
+        }
+
+        let itemsSummary = (tx.items || []).map(i => `${i.nama} (${i.qty}x)`).join(", ");
+        let badgeClass = isCash ? "badge-cash" : "badge-qris";
+
+        tableHtml += `
+            <tr>
+                <td><b>#${tx.nota}</b></td>
+                <td>
+                    <div class="fw-bold">${tx.tanggal}</div>
+                    <div class="small text-muted">${tx.jam || ''}</div>
+                </td>
+                <td>
+                    <span class="badge ${badgeClass}">${tx.pembayaran}</span>
+                </td>
+                <td><small class="text-secondary">${itemsSummary || '-'}</small></td>
+                <td class="text-end fw-bold">${rupiah(tx.total)}</td>
+            </tr>
+        `;
+    });
+
+    document.getElementById("totalOmset").innerText = rupiah(totalOmset);
+    document.getElementById("totalCash").innerText = rupiah(totalCash);
+    document.getElementById("totalQris").innerText = rupiah(totalQris);
+    document.getElementById("totalTx").innerText = totalTx;
+
+    let tbody = document.getElementById("transactionTable");
+    let emptyMsg = document.getElementById("emptyMessage");
+
+    if (totalTx === 0) {
+        tbody.innerHTML = "";
+        emptyMsg.style.display = "block";
+    } else {
+        tbody.innerHTML = tableHtml;
+        emptyMsg.style.display = "none";
+    }
+}
+
+function resetFilter() {
+    let today = formatDateToInput(new Date());
+    document.getElementById("startDate").value = today;
+    document.getElementById("endDate").value = today;
+    filterData();
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+    resetFilter();
+});
+</script>
+
+</body>
+</html>
