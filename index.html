@@ -410,10 +410,10 @@ Uang Diterima
 <input
 id="cashReceived"
 class="form-control form-control-lg"
-type="number"
+type="text"
+inputmode="numeric"
 placeholder="Masukkan nominal"
-oninput="calculateChange()">
-
+oninput="formatCashInput(this)">
 
 <div
 id="changeDisplay"
@@ -573,6 +573,22 @@ Terima Kasih
 
 
 <script>
+function formatCashInput(input){
+
+    // Ambil hanya angka
+    let value = input.value.replace(/\D/g, "");
+
+    if(value === ""){
+        input.value = "";
+        calculateChange();
+        return;
+    }
+
+    // Format ribuan Indonesia
+    input.value = Number(value).toLocaleString("id-ID");
+
+    calculateChange();
+}
 
 
 /* =====================================================
@@ -1260,11 +1276,11 @@ let total=
 getTotal();
 
 
-let received=
+let received =
 parseInt(
 document
 .getElementById("cashReceived")
-.value
+.value.replace(/\D/g, "")
 ) || 0;
 
 
@@ -1364,12 +1380,11 @@ let change=0;
 if(
 paymentMethod==="cash"
 ){
-
-cashReceived=
+cashReceived =
 parseInt(
 document
 .getElementById("cashReceived")
-.value
+.value.replace(/\D/g, "")
 ) || 0;
 
 
