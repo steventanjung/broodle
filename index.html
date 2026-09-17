@@ -246,7 +246,7 @@ Pembayaran melalui QRIS
 
 </div>
 
-<button onclick="completeTransaction()">
+<button id="completeButton" onclick="completeTransaction()">
 Selesaikan & Simpan
 </button>
 
@@ -329,6 +329,7 @@ let nota =
 parseInt(localStorage.getItem("nota")) || 1;
 
 let currentTransaction = null;
+let transactionProcessing = false;
 
 
 /* =====================================================
@@ -560,6 +561,9 @@ document.getElementById("changeDisplay").innerText=
 "Kembalian : Rp0";
 
 updateTotal();
+transactionProcessing = false;
+
+document.getElementById("completeButton").disabled = false;
 
 }
 
@@ -680,14 +684,23 @@ document.getElementById("changeDisplay").innerText=
 
 async function completeTransaction(){
 
-let total=getTotal();
+if(transactionProcessing){
+    return;
+}
 
+transactionProcessing = true;
+
+document.getElementById("completeButton").disabled = true;
+
+let total=getTotal();
 if(total<=0){
 
-alert("Belum ada barang dipilih");
+    transactionProcessing = false;
+    document.getElementById("completeButton").disabled = false;
 
-return;
+    alert("Belum ada barang dipilih");
 
+    return;
 }
 
 let paymentMethod =
@@ -705,13 +718,15 @@ document.getElementById("cashReceived").value
 
 if(cashReceived<total){
 
-alert(
-"Uang diterima kurang.\n\n"+
-"Total: "+rupiah(total)
-);
+    transactionProcessing = false;
+    document.getElementById("completeButton").disabled = false;
 
-return;
+    alert(
+        "Uang diterima kurang.\n\n"+
+        "Total: "+rupiah(total)
+    );
 
+    return;
 }
 
 change=cashReceived-total;
@@ -1233,6 +1248,9 @@ let result=await response.json();
 
 if(result.status==="printed"){
 
+document.getElementById("receipt").style.display="none";
+// Reset kasir
+renderCashier();
 alert("Nota berhasil dicetak");
 
 }else{
