@@ -1377,36 +1377,27 @@ return String(text)
 // Inisialisasi Aplikasi
 // =======================
 
-if(menus.length===0){
+const MENU_VERSION = "2";
 
-    menus.push(
-        {
-            nama:"Cheesecake A",
-            harga:40000
-        },
-        {
-            nama:"Cheesecake B",
-            harga:55000
-        },
-        {
-            nama:"Dubai Chewy Cookie",
-            harga:50000
-        },
-        {
-            nama:"Strawberry Dubai Choco",
-            harga:95000
-        },
-        {
-            nama:"London Choco Cake",
-            harga:55000
-        },
-        {
-            nama:"Mooncake Pudding",
-            harga:40000
-        }
-    );
+let menus =
+JSON.parse(localStorage.getItem("menus")) || [];
 
-    save();
+let savedMenuVersion =
+localStorage.getItem("menuVersion");
+
+if(savedMenuVersion !== MENU_VERSION){
+
+menus=[
+{nama:"Cheesecake A",harga:40000},
+{nama:"Cheesecake B",harga:55000},
+{nama:"Dubai Chewy Cookie",harga:50000},
+{nama:"Strawberry Dubai Choco",harga:95000},
+{nama:"London Choco Cake",harga:55000},
+{nama:"Mooncake Pudding",harga:40000}
+];
+
+localStorage.setItem("menus",JSON.stringify(menus));
+localStorage.setItem("menuVersion",MENU_VERSION);
 
 }
 
