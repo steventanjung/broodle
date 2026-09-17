@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laporan Penjualan - Kukikoe</title>
+    <title>Laporan Penjualan - Kukikoe (Google Sheets)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
@@ -18,7 +18,7 @@
             color: #212529;
         }
         .container-custom {
-            max-width: 900px;
+            max-width: 950px;
             margin: 0 auto;
         }
         .card-custom {
@@ -77,30 +77,23 @@
             color: #055160;
         }
         
+        .sync-spinner {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 0.2em solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spinner-border .75s linear infinite;
+        }
+
         @media print {
-            .no-print {
-                display: none !important;
-            }
-            body {
-                background: white;
-                padding: 0;
-            }
-            .card-custom {
-                box-shadow: none;
-                padding: 0;
-                margin-bottom: 20px;
-            }
-            .stat-card {
-                border: 1px solid #ccc;
-                color: #000 !important;
-                background: none !important;
-            }
-            .stat-value {
-                color: #000 !important;
-            }
-            .stat-card.qris {
-                color: #000 !important;
-            }
+            .no-print { display: none !important; }
+            body { background: white; padding: 0; }
+            .card-custom { box-shadow: none; padding: 0; margin-bottom: 20px; }
+            .stat-card { border: 1px solid #ccc; color: #000 !important; background: none !important; }
+            .stat-value { color: #000 !important; }
+            .stat-card.qris { color: #000 !important; }
         }
     </style>
 </head>
@@ -108,15 +101,20 @@
 
 <div class="container-custom">
     
-    <!-- HEADER & ACTION -->
+    <!-- HEADER -->
     <div class="d-flex justify-content-between align-items-center mb-3 no-print">
         <div>
             <h3 class="fw-bold mb-0">Laporan Penjualan</h3>
-            <span class="text-muted small">Kukikoe - Mooncake & Dessert</span>
+            <span class="text-muted small">Kukikoe (Sumber: Google Sheets)</span>
         </div>
-        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
-            <i class="bi bi-printer me-1"></i> Cetak Laporan
-        </button>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary btn-sm" onclick="fetchDataFromGoogleSheets()">
+                <i class="bi bi-arrow-clockwise me-1" id="refreshIcon"></i> Muat Ulang Data
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i> Cetak Laporan
+            </button>
+        </div>
     </div>
 
     <!-- FILTER PERIODE TANGGAL -->
@@ -135,14 +133,17 @@
                 <button class="btn btn-primary w-100" onclick="filterData()">
                     <i class="bi bi-search me-1"></i> Tampilkan
                 </button>
-                <button class="btn btn-light border" onclick="resetFilter()" title="Reset Hari Ini">
-                    Hari Ini
-                </button>
+                <button class="btn btn-light border" onclick="resetFilter()">Hari Ini</button>
             </div>
         </div>
     </div>
 
-    <!-- RINGKASAN STATISTIK -->
+    <!-- STATUS LOADING / ERROR -->
+    <div id="statusBox" class="alert alert-info no-print" style="display:none;">
+        <span id="statusText">Mengambil data transaksi dari Google Sheets...</span>
+    </div>
+
+    <!-- STATISTIK RINGKASAN -->
     <div class="row g-3 mb-3">
         <div class="col-12 col-sm-6 col-md-3">
             <div class="stat-card total">
@@ -200,9 +201,7 @@
                         <th class="text-end">Total</th>
                     </tr>
                 </thead>
-                <tbody id="transactionTable">
-                    <!-- Data transaksi disuntik via JS -->
-                </tbody>
+                <tbody id="transactionTable"></tbody>
             </table>
         </div>
 
@@ -215,21 +214,20 @@
 </div>
 
 <script>
-/* =====================================================
-   HELPER FORMAT
-   ===================================================== */
+// URL Web App Google Apps Script Anda
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwyKe1AdCJG-rRFJqQlM9u5odQKUSPUirskaqPriC63vVm7IEIgaEXkeKnm1nUdap47/exec";
+
+let rawTransactions = [];
+
 function rupiah(n) {
     return "Rp" + Number(n).toLocaleString("id-ID");
 }
 
 function parseIndonesianDate(dateStr) {
     if (!dateStr) return null;
-    let parts = dateStr.split('/');
+    let parts = String(dateStr).split('/');
     if (parts.length === 3) {
-        let day = parseInt(parts[0], 10);
-        let month = parseInt(parts[1], 10) - 1;
-        let year = parseInt(parts[2], 10);
-        return new Date(year, month, day);
+        return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
     }
     return new Date(dateStr);
 }
@@ -238,62 +236,72 @@ function formatDateToInput(d) {
     let month = '' + (d.getMonth() + 1);
     let day = '' + d.getDate();
     let year = d.getFullYear();
-
     if (month.length < 2) month = '0' + month;
     if (day.length < 2) day = '0' + day;
-
     return [year, month, day].join('-');
 }
 
-/* =====================================================
-   LOAD DATA DARI LOCALSTORAGE
-   ===================================================== */
-function getAllTransactions() {
-    let pending = JSON.parse(localStorage.getItem("pendingTransactions")) || [];
-    let history = JSON.parse(localStorage.getItem("transactionHistory")) || [];
-    
-    let all = [...pending, ...history];
+async function fetchDataFromGoogleSheets() {
+    const statusBox = document.getElementById("statusBox");
+    const statusText = document.getElementById("statusText");
+    const refreshIcon = document.getElementById("refreshIcon");
 
-    let unique = [];
-    let notaSet = new Set();
-    
-    all.forEach(item => {
-        if (!notaSet.has(item.nota)) {
-            notaSet.add(item.nota);
-            unique.push(item);
+    statusBox.style.display = "block";
+    statusBox.className = "alert alert-info no-print";
+    statusText.innerText = "Mengambil data transaksi terbaru dari Google Sheets...";
+    refreshIcon.className = "sync-spinner me-1";
+
+    try {
+        let response = await fetch(GOOGLE_SCRIPT_URL + "?action=getReport");
+        if (!response.ok) throw new Error("Gagal mengambil data dari Google Sheets.");
+
+        let result = await response.json();
+        
+        if (Array.isArray(result)) {
+            rawTransactions = result;
+            statusBox.style.display = "none";
+        } else if (result.status === "success" && Array.isArray(result.data)) {
+            rawTransactions = result.data;
+            statusBox.style.display = "none";
+        } else {
+            throw new Error("Format data tidak sesuai");
         }
-    });
 
-    return unique;
+        filterData();
+    } catch (error) {
+        console.error(error);
+        statusBox.className = "alert alert-warning no-print";
+        statusText.innerText = "Gagal memuat data live. Memeriksa data lokal...";
+        
+        let localData = JSON.parse(localStorage.getItem("pendingTransactions")) || [];
+        if (localData.length > 0) {
+            rawTransactions = localData;
+        } else {
+            statusBox.className = "alert alert-danger no-print";
+            statusText.innerText = "Tidak dapat terhubung ke Google Sheets & tidak ada data lokal.";
+        }
+        filterData();
+    } finally {
+        refreshIcon.className = "bi bi-arrow-clockwise me-1";
+    }
 }
 
-/* =====================================================
-   FILTER & RENDER
-   ===================================================== */
 function filterData() {
-    let allData = getAllTransactions();
-    
     let startVal = document.getElementById("startDate").value;
     let endVal = document.getElementById("endDate").value;
 
     let startDate = startVal ? new Date(startVal + "T00:00:00") : null;
     let endDate = endVal ? new Date(endVal + "T23:59:59") : null;
 
-    let filtered = allData.filter(item => {
+    let filtered = rawTransactions.filter(item => {
         let itemDate = parseIndonesianDate(item.tanggal);
         if (!itemDate) return true;
-
         if (startDate && itemDate < startDate) return false;
         if (endDate && itemDate > endDate) return false;
-
         return true;
     });
 
-    filtered.sort((a, b) => {
-        let dateA = parseIndonesianDate(a.tanggal) || new Date(0);
-        let dateB = parseIndonesianDate(b.tanggal) || new Date(0);
-        return dateB - dateA;
-    });
+    filtered.sort((a, b) => (parseIndonesianDate(b.tanggal) || 0) - (parseIndonesianDate(a.tanggal) || 0));
 
     renderReport(filtered);
     updatePeriodeBadge(startVal, endVal);
@@ -301,34 +309,27 @@ function filterData() {
 
 function updatePeriodeBadge(start, end) {
     let badge = document.getElementById("periodeInfo");
-    if (!start && !end) {
-        badge.innerText = "Periode: Semua Tanggal";
-    } else if (start && end && start === end) {
-        badge.innerText = "Periode: " + start;
-    } else {
-        badge.innerText = "Periode: " + (start || "Awal") + " s/d " + (end || "Hari Ini");
-    }
+    if (!start && !end) badge.innerText = "Periode: Semua Tanggal";
+    else if (start && end && start === end) badge.innerText = "Periode: " + start;
+    else badge.innerText = "Periode: " + (start || "Awal") + " s/d " + (end || "Hari Ini");
 }
 
 function renderReport(data) {
-    let totalOmset = 0;
-    let totalCash = 0;
-    let totalQris = 0;
-    let totalTx = data.length;
-
+    let totalOmset = 0, totalCash = 0, totalQris = 0, totalTx = data.length;
     let tableHtml = "";
 
     data.forEach(tx => {
-        totalOmset += tx.total || 0;
+        let totalVal = Number(tx.total) || 0;
+        totalOmset += totalVal;
         
         let isCash = (tx.pembayaran || "").toLowerCase() === "cash";
-        if (isCash) {
-            totalCash += tx.total || 0;
-        } else {
-            totalQris += tx.total || 0;
-        }
+        if (isCash) totalCash += totalVal;
+        else totalQris += totalVal;
 
-        let itemsSummary = (tx.items || []).map(i => `${i.nama} (${i.qty}x)`).join(", ");
+        let itemsSummary = Array.isArray(tx.items) 
+            ? tx.items.map(i => `${i.nama} (${i.qty}x)`).join(", ")
+            : (tx.items || tx.rincian || "-");
+
         let badgeClass = isCash ? "badge-cash" : "badge-qris";
 
         tableHtml += `
@@ -338,11 +339,9 @@ function renderReport(data) {
                     <div class="fw-bold">${tx.tanggal}</div>
                     <div class="small text-muted">${tx.jam || ''}</div>
                 </td>
-                <td>
-                    <span class="badge ${badgeClass}">${tx.pembayaran}</span>
-                </td>
-                <td><small class="text-secondary">${itemsSummary || '-'}</small></td>
-                <td class="text-end fw-bold">${rupiah(tx.total)}</td>
+                <td><span class="badge ${badgeClass}">${tx.pembayaran}</span></td>
+                <td><small class="text-secondary">${itemsSummary}</small></td>
+                <td class="text-end fw-bold">${rupiah(totalVal)}</td>
             </tr>
         `;
     });
@@ -352,16 +351,8 @@ function renderReport(data) {
     document.getElementById("totalQris").innerText = rupiah(totalQris);
     document.getElementById("totalTx").innerText = totalTx;
 
-    let tbody = document.getElementById("transactionTable");
-    let emptyMsg = document.getElementById("emptyMessage");
-
-    if (totalTx === 0) {
-        tbody.innerHTML = "";
-        emptyMsg.style.display = "block";
-    } else {
-        tbody.innerHTML = tableHtml;
-        emptyMsg.style.display = "none";
-    }
+    document.getElementById("transactionTable").innerHTML = tableHtml;
+    document.getElementById("emptyMessage").style.display = totalTx === 0 ? "block" : "none";
 }
 
 function resetFilter() {
@@ -372,9 +363,37 @@ function resetFilter() {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-    resetFilter();
+    let today = formatDateToInput(new Date());
+    document.getElementById("startDate").value = today;
+    document.getElementById("endDate").value = today;
+    fetchDataFromGoogleSheets();
 });
-</script>
 
+function doGet(e) {
+  var action = e.parameter.action;
+  
+  if (action === "getReport") {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Penjualan"); // Sesuaikan nama sheet
+    var data = sheet.getDataRange().getValues();
+    
+    var result = [];
+    // Asumsi baris 1 adalah Header (Nota, Tanggal, Jam, Pembayaran, Items, Total)
+    for (var i = 1; i < data.length; i++) {
+      result.push({
+        nota: data[i][0],
+        tanggal: data[i][1],
+        jam: data[i][2],
+        pembayaran: data[i][3],
+        rincian: data[i][4],
+        total: data[i][5]
+      });
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({ status: "success", data: result }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+</script>
 </body>
 </html>
