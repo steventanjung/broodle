@@ -76,6 +76,41 @@ body{
     transform:scale(.96);
 }
 
+.categoryTabs{
+    display:flex;
+    gap:7px;
+    overflow-x:auto;
+    padding-bottom:3px;
+    scrollbar-width:none;
+}
+.categoryTabs::-webkit-scrollbar{display:none;}
+
+.categoryBtn{
+    flex:0 0 auto;
+    border:1px solid #dee2e6;
+    background:#fff;
+    border-radius:20px;
+    padding:8px 13px;
+    font-size:13px;
+    font-weight:600;
+}
+.categoryBtn.active{
+    background:#0d6efd;
+    color:#fff;
+    border-color:#0d6efd;
+}
+
+.featuredBadge{
+    display:inline-block;
+    font-size:10px;
+    font-weight:bold;
+    background:#fff3cd;
+    color:#856404;
+    border-radius:8px;
+    padding:3px 6px;
+    margin-bottom:4px;
+}
+
 .productImage{
     height:135px;
     background:#e9ecef;
@@ -389,6 +424,15 @@ Daftar Produk
 
 <!-- PRODUCT GRID -->
 
+<div class="categoryTabs mb-3">
+    <button type="button" class="categoryBtn active" onclick="setCategory('Semua',this)">Semua</button>
+    <button type="button" class="categoryBtn" onclick="setCategory('Unggulan',this)">⭐ Unggulan</button>
+    <button type="button" class="categoryBtn" onclick="setCategory('Cake',this)">Cake</button>
+    <button type="button" class="categoryBtn" onclick="setCategory('Dessert',this)">Dessert</button>
+    <button type="button" class="categoryBtn" onclick="setCategory('Snack',this)">Snack</button>
+    <button type="button" class="categoryBtn" onclick="setCategory('Bagia',this)">Bagia</button>
+</div>
+
 <div id="cashierList"></div>
 
 
@@ -672,69 +716,24 @@ function updateNetworkStatus() {
    MENU VERSION
    ===================================================== */
 
-const MENU_VERSION="4";
+const MENU_VERSION="7";
 
 
 const DEFAULT_MENUS=[
 
-    {
-        nama:"Cheesecake A",
-        harga:40000
-    },
-
-    {
-        nama:"Cheesecake B",
-        harga:55000
-    },
-
-    {
-        nama:"Dubai Chewy Cookie",
-        harga:50000
-    },
-
-    {
-        nama:"Strawberry Dubai Choco",
-        harga:95000
-    },
-
-    {
-        nama:"London Choco Cake",
-        harga:55000
-    },
-
-    {
-        nama:"Mooncake Pudding",
-        harga:40000
-    },
-
-    {
-        nama:"Milk Cheese Bread",
-        harga:25000
-    },
-    {
-        nama:"Bakwan Goreng",
-        harga:40000
-    },
-    {
-        nama:"Scoopable Nutella",
-        harga:40000
-    },
-    {
-        nama:"Scoopable Kunafa",
-        harga:55000
-    },
-    {
-        nama:"Risol",
-        harga:5000
-    },
-    {
-        nama:"Bagia Ori / Mocha",
-        harga:35000
-    },
-    {
-        nama:"Bagia Kacang",
-        harga:45000
-    }
+    {nama:"Cheesecake A",harga:40000,kategori:"Cake",unggulan:true},
+    {nama:"Cheesecake B",harga:55000,kategori:"Cake",unggulan:false},
+    {nama:"Dubai Chewy Cookie",harga:50000,kategori:"Dessert",unggulan:true},
+    {nama:"Strawberry Dubai Choco",harga:95000,kategori:"Cake",unggulan:true},
+    {nama:"London Choco Cake",harga:55000,kategori:"Cake",unggulan:false},
+    {nama:"Mooncake Pudding",harga:40000,kategori:"Dessert",unggulan:true},
+    {nama:"Milk Cheese Bread",harga:25000,kategori:"Snack",unggulan:false},
+    {nama:"Bakwan Goreng",harga:40000,kategori:"Snack",unggulan:false},
+    {nama:"Scoopable Nutella",harga:40000,kategori:"Dessert",unggulan:false},
+    {nama:"Scoopable Kunafa",harga:55000,kategori:"Dessert",unggulan:false},
+    {nama:"Risol",harga:5000,kategori:"Snack",unggulan:false},
+    {nama:"Bagia Ori / Mocha",harga:35000,kategori:"Bagia",unggulan:false},
+    {nama:"Bagia Kacang",harga:45000,kategori:"Bagia",unggulan:false}
 
 ];
 
@@ -757,15 +756,14 @@ if(
 savedMenuVersion !== MENU_VERSION
 ){
 
-    menus =
-    DEFAULT_MENUS.map(
-        menu=>({
-
-            nama:menu.nama,
-            harga:menu.harga
-
-        })
-    );
+    menus = DEFAULT_MENUS.map(
+    menu => ({
+        nama: menu.nama,
+        harga: menu.harga,
+        kategori: menu.kategori,
+        unggulan: !!menu.unggulan
+    })
+);
 
 
     localStorage.setItem(
@@ -785,6 +783,16 @@ savedMenuVersion !== MENU_VERSION
 /* =====================================================
    FALLBACK MENU
    ===================================================== */
+
+if(Array.isArray(menus)){
+    menus=menus.map(m=>({
+        nama:m.nama,
+        harga:m.harga,
+        kategori:m.kategori || "Snack",
+        unggulan:!!m.unggulan
+    }));
+    save();
+}
 
 if(
 !Array.isArray(menus) ||
@@ -1074,25 +1082,88 @@ function renderMenu(){
    RENDER KASIR
    ===================================================== */
 
+let activeCategory="Semua";
+
+function setCategory(category, button){
+    activeCategory=category;
+
+    document.querySelectorAll(".categoryBtn").forEach(btn=>{
+        btn.classList.remove("active");
+    });
+
+    if(button){
+        button.classList.add("active");
+    }
+
+    renderCashier();
+}
+
+function getProductCategory(item){
+  // Respect explicit category first.
+  const explicit = normalizeCategory(item?.kategori ?? item?.category ?? '');
+  if (explicit) {
+    if (explicit === 'bagia' || explicit.includes('bagia')) return 'bagia';
+    if (explicit === 'snack' || explicit.includes('snack')) return 'snack';
+    if (explicit === 'cake' || explicit.includes('cake')) return 'cake';
+    if (explicit === 'dessert' || explicit.includes('dessert')) return 'dessert';
+  }
+
+  // Backward-compatible fallback for older menu records that may not have kategori.
+  const text = normalizeCategory([
+    item?.nama, item?.name, item?.id, item?.kode, item?.code, item?.jenis
+  ].filter(Boolean).join(' '));
+
+  if (text.includes('bagia')) return 'bagia';
+  if (text.includes('snack')) return 'snack';
+  if (text.includes('cake') || text.includes('cheesecake')) return 'cake';
+  if (text.includes('dessert') || text.includes('pudding') || text.includes('puding')) return 'dessert';
+
+  return explicit;
+}
+
+function normalizeCategory(value){
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
 function renderCashier(){
 
-    cart={};
-
+    if(!cart || typeof cart!=="object"){
+        cart={};
+    }
 
     let html=`
-
         <div class="productGrid">
-
     `;
 
+    menus.forEach((m,i)=>{
 
-    menus.forEach(
-        (m,i)=>{
-
+        if(typeof cart[i] !== "number"){
             cart[i]=0;
+        }
 
+        let category = getProductCategory(m);
+let featured = !!m.unggulan;
 
-            html+=`
+const categoryMap = {
+    cake: "Cake",
+    dessert: "Dessert",
+    snack: "Snack",
+    bagia: "Bagia"
+};
+
+category = categoryMap[category] || "Snack";
+
+        let visible =
+            activeCategory==="Semua" ||
+            (activeCategory==="Unggulan" && featured) ||
+            activeCategory===category;
+
+        if(!visible) return;
+
+        html+=`
 
             <div
                 class="productCard"
@@ -1104,26 +1175,22 @@ function renderCashier(){
                     <img
                         src="images/${i+1}.jpg"
                         alt="${escapeHtml(m.nama)}"
+                        onerror="this.style.display='none'"
                     >
 
                 </div>
 
-
                 <div class="productInfo">
 
+                    ${featured ? '<div class="featuredBadge">⭐ UNGGULAN</div>' : ''}
+
                     <div class="productName">
-
                         ${escapeHtml(m.nama)}
-
                     </div>
-
 
                     <div class="productPrice">
-
                         ${rupiah(m.harga)}
-
                     </div>
-
 
                     <div
                         class="productBottom"
@@ -1135,27 +1202,19 @@ function renderCashier(){
                             <button
                                 class="qtyBtn"
                                 onclick="minusQty(${i})">
-
                                 −
-
                             </button>
-
 
                             <span
                                 id="qty${i}"
                                 class="qtyNumber">
-
                                 0
-
                             </span>
-
 
                             <button
                                 class="qtyBtn"
                                 onclick="plusQty(${i})">
-
                                 +
-
                             </button>
 
                         </div>
@@ -1166,61 +1225,45 @@ function renderCashier(){
 
             </div>
 
-            `;
-
-        }
-    );
-
+        `;
+    });
 
     html+=`
-
         </div>
-
     `;
 
+    document
+        .getElementById("cashierList")
+        .innerHTML=html;
 
     document
-    .getElementById("cashierList")
-    .innerHTML=html;
-
-
-    document
-    .getElementById("cashReceived")
-    .value="";
-
+        .getElementById("cashReceived")
+        .value="";
 
     document
-    .getElementById("changeDisplay")
-    .innerText=
-    "Kembalian : Rp0";
-
+        .getElementById("changeDisplay")
+        .innerText=
+        "Kembalian : Rp0";
 
     updateTotal();
 
-
     transactionProcessing=false;
 
+    document
+        .getElementById("completeButton")
+        .disabled=false;
 
     document
-    .getElementById("completeButton")
-    .disabled=false;
-
-
-    document
-    .getElementById("loadingBox")
-    .classList
-    .remove("active");
-
+        .getElementById("loadingBox")
+        .classList
+        .remove("active");
 
     document
-    .getElementById("paymentMethod")
-    .value="cash";
-
+        .getElementById("paymentMethod")
+        .value="cash";
 
     paymentChanged();
-
 }
-
 
 /* =====================================================
    TAP CARD = +1
