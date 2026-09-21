@@ -750,13 +750,13 @@ function updateNetworkStatus() {
    MENU VERSION
    ===================================================== */
 
-const MENU_VERSION="9";
+const MENU_VERSION="10";
 
 
 const DEFAULT_MENUS=[
 
     {nama:"Cheesecake A",harga:40000,kategori:"Cheesecake",unggulan:true},
-    {nama:"Cheesecake B",harga:55000,kategori:"Cheesecake",unggulan:false},
+    {nama:"Cheesecake B",harga:55000,kategori:"Cheesecake",unggulan:true},
     {nama:"Dubai Chewy Cookie",harga:50000,kategori:"Dubai",unggulan:true},
     {nama:"Strawberry Dubai Choco",harga:95000,kategori:"Dubai",unggulan:true},
     {nama:"London Choco Cake",harga:55000,kategori:"Cheesecake",unggulan:false},
@@ -1138,8 +1138,8 @@ function getProductCategory(item){
   if (explicit) {
     if (explicit === 'bagia' || explicit.includes('bagia')) return 'bagia';
     if (explicit === 'snack' || explicit.includes('snack')) return 'snack';
-    if (explicit === 'cheesecake' || explicit.includes('cheesecake')) return 'cake';
-    if (explicit === 'dubai' || explicit.includes('dubai')) return 'dessert';
+    if (explicit === 'cheesecake' || explicit.includes('cheesecake')) return 'cheesecake';
+    if (explicit === 'dubai' || explicit.includes('dubai')) return 'dubai';
   }
 
   // Backward-compatible fallback for older menu records that may not have kategori.
