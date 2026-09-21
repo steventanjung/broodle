@@ -425,13 +425,13 @@ Daftar Produk
 <!-- PRODUCT GRID -->
 
 <div class="categoryTabs mb-3">
-    <button type="button" class="categoryBtn active" onclick="setCategory('Unggulan',this)">⭐ Unggulan</button>
-    <button type="button" class="categoryBtn" onclick="setCategory('Semua',this)">Semua</button>
+    <button type="button" class="categoryBtn active" onclick="setCategory('Unggulan',this)">⭐ Best Seller</button>
     <button type="button" class="categoryBtn" onclick="setCategory('Cheesecake',this)">Cheesecake</button>
-    <button type="button" class="categoryBtn" onclick="setCategory('Choco',this)">Choco</button>
     <button type="button" class="categoryBtn" onclick="setCategory('Dubai',this)">Dubai</button>
+    <button type="button" class="categoryBtn" onclick="setCategory('Choco',this)">Choco</button>
     <button type="button" class="categoryBtn" onclick="setCategory('Snack',this)">Snack</button>
     <button type="button" class="categoryBtn" onclick="setCategory('Bagia',this)">Bagia</button>
+    <button type="button" class="categoryBtn" onclick="setCategory('Semua',this)">Semua</button>
 </div>
 
 <div id="cashierList"></div>
@@ -751,7 +751,7 @@ function updateNetworkStatus() {
    MENU VERSION
    ===================================================== */
 
-const MENU_VERSION="10";
+const MENU_VERSION="11";
 
 
 const DEFAULT_MENUS=[
@@ -763,7 +763,7 @@ const DEFAULT_MENUS=[
     {nama:"London Choco Cake",harga:55000,kategori:"Choco",unggulan:false},
     {nama:"Mooncake Pudding",harga:40000,kategori:"Snack",unggulan:true},
     {nama:"Milk Cheese Bread",harga:25000,kategori:"Snack",unggulan:false},
-    {nama:"Bakwan Goreng",harga:40000,kategori:"Snack",unggulan:false},
+    {nama:"Bakwan Goreng",harga:40000,kategori:"Snack",unggulan:true},
     {nama:"Scoopable Nutella",harga:40000,kategori:"Choco",unggulan:true},
     {nama:"Scoopable Kunafa",harga:55000,kategori:"Dubai",unggulan:true},
     {nama:"Risol",harga:5000,kategori:"Snack",unggulan:false},
@@ -1220,7 +1220,7 @@ category = categoryMap[category] || "Snack";
 
                 <div class="productInfo">
 
-                    ${featured ? '<div class="featuredBadge">⭐ UNGGULAN</div>' : ''}
+                    ${featured ? '<div class="featuredBadge">⭐ BEST SELLER</div>' : ''}
 
                     <div class="productName">
                         ${escapeHtml(m.nama)}
