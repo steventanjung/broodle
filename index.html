@@ -684,30 +684,64 @@ let transactionProcessing=false;
    OFFLINE QUEUE & NETWORK STATUS
    ===================================================== */
 
-let pendingTransactions = 
-JSON.parse(localStorage.getItem("pendingTransactions")) || [];
+let pendingTransactions =
+    JSON.parse(localStorage.getItem("pendingTransactions")) || [];
 
-window.addEventListener("online", updateNetworkStatus);
-window.addEventListener("offline", updateNetworkStatus);
+let syncingTransactions = false;
+
+window.addEventListener("online", async function(){
+
+    updateNetworkStatus();
+
+    await processPendingTransactions();
+
+});
+window.addEventListener("offline", function(){
+
+    updateNetworkStatus();
+
+});
 
 function updateNetworkStatus() {
-    const netBadge = document.getElementById("networkBadge");
-    const syncBadge = document.getElementById("syncBadge");
+
+    const netBadge =
+        document.getElementById("networkBadge");
+
+    const syncBadge =
+        document.getElementById("syncBadge");
 
     if (navigator.onLine) {
-        netBadge.className = "badge text-bg-success";
-        netBadge.innerText = "Online";
-        processPendingTransactions();
+
+        netBadge.className =
+            "badge text-bg-success";
+
+        netBadge.innerText =
+            "Online";
+
     } else {
-        netBadge.className = "badge text-bg-danger";
-        netBadge.innerText = "Offline";
+
+        netBadge.className =
+            "badge text-bg-danger";
+
+        netBadge.innerText =
+            "Offline";
+
     }
 
     if (pendingTransactions.length > 0) {
-        syncBadge.style.display = "inline-block";
-        syncBadge.innerText = pendingTransactions.length + " Pending";
+
+        syncBadge.style.display =
+            "inline-block";
+
+        syncBadge.innerText =
+            pendingTransactions.length +
+            " Pending";
+
     } else {
-        syncBadge.style.display = "none";
+
+        syncBadge.style.display =
+            "none";
+
     }
 }
 
@@ -716,7 +750,7 @@ function updateNetworkStatus() {
    MENU VERSION
    ===================================================== */
 
-const MENU_VERSION="7";
+const MENU_VERSION="8";
 
 
 const DEFAULT_MENUS=[
@@ -1527,6 +1561,10 @@ function calculateChange(){
 /* =====================================================
    COMPLETE TRANSACTION
    ===================================================== */
+const transactionId =
+    Date.now().toString() +
+    "-" +
+    Math.random().toString(36).substring(2, 8);
 
 async function completeTransaction(){
 
@@ -1703,32 +1741,33 @@ async function completeTransaction(){
        TRANSACTION
        ========================= */
 
-    let transaction={
+   let transaction = {
 
-        tanggal:tanggal,
+    transactionId: transactionId,
 
-        jam:jam,
+    tanggal: tanggal,
 
-        nota:nomorNota,
+    jam: jam,
 
-        pembayaran:
-        paymentMethod==="cash"
-        ?"Cash"
-        :"QRIS",
+    nota: nomorNota,
 
-        cashReceived:
+    pembayaran:
+        paymentMethod === "cash"
+        ? "Cash"
+        : "QRIS",
+
+    cashReceived:
         cashReceived,
 
-        change:
+    change:
         change,
 
-        total:
+    total:
         total,
 
-        items:
+    items:
         items
-
-    };
+};
 
 
     currentTransaction =
@@ -1764,8 +1803,25 @@ async function completeTransaction(){
        ========================= */
 
     // 1. Simpan ke antrean lokal dulu
+const alreadyQueued =
+    pendingTransactions.some(
+        item =>
+            item.transactionId ===
+            transaction.transactionId
+    );
+
+if (!alreadyQueued) {
+
     pendingTransactions.push(transaction);
-    localStorage.setItem("pendingTransactions", JSON.stringify(pendingTransactions));
+
+    localStorage.setItem(
+        "pendingTransactions",
+        JSON.stringify(
+            pendingTransactions
+        )
+    );
+
+}
     updateNetworkStatus();
 
     // 2. Coba kirim antrean ke Google Sheets
@@ -1852,17 +1908,16 @@ async function completeTransaction(){
     .style.display=
     "none";
 
+// Reset cart untuk transaksi berikutnya
+cart = {};
 
-    renderCashier();
+renderCashier();
 
-
-    alert(
-
-        "Transaksi berhasil.\n"+
-        "No Nota: "+
-        nomorNota
-
-    );
+alert(
+    "Transaksi berhasil.\n"+
+    "No Nota: "+
+    nomorNota
+);
 
 }
 
@@ -1904,31 +1959,75 @@ async function saveToGoogleSheets(data){
    OFFLINE SYNC PROCESSOR
    ===================================================== */
 
-async function processPendingTransactions(){
-    if(!navigator.onLine || pendingTransactions.length === 0){
+async function processPendingTransactions() {
+
+    // Jangan proses kalau offline
+    if (!navigator.onLine) {
         return false;
     }
 
-    let remainingQueue = [...pendingTransactions];
-    let success = true;
-
-    for (let txn of pendingTransactions) {
-        try {
-            await saveToGoogleSheets(txn);
-            // Hapus data yang berhasil terkirim dari antrean
-            remainingQueue = remainingQueue.filter(item => item.nota !== txn.nota);
-            localStorage.setItem("pendingTransactions", JSON.stringify(remainingQueue));
-            updateNetworkStatus();
-        } catch (error) {
-            console.error("Gagal mengirim nota " + txn.nota + ":", error);
-            success = false;
-            break; // Hentikan sinkronisasi jika jaringan terputus di tengah jalan
-        }
+    // Cegah dua proses sync berjalan bersamaan
+    if (syncingTransactions) {
+        return false;
     }
 
-    pendingTransactions = remainingQueue;
-    updateNetworkStatus();
-    return success;
+    if (pendingTransactions.length === 0) {
+        return true;
+    }
+
+    syncingTransactions = true;
+
+    let allSuccess = true;
+
+    try {
+
+        while (
+            navigator.onLine &&
+            pendingTransactions.length > 0
+        ) {
+
+            const txn =
+                pendingTransactions[0];
+
+            try {
+
+                await saveToGoogleSheets(txn);
+
+                // Hapus HANYA transaksi paling depan
+                // setelah request selesai
+                pendingTransactions.shift();
+
+                localStorage.setItem(
+                    "pendingTransactions",
+                    JSON.stringify(
+                        pendingTransactions
+                    )
+                );
+
+                updateNetworkStatus();
+
+            } catch (error) {
+
+                console.error(
+                    "Gagal mengirim transaksi:",
+                    txn.nota,
+                    error
+                );
+
+                allSuccess = false;
+
+                break;
+            }
+        }
+
+    } finally {
+
+        syncingTransactions = false;
+
+        updateNetworkStatus();
+    }
+
+    return allSuccess;
 }
 
 
