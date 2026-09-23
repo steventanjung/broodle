@@ -11,14 +11,14 @@
     body {
         background: #f6f7f9;
         font-family: Arial, sans-serif;
+        color: #222;
     }
 
     .container {
         max-width: 900px;
     }
 
-    .header,
-    .report-card {
+    .header {
         background: #fff;
         border-radius: 18px;
         padding: 20px;
@@ -36,6 +36,14 @@
         font-size: 14px;
     }
 
+    .report-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 20px;
+        margin-top: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,.06);
+    }
+
     .summary-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -45,13 +53,12 @@
     .summary {
         border-radius: 15px;
         padding: 18px;
-        background: #f7f7f7;
     }
 
     .summary-title {
-        color: #777;
         font-size: 13px;
         margin-bottom: 5px;
+        color: #777;
     }
 
     .summary-value {
@@ -61,7 +68,7 @@
 
     .total-box {
         background: #111;
-        color: white;
+        color: #fff;
     }
 
     .total-box .summary-title {
@@ -76,13 +83,14 @@
         background: #eef4ff;
     }
 
-    .table {
-        margin-bottom: 0;
+    .transaction-count {
+        color: #777;
+        font-size: 14px;
     }
 
     .table th {
+        color: #777;
         font-size: 13px;
-        color: #666;
         font-weight: 600;
         white-space: nowrap;
     }
@@ -99,42 +107,31 @@
         background: #0d6efd;
     }
 
-    .transaction-count {
-        color: #777;
-        font-size: 14px;
-    }
-
     .empty {
         text-align: center;
-        padding: 30px 15px;
+        padding: 25px 10px;
     }
 
     .empty-icon {
         font-size: 42px;
-        line-height: 1;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
     }
 
     .empty-title {
-        font-size: 17px;
         font-weight: 700;
-        color: #333;
+        font-size: 17px;
     }
 
     .empty-text {
-        font-size: 13px;
         color: #888;
+        font-size: 13px;
         margin-top: 5px;
     }
 
     .loading {
         text-align: center;
-        padding: 25px 15px;
+        padding: 25px;
         color: #777;
-    }
-
-    .btn-report {
-        min-width: 120px;
     }
 
     .d-none {
@@ -142,6 +139,7 @@
     }
 
     @media (max-width: 600px) {
+
         .container {
             padding-left: 12px;
             padding-right: 12px;
@@ -179,93 +177,186 @@
 
     <!-- HEADER -->
     <div class="header">
-        <div class="brand">Kukikoe</div>
-        <div class="subtitle">Laporan Penjualan</div>
+
+        <div class="brand">
+            Kukikoe
+        </div>
+
+        <div class="subtitle">
+            Laporan Penjualan
+        </div>
 
         <div class="row g-2 mt-3">
+
             <div class="col-12 col-md-8">
-                <label class="form-label fw-semibold">Pilih Tanggal</label>
-                <input type="date" id="datePicker" class="form-control">
+
+                <label class="form-label fw-semibold">
+                    Pilih Tanggal
+                </label>
+
+                <input
+                    type="date"
+                    id="datePicker"
+                    class="form-control"
+                >
+
             </div>
 
             <div class="col-12 col-md-4 d-flex align-items-end">
-                <button class="btn btn-dark w-100 btn-report" onclick="loadReport()">
+
+                <button
+                    class="btn btn-dark w-100"
+                    onclick="loadReport()"
+                    id="reportButton"
+                >
                     Tampilkan
                 </button>
+
             </div>
+
         </div>
+
     </div>
 
 
     <!-- LOADING -->
-    <div id="loadingSection" class="report-card d-none">
+    <div
+        id="loadingSection"
+        class="report-card d-none"
+    >
+
         <div class="loading">
-            <div class="spinner-border mb-3"></div>
-            <div>Mengambil data...</div>
+
+            <div
+                class="spinner-border mb-3"
+                role="status"
+            ></div>
+
+            <div>
+                Mengambil data...
+            </div>
+
         </div>
+
     </div>
 
 
     <!-- SUMMARY -->
-    <div id="summarySection" class="report-card d-none">
+    <div
+        id="summarySection"
+        class="report-card d-none"
+    >
 
         <h5 class="fw-bold mb-3">
-            Laporan <span id="reportDate"></span>
+            Laporan
+            <span id="reportDate"></span>
         </h5>
+
 
         <div class="summary-grid">
 
             <div class="summary total-box">
-                <div class="summary-title">Total Pendapatan</div>
-                <div class="summary-value" id="totalSales">
+
+                <div class="summary-title">
+                    Total Pendapatan
+                </div>
+
+                <div
+                    class="summary-value"
+                    id="totalSales"
+                >
                     Rp0
                 </div>
+
             </div>
+
 
             <div class="summary cash-box">
-                <div class="summary-title">Cash</div>
-                <div class="summary-value" id="totalCash">
+
+                <div class="summary-title">
+                    Cash
+                </div>
+
+                <div
+                    class="summary-value"
+                    id="totalCash"
+                >
                     Rp0
                 </div>
+
             </div>
 
+
             <div class="summary qris-box">
-                <div class="summary-title">QRIS</div>
-                <div class="summary-value" id="totalQris">
+
+                <div class="summary-title">
+                    QRIS
+                </div>
+
+                <div
+                    class="summary-value"
+                    id="totalQris"
+                >
                     Rp0
                 </div>
+
             </div>
 
         </div>
 
+
         <div class="transaction-count mt-3">
-            <span id="transactionCount">0</span> transaksi
+
+            <span id="transactionCount">
+                0
+            </span>
+
+            transaksi
+
         </div>
 
     </div>
 
 
-    <!-- TRANSACTION LIST -->
-    <div id="transactionSection" class="report-card d-none">
+    <!-- TRANSACTIONS -->
+    <div
+        id="transactionSection"
+        class="report-card d-none"
+    >
 
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="fw-bold mb-0">
-                Daftar Transaksi
-            </h5>
-        </div>
+        <h5 class="fw-bold mb-3">
+            Daftar Transaksi
+        </h5>
+
 
         <div class="table-responsive">
 
             <table class="table table-hover align-middle">
 
                 <thead>
+
                     <tr>
-                        <th>Nota</th>
-                        <th>Jam</th>
-                        <th>Pembayaran</th>
-                        <th class="text-end">Total</th>
+
+                        <th>
+                            Nota
+                        </th>
+
+                        <th>
+                            Jam
+                        </th>
+
+                        <th>
+                            Pembayaran
+                        </th>
+
+                        <th class="text-end">
+                            Total
+                        </th>
+
                     </tr>
+
                 </thead>
+
 
                 <tbody id="transactionTable"></tbody>
 
@@ -277,11 +368,16 @@
 
 
     <!-- EMPTY -->
-    <div id="emptySection" class="report-card d-none">
+    <div
+        id="emptySection"
+        class="report-card d-none"
+    >
 
         <div class="empty">
 
-            <div class="empty-icon">📊</div>
+            <div class="empty-icon">
+                📊
+            </div>
 
             <div class="empty-title">
                 Tidak ada transaksi
@@ -301,7 +397,7 @@
 <script>
 
 /* =========================================================
-   GOOGLE DATA URL
+   DATA URL
 ========================================================= */
 
 const DATA_URL =
@@ -315,37 +411,48 @@ const DATA_URL =
 const PRODUCT_PRICES = {
 
     "Cheesecake A": 40000,
+
     "Cheesecake B": 55000,
 
     "Dubai Chewy Cookie": 50000,
+
     "Strawberry Dubai Choco": 95000,
 
     "London Choco Cake": 55000,
 
     "Mooncake Pudding": 40000,
+
     "Milk Cheese Bread": 25000,
+
     "Bakwan Goreng": 40000,
+
     "Risol": 5000,
 
     "Scoopable Nutella": 40000,
+
     "Scoopable Kunafa": 55000,
 
     "Bagia Ori / Mocha": 35000,
+
     "Bagia Kacang": 45000
+
 };
 
 
 /* =========================================================
-   FORMAT RUPIAH
+   RUPIAH
 ========================================================= */
 
 function rupiah(value) {
 
-    return new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        maximumFractionDigits: 0
-    }).format(value || 0);
+    return new Intl.NumberFormat(
+        "id-ID",
+        {
+            style: "currency",
+            currency: "IDR",
+            maximumFractionDigits: 0
+        }
+    ).format(value || 0);
 
 }
 
@@ -358,20 +465,52 @@ function normalizeDate(value) {
 
     if (!value) return "";
 
-    const str = String(value).trim();
+    const str =
+        String(value).trim();
 
-    const parts = str.split("/");
+    const parts =
+        str.split("/");
 
     if (parts.length === 3) {
 
-        const day = parts[0].padStart(2, "0");
-        const month = parts[1].padStart(2, "0");
-        const year = parts[2];
+        const day =
+            parts[0].padStart(2, "0");
+
+        const month =
+            parts[1].padStart(2, "0");
+
+        const year =
+            parts[2];
 
         return `${year}-${month}-${day}`;
+
     }
 
     return str;
+
+}
+
+
+/* =========================================================
+   FORMAT DISPLAY DATE
+========================================================= */
+
+function formatDisplayDate(dateString) {
+
+    const date =
+        new Date(
+            dateString + "T00:00:00"
+        );
+
+    return new Intl.DateTimeFormat(
+        "id-ID",
+        {
+            day: "numeric",
+            month: "long",
+            year: "numeric"
+        }
+    ).format(date);
+
 }
 
 
@@ -389,64 +528,64 @@ function formatTime(value) {
         return "-";
     }
 
-    const number = Number(value);
 
-    if (!isNaN(number)) {
+    const number =
+        Number(value);
 
-        const hour = Math.floor(number);
 
-        const decimal = number - hour;
+    if (isNaN(number)) {
 
-        let minute = Math.round(decimal * 100);
+        return String(value);
 
-        /*
-         * Untuk kasus seperti 16.5 -> 16:50
-         */
-        if (minute > 59) {
-            minute = Math.round(decimal * 60);
-        }
-
-        return (
-            String(hour).padStart(2, "0") +
-            ":" +
-            String(minute).padStart(2, "0")
-        );
     }
 
-    return String(value);
+
+    const hour =
+        Math.floor(number);
+
+
+    const decimal =
+        number - hour;
+
+
+    let minute =
+        Math.round(decimal * 100);
+
+
+    /*
+       Contoh:
+       12.33 = 12:33
+       14 = 14:00
+       16.5 = 16:50
+    */
+
+    if (minute > 59) {
+
+        minute =
+            Math.round(decimal * 60);
+
+    }
+
+
+    return (
+        String(hour).padStart(2, "0") +
+        ":" +
+        String(minute).padStart(2, "0")
+    );
+
 }
 
 
 /* =========================================================
-   HARGA PRODUK
+   HARGA
 ========================================================= */
 
-function getProductPrice(productName) {
-
-    if (!productName) return 0;
+function getPrice(product) {
 
     return PRODUCT_PRICES[
-        String(productName).trim()
+        String(product || "").trim()
     ] || 0;
-}
 
-
-/* =========================================================
-   HITUNG SUBTOTAL
-========================================================= */
-
-function calculateRow(row) {
-
-    const product =
-        String(row.rincian || "").trim();
-
-    const qty =
-        Number(row.total) || 0;
-
-    const price =
-        getProductPrice(product);
-
-    return qty * price;
 }
 
 
@@ -456,25 +595,23 @@ function calculateRow(row) {
 
 async function fetchData() {
 
+    /*
+       Sengaja TIDAK memakai response.ok.
+
+       Endpoint googleusercontent yang sebelumnya
+       berhasil dipakai langsung dibaca sebagai JSON.
+    */
+
     const response =
         await fetch(DATA_URL);
 
-    if (!response.ok) {
-        throw new Error(
-            "Gagal mengambil data dari server."
-        );
-    }
 
     const data =
         await response.json();
 
-    if (!Array.isArray(data)) {
-        throw new Error(
-            "Format data tidak valid."
-        );
-    }
 
     return data;
+
 }
 
 
@@ -490,15 +627,16 @@ function groupTransactions(
     const filtered =
         data.filter(row => {
 
-            const rowDate =
-                normalizeDate(row.nota);
-
-            return rowDate === selectedDate;
+            return (
+                normalizeDate(row.nota) ===
+                selectedDate
+            );
 
         });
 
 
-    const groups = new Map();
+    const groups =
+        new Map();
 
 
     filtered.forEach(row => {
@@ -506,8 +644,10 @@ function groupTransactions(
         const date =
             normalizeDate(row.nota);
 
+
         const time =
             Number(row.tanggal);
+
 
         const payment =
             String(
@@ -518,10 +658,15 @@ function groupTransactions(
 
 
         /*
-         * Karena API sekarang belum memberikan
-         * nomor nota asli, transaksi dikelompokkan
-         * berdasarkan tanggal + jam + pembayaran.
-         */
+           Untuk sementara transaksi
+           dikelompokkan berdasarkan:
+
+           Tanggal
+           +
+           Waktu
+           +
+           Pembayaran
+        */
 
         const key =
             `${date}|${time}|${payment}`;
@@ -529,17 +674,15 @@ function groupTransactions(
 
         if (!groups.has(key)) {
 
-            groups.set(key, {
-
-                date: date,
-
-                time: time,
-
-                payment: payment,
-
-                total: 0
-
-            });
+            groups.set(
+                key,
+                {
+                    date: date,
+                    time: time,
+                    payment: payment,
+                    total: 0
+                }
+            );
 
         }
 
@@ -548,18 +691,32 @@ function groupTransactions(
             groups.get(key);
 
 
+        const product =
+            String(
+                row.rincian || ""
+            ).trim();
+
+
+        const qty =
+            Number(row.total) || 0;
+
+
+        const price =
+            getPrice(product);
+
+
         transaction.total +=
-            calculateRow(row);
+            qty * price;
 
     });
 
 
-    return Array.from(groups.values())
-        .sort((a, b) => {
-
-            return a.time - b.time;
-
-        });
+    return Array.from(
+        groups.values()
+    ).sort(
+        (a, b) =>
+            a.time - b.time
+    );
 
 }
 
@@ -583,10 +740,11 @@ async function loadReport() {
         );
 
         return;
+
     }
 
 
-    hideAllSections();
+    hideSections();
 
 
     document
@@ -596,10 +754,26 @@ async function loadReport() {
         .classList.remove("d-none");
 
 
+    document
+        .getElementById(
+            "reportButton"
+        )
+        .disabled = true;
+
+
     try {
 
         const data =
             await fetchData();
+
+
+        if (!Array.isArray(data)) {
+
+            throw new Error(
+                "Data yang diterima bukan JSON array."
+            );
+
+        }
 
 
         const transactions =
@@ -627,6 +801,7 @@ async function loadReport() {
                 .classList.remove("d-none");
 
             return;
+
         }
 
 
@@ -643,6 +818,12 @@ async function loadReport() {
 
     } catch (error) {
 
+        console.error(
+            "REPORT ERROR:",
+            error
+        );
+
+
         document
             .getElementById(
                 "loadingSection"
@@ -650,13 +831,18 @@ async function loadReport() {
             .classList.add("d-none");
 
 
-        console.error(error);
-
-
         alert(
-            "Gagal mengambil data laporan.\n\n" +
+            "Gagal mengambil data.\n\n" +
             error.message
         );
+
+    } finally {
+
+        document
+            .getElementById(
+                "reportButton"
+            )
+            .disabled = false;
 
     }
 
@@ -673,7 +859,9 @@ function renderSummary(
 ) {
 
     let total = 0;
+
     let cash = 0;
+
     let qris = 0;
 
 
@@ -780,21 +968,21 @@ function renderTransactions(
                 document.createElement("tr");
 
 
-            let paymentBadge;
+            let badge;
 
 
             if (
                 transaction.payment === "QRIS"
             ) {
 
-                paymentBadge =
+                badge =
                     `<span class="badge badge-qris">
                         QRIS
                     </span>`;
 
             } else {
 
-                paymentBadge =
+                badge =
                     `<span class="badge badge-cash">
                         Cash
                     </span>`;
@@ -817,7 +1005,7 @@ function renderTransactions(
                 </td>
 
                 <td>
-                    ${paymentBadge}
+                    ${badge}
                 </td>
 
                 <td class="text-end fw-bold">
@@ -845,36 +1033,10 @@ function renderTransactions(
 
 
 /* =========================================================
-   FORMAT TANGGAL TAMPILAN
+   HIDE
 ========================================================= */
 
-function formatDisplayDate(
-    dateString
-) {
-
-    const date =
-        new Date(
-            dateString + "T00:00:00"
-        );
-
-
-    return new Intl.DateTimeFormat(
-        "id-ID",
-        {
-            day: "numeric",
-            month: "long",
-            year: "numeric"
-        }
-    ).format(date);
-
-}
-
-
-/* =========================================================
-   HIDE SEMUA STATE
-========================================================= */
-
-function hideAllSections() {
+function hideSections() {
 
     document
         .getElementById(
@@ -912,7 +1074,7 @@ function hideAllSections() {
 
 document.addEventListener(
     "DOMContentLoaded",
-    () => {
+    function() {
 
         const today =
             new Date();
