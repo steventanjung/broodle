@@ -11,7 +11,6 @@
     body {
         background: #f6f7f9;
         font-family: Arial, sans-serif;
-        color: #222;
     }
 
     .container {
@@ -53,12 +52,13 @@
     .summary {
         border-radius: 15px;
         padding: 18px;
+        background: #f7f7f7;
     }
 
     .summary-title {
+        color: #777;
         font-size: 13px;
         margin-bottom: 5px;
-        color: #777;
     }
 
     .summary-value {
@@ -68,11 +68,7 @@
 
     .total-box {
         background: #111;
-        color: #fff;
-    }
-
-    .total-box .summary-title {
-        color: #ccc;
+        color: white;
     }
 
     .cash-box {
@@ -83,16 +79,14 @@
         background: #eef4ff;
     }
 
-    .transaction-count {
-        color: #777;
-        font-size: 14px;
+    .table {
+        margin-bottom: 0;
     }
 
     .table th {
-        color: #777;
         font-size: 13px;
+        color: #666;
         font-weight: 600;
-        white-space: nowrap;
     }
 
     .table td {
@@ -109,54 +103,35 @@
 
     .empty {
         text-align: center;
-        padding: 25px 10px;
-    }
-
-    .empty-icon {
-        font-size: 42px;
-        margin-bottom: 10px;
-    }
-
-    .empty-title {
-        font-weight: 700;
-        font-size: 17px;
-    }
-
-    .empty-text {
+        padding: 40px 20px;
         color: #888;
-        font-size: 13px;
-        margin-top: 5px;
     }
 
     .loading {
         text-align: center;
-        padding: 25px;
-        color: #777;
+        padding: 30px;
     }
 
-    .d-none {
-        display: none !important;
+    .transaction-count {
+        color: #777;
+        font-size: 14px;
+    }
+
+    .btn-report {
+        min-width: 120px;
     }
 
     @media (max-width: 600px) {
-
-        .container {
-            padding-left: 12px;
-            padding-right: 12px;
-        }
-
-        .header,
-        .report-card {
-            padding: 16px;
-            border-radius: 15px;
-        }
-
         .summary-grid {
             grid-template-columns: 1fr;
         }
 
-        .summary-value {
-            font-size: 20px;
+        .header {
+            padding: 16px;
+        }
+
+        .report-card {
+            padding: 15px;
         }
 
         .table {
@@ -177,188 +152,87 @@
 
     <!-- HEADER -->
     <div class="header">
-
-        <div class="brand">
-            Kukikoe
-        </div>
-
-        <div class="subtitle">
-            Laporan Penjualan
-        </div>
+        <div class="brand">Kukikoe</div>
+        <div class="subtitle">Laporan Penjualan</div>
 
         <div class="row g-2 mt-3">
-
             <div class="col-12 col-md-8">
-
-                <label class="form-label fw-semibold">
-                    Pilih Tanggal
-                </label>
-
-                <input
-                    type="date"
-                    id="datePicker"
-                    class="form-control"
-                >
-
+                <label class="form-label fw-semibold">Pilih Tanggal</label>
+                <input type="date" id="datePicker" class="form-control">
             </div>
 
             <div class="col-12 col-md-4 d-flex align-items-end">
-
-                <button
-                    class="btn btn-dark w-100"
-                    onclick="loadReport()"
-                    id="reportButton"
-                >
+                <button class="btn btn-dark w-100 btn-report" onclick="loadReport()">
                     Tampilkan
                 </button>
-
             </div>
-
         </div>
-
-    </div>
-
-
-    <!-- LOADING -->
-    <div
-        id="loadingSection"
-        class="report-card d-none"
-    >
-
-        <div class="loading">
-
-            <div
-                class="spinner-border mb-3"
-                role="status"
-            ></div>
-
-            <div>
-                Mengambil data...
-            </div>
-
-        </div>
-
     </div>
 
 
     <!-- SUMMARY -->
-    <div
-        id="summarySection"
-        class="report-card d-none"
-    >
+    <div id="summarySection" class="report-card d-none">
 
         <h5 class="fw-bold mb-3">
-            Laporan
-            <span id="reportDate"></span>
+            Laporan <span id="reportDate"></span>
         </h5>
-
 
         <div class="summary-grid">
 
             <div class="summary total-box">
-
-                <div class="summary-title">
-                    Total Pendapatan
-                </div>
-
-                <div
-                    class="summary-value"
-                    id="totalSales"
-                >
+                <div class="summary-title">Total Pendapatan</div>
+                <div class="summary-value" id="totalSales">
                     Rp0
                 </div>
-
             </div>
-
 
             <div class="summary cash-box">
-
-                <div class="summary-title">
-                    Cash
-                </div>
-
-                <div
-                    class="summary-value"
-                    id="totalCash"
-                >
+                <div class="summary-title">Cash</div>
+                <div class="summary-value" id="totalCash">
                     Rp0
                 </div>
-
             </div>
 
-
             <div class="summary qris-box">
-
-                <div class="summary-title">
-                    QRIS
-                </div>
-
-                <div
-                    class="summary-value"
-                    id="totalQris"
-                >
+                <div class="summary-title">QRIS</div>
+                <div class="summary-value" id="totalQris">
                     Rp0
                 </div>
-
             </div>
 
         </div>
 
-
         <div class="transaction-count mt-3">
-
-            <span id="transactionCount">
-                0
-            </span>
-
-            transaksi
-
+            <span id="transactionCount">0</span> transaksi
         </div>
 
     </div>
 
 
-    <!-- TRANSACTIONS -->
-    <div
-        id="transactionSection"
-        class="report-card d-none"
-    >
+    <!-- TRANSACTION LIST -->
+    <div id="transactionSection" class="report-card d-none">
 
-        <h5 class="fw-bold mb-3">
-            Daftar Transaksi
-        </h5>
-
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0">
+                Daftar Transaksi
+            </h5>
+        </div>
 
         <div class="table-responsive">
 
             <table class="table table-hover align-middle">
 
                 <thead>
-
                     <tr>
-
-                        <th>
-                            Nota
-                        </th>
-
-                        <th>
-                            Jam
-                        </th>
-
-                        <th>
-                            Pembayaran
-                        </th>
-
-                        <th class="text-end">
-                            Total
-                        </th>
-
+                        <th>Nota</th>
+                        <th>Jam</th>
+                        <th>Pembayaran</th>
+                        <th class="text-end">Total</th>
                     </tr>
-
                 </thead>
 
-
-                <tbody id="transactionTable"></tbody>
+                <tbody id="transactionTable">
+                </tbody>
 
             </table>
 
@@ -367,28 +241,22 @@
     </div>
 
 
-    <!-- EMPTY -->
-    <div
-        id="emptySection"
-        class="report-card d-none"
-    >
-
-        <div class="empty">
-
-            <div class="empty-icon">
-                📊
-            </div>
-
-            <div class="empty-title">
-                Tidak ada transaksi
-            </div>
-
-            <div class="empty-text">
-                Tidak ditemukan transaksi pada tanggal yang dipilih.
-            </div>
-
+    <!-- LOADING -->
+    <div id="loadingSection" class="report-card d-none">
+        <div class="loading">
+            <div class="spinner-border mb-3"></div>
+            <div>Mengambil data...</div>
         </div>
+    </div>
 
+
+    <!-- EMPTY -->
+    <div id="emptySection" class="report-card d-none">
+        <div class="empty">
+            <div style="font-size:40px;">📊</div>
+            <h5 class="mt-3">Tidak ada transaksi</h5>
+            <div>Tidak ditemukan transaksi pada tanggal tersebut.</div>
+        </div>
     </div>
 
 </div>
@@ -397,11 +265,11 @@
 <script>
 
 /* =========================================================
-   DATA URL
+   GOOGLE DATA URL
 ========================================================= */
 
 const DATA_URL =
-"https://script.googleusercontent.com/macros/echo?user_content_key=AUkAhnQhfjZlQg8nJ6wFV8S_giqK637TI7uDabf4UHcVHRvtfAFo3OmHUXk7QQkPWq0v9XcXlYkvKaj9GCNpMdX571e667ynjk3IRFHltHPDtmaSj4VKS6o7X4tO6mxiq7gwxBx_YLCosq4yZs_BSFXUC-liAzi_5rnfQwofbLcR7IsjPjHSlqALNKMFsGGuIsjrc7IlhtxRjueJk9F2q87tTVnR4K3iBAFpjlqZpAvY3IfREIQZfL9IFaXyFUAknf6Uu2y78TS0A_EEknFaRparTu4tSgo24EQ&lib=MbNqoalhwzmfLgZVjC4XyNX6DnvbZbUGR";
+"https://script.googleusercontent.com/macros/echo?user_content_key=AUkAhnQhfjZlQg8nJ6wFV8S_giqK637TI7uDabf4UHcVHRvtfAFo3OmHUXk7QQkPWq0v9XcXlYkvKaj9GCNpMdX571e667ynjk3IRFHltHPDtmaSj4VKS6o7X4tO6mxiq7gwxBx_YLCosq4yZs_BSFXUC-liAzi_5rnfQwofbLcR7IsPjHSlqALNKMFsGGuIsjrc7IlhtxRjueJk9F2q87tTVnR4K3iBAFpjlqZpAvY3IfREIQZfL9IFaXyFUAknf6Uu2y78TS0A_EEknFaRparTu4tSgo24EQ&lib=MbNqoalhwzmfLgZVjC4XyNX6DnvbZbUGR";
 
 
 /* =========================================================
@@ -411,106 +279,68 @@ const DATA_URL =
 const PRODUCT_PRICES = {
 
     "Cheesecake A": 40000,
-
     "Cheesecake B": 55000,
 
     "Dubai Chewy Cookie": 50000,
-
     "Strawberry Dubai Choco": 95000,
 
     "London Choco Cake": 55000,
 
     "Mooncake Pudding": 40000,
-
     "Milk Cheese Bread": 25000,
-
     "Bakwan Goreng": 40000,
-
     "Risol": 5000,
 
     "Scoopable Nutella": 40000,
-
     "Scoopable Kunafa": 55000,
 
     "Bagia Ori / Mocha": 35000,
-
     "Bagia Kacang": 45000
-
 };
 
 
 /* =========================================================
-   RUPIAH
+   FORMAT RUPIAH
 ========================================================= */
 
 function rupiah(value) {
 
-    return new Intl.NumberFormat(
-        "id-ID",
-        {
-            style: "currency",
-            currency: "IDR",
-            maximumFractionDigits: 0
-        }
-    ).format(value || 0);
+    return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        maximumFractionDigits: 0
+    }).format(value || 0);
 
 }
 
 
 /* =========================================================
-   NORMALIZE DATE
+   FORMAT TANGGAL
 ========================================================= */
 
 function normalizeDate(value) {
 
     if (!value) return "";
 
-    const str =
-        String(value).trim();
+    let str = String(value).trim();
 
-    const parts =
-        str.split("/");
+    /*
+       API:
+       17/9/2026
+    */
+
+    let parts = str.split("/");
 
     if (parts.length === 3) {
 
-        const day =
-            parts[0].padStart(2, "0");
-
-        const month =
-            parts[1].padStart(2, "0");
-
-        const year =
-            parts[2];
+        let day = parts[0].padStart(2, "0");
+        let month = parts[1].padStart(2, "0");
+        let year = parts[2];
 
         return `${year}-${month}-${day}`;
-
     }
 
     return str;
-
-}
-
-
-/* =========================================================
-   FORMAT DISPLAY DATE
-========================================================= */
-
-function formatDisplayDate(dateString) {
-
-    const date =
-        new Date(
-            dateString + "T00:00:00"
-        );
-
-    return new Intl.DateTimeFormat(
-        "id-ID",
-        {
-            day: "numeric",
-            month: "long",
-            year: "numeric"
-        }
-    ).format(date);
-
 }
 
 
@@ -520,98 +350,93 @@ function formatDisplayDate(dateString) {
 
 function formatTime(value) {
 
-    if (
-        value === null ||
-        value === undefined ||
-        value === ""
-    ) {
+    if (value === null || value === undefined || value === "") {
         return "-";
     }
 
-
-    const number =
-        Number(value);
-
-
-    if (isNaN(number)) {
-
-        return String(value);
-
-    }
-
-
-    const hour =
-        Math.floor(number);
-
-
-    const decimal =
-        number - hour;
-
-
-    let minute =
-        Math.round(decimal * 100);
-
+    let str = String(value);
 
     /*
-       Contoh:
-       12.33 = 12:33
-       14 = 14:00
-       16.5 = 16:50
+       Contoh API:
+
+       12.33
+       = 12:33
+
+       14
+       = 14:00
+
+       16.5
+       = 16:50
     */
 
-    if (minute > 59) {
+    let number = Number(value);
 
-        minute =
-            Math.round(decimal * 60);
+    if (!isNaN(number)) {
 
+        let hour = Math.floor(number);
+
+        let decimal = number - hour;
+
+        let minute = Math.round(decimal * 100);
+
+        if (minute > 59) {
+            minute = Math.round(decimal * 60);
+        }
+
+        return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
     }
 
-
-    return (
-        String(hour).padStart(2, "0") +
-        ":" +
-        String(minute).padStart(2, "0")
-    );
-
+    return str;
 }
 
 
 /* =========================================================
-   HARGA
+   PARSE HARGA
 ========================================================= */
 
-function getPrice(product) {
+function getProductPrice(productName) {
 
-    return PRODUCT_PRICES[
-        String(product || "").trim()
-    ] || 0;
+    if (!productName) return 0;
 
+    return PRODUCT_PRICES[productName] || 0;
 }
 
 
 /* =========================================================
-   FETCH DATA
+   HITUNG SUBTOTAL BARIS
+========================================================= */
+
+function calculateRow(row) {
+
+    const product = String(row.rincian || "").trim();
+
+    const qty = Number(row.total) || 0;
+
+    const price = getProductPrice(product);
+
+    return qty * price;
+}
+
+
+/* =========================================================
+   LOAD DATA
 ========================================================= */
 
 async function fetchData() {
 
-    /*
-       Sengaja TIDAK memakai response.ok.
+    const response = await fetch(DATA_URL);
 
-       Endpoint googleusercontent yang sebelumnya
-       berhasil dipakai langsung dibaca sebagai JSON.
-    */
+    if (!response.ok) {
+        throw new Error("Gagal mengambil data.");
+    }
 
-    const response =
-        await fetch(DATA_URL);
+    const data = await response.json();
 
-
-    const data =
-        await response.json();
-
+    if (!Array.isArray(data)) {
+        throw new Error("Format data tidak valid.");
+    }
 
     return data;
-
 }
 
 
@@ -619,104 +444,98 @@ async function fetchData() {
    GROUP TRANSACTIONS
 ========================================================= */
 
-function groupTransactions(
-    data,
-    selectedDate
-) {
+function groupTransactions(data, selectedDate) {
 
-    const filtered =
-        data.filter(row => {
+    /*
+       Karena field "nota" dari API saat ini berisi tanggal,
+       kita gunakan:
 
-            return (
-                normalizeDate(row.nota) ===
-                selectedDate
-            );
+       tanggal + jam + pembayaran
 
-        });
+       sebagai ID transaksi.
 
+       Contoh:
 
-    const groups =
-        new Map();
+       17/9/2026 + 12.33 + QRIS
+       = 1 transaksi
 
+       17/9/2026 + 13.42 + Cash
+       = transaksi berikutnya
+    */
 
-    filtered.forEach(row => {
+    const filtered = data.filter(row => {
 
-        const date =
-            normalizeDate(row.nota);
+        const rowDate = normalizeDate(row.nota);
 
-
-        const time =
-            Number(row.tanggal);
-
-
-        const payment =
-            String(
-                row.pembayaran || ""
-            )
-            .trim()
-            .toUpperCase();
-
-
-        /*
-           Untuk sementara transaksi
-           dikelompokkan berdasarkan:
-
-           Tanggal
-           +
-           Waktu
-           +
-           Pembayaran
-        */
-
-        const key =
-            `${date}|${time}|${payment}`;
-
-
-        if (!groups.has(key)) {
-
-            groups.set(
-                key,
-                {
-                    date: date,
-                    time: time,
-                    payment: payment,
-                    total: 0
-                }
-            );
-
-        }
-
-
-        const transaction =
-            groups.get(key);
-
-
-        const product =
-            String(
-                row.rincian || ""
-            ).trim();
-
-
-        const qty =
-            Number(row.total) || 0;
-
-
-        const price =
-            getPrice(product);
-
-
-        transaction.total +=
-            qty * price;
+        return rowDate === selectedDate;
 
     });
 
 
-    return Array.from(
-        groups.values()
-    ).sort(
-        (a, b) =>
-            a.time - b.time
-    );
+    const groups = new Map();
+
+
+    filtered.forEach(row => {
+
+        const date = normalizeDate(row.nota);
+
+        const timeValue = Number(row.tanggal);
+
+        const payment = String(
+            row.pembayaran || ""
+        ).trim().toUpperCase();
+
+
+        const key =
+            `${date}|${timeValue}|${payment}`;
+
+
+        if (!groups.has(key)) {
+
+            groups.set(key, {
+
+                date: date,
+
+                time: timeValue,
+
+                payment: payment,
+
+                total: 0,
+
+                items: []
+
+            });
+
+        }
+
+
+        const transaction = groups.get(key);
+
+        const subtotal = calculateRow(row);
+
+        transaction.total += subtotal;
+
+        transaction.items.push({
+
+            product: row.rincian,
+
+            qty: Number(row.total) || 0,
+
+            price: getProductPrice(row.rincian),
+
+            subtotal: subtotal
+
+        });
+
+    });
+
+
+    return Array.from(groups.values())
+        .sort((a, b) => {
+
+            return a.time - b.time;
+
+        });
 
 }
 
@@ -727,122 +546,66 @@ function groupTransactions(
 
 async function loadReport() {
 
-    const selectedDate =
-        document.getElementById(
-            "datePicker"
-        ).value;
+    const date = document.getElementById("datePicker").value;
 
 
-    if (!selectedDate) {
+    if (!date) {
 
-        alert(
-            "Silakan pilih tanggal terlebih dahulu."
-        );
+        alert("Silakan pilih tanggal terlebih dahulu.");
 
         return;
 
     }
 
 
-    hideSections();
-
+    hideAllSections();
 
     document
-        .getElementById(
-            "loadingSection"
-        )
+        .getElementById("loadingSection")
         .classList.remove("d-none");
-
-
-    document
-        .getElementById(
-            "reportButton"
-        )
-        .disabled = true;
 
 
     try {
 
-        const data =
-            await fetchData();
-
-
-        if (!Array.isArray(data)) {
-
-            throw new Error(
-                "Data yang diterima bukan JSON array."
-            );
-
-        }
-
+        const data = await fetchData();
 
         const transactions =
-            groupTransactions(
-                data,
-                selectedDate
-            );
+            groupTransactions(data, date);
 
 
         document
-            .getElementById(
-                "loadingSection"
-            )
+            .getElementById("loadingSection")
             .classList.add("d-none");
 
 
-        if (
-            transactions.length === 0
-        ) {
+        if (transactions.length === 0) {
 
             document
-                .getElementById(
-                    "emptySection"
-                )
+                .getElementById("emptySection")
                 .classList.remove("d-none");
 
             return;
-
         }
 
 
-        renderSummary(
-            transactions,
-            selectedDate
-        );
+        renderSummary(transactions, date);
 
-
-        renderTransactions(
-            transactions
-        );
+        renderTransactions(transactions);
 
 
     } catch (error) {
 
-        console.error(
-            "REPORT ERROR:",
-            error
-        );
-
-
         document
-            .getElementById(
-                "loadingSection"
-            )
+            .getElementById("loadingSection")
             .classList.add("d-none");
 
 
+        console.error(error);
+
         alert(
-            "Gagal mengambil data.\n\n" +
+            "Gagal mengambil data laporan.\n\n" +
             error.message
         );
-
-    } finally {
-
-        document
-            .getElementById(
-                "reportButton"
-            )
-            .disabled = false;
 
     }
 
@@ -853,10 +616,7 @@ async function loadReport() {
    SUMMARY
 ========================================================= */
 
-function renderSummary(
-    transactions,
-    date
-) {
+function renderSummary(transactions, date) {
 
     let total = 0;
 
@@ -865,80 +625,49 @@ function renderSummary(
     let qris = 0;
 
 
-    transactions.forEach(
-        transaction => {
+    transactions.forEach(transaction => {
 
-            total +=
-                transaction.total;
+        total += transaction.total;
 
 
-            if (
-                transaction.payment === "CASH"
-            ) {
+        if (transaction.payment === "CASH") {
 
-                cash +=
-                    transaction.total;
-
-            }
-
-
-            if (
-                transaction.payment === "QRIS"
-            ) {
-
-                qris +=
-                    transaction.total;
-
-            }
+            cash += transaction.total;
 
         }
-    );
+
+
+        if (transaction.payment === "QRIS") {
+
+            qris += transaction.total;
+
+        }
+
+    });
+
+
+    document.getElementById("totalSales")
+        .textContent = rupiah(total);
+
+
+    document.getElementById("totalCash")
+        .textContent = rupiah(cash);
+
+
+    document.getElementById("totalQris")
+        .textContent = rupiah(qris);
+
+
+    document.getElementById("transactionCount")
+        .textContent = transactions.length;
+
+
+    document.getElementById("reportDate")
+        .textContent = formatDisplayDate(date);
 
 
     document
-        .getElementById(
-            "totalSales"
-        )
-        .textContent =
-        rupiah(total);
-
-
-    document
-        .getElementById(
-            "totalCash"
-        )
-        .textContent =
-        rupiah(cash);
-
-
-    document
-        .getElementById(
-            "totalQris"
-        )
-        .textContent =
-        rupiah(qris);
-
-
-    document
-        .getElementById(
-            "transactionCount"
-        )
-        .textContent =
-        transactions.length;
-
-
-    document
-        .getElementById(
-            "reportDate"
-        )
-        .textContent =
-        formatDisplayDate(date);
-
-
-    document
-        .getElementById(
-            "summarySection"
-        )
+        .getElementById("summarySection")
         .classList.remove("d-none");
 
 }
@@ -948,121 +677,107 @@ function renderSummary(
    TRANSACTION TABLE
 ========================================================= */
 
-function renderTransactions(
-    transactions
-) {
+function renderTransactions(transactions) {
 
     const tbody =
-        document.getElementById(
-            "transactionTable"
-        );
+        document.getElementById("transactionTable");
 
 
     tbody.innerHTML = "";
 
 
-    transactions.forEach(
-        (transaction, index) => {
+    transactions.forEach((transaction, index) => {
 
-            const tr =
-                document.createElement("tr");
-
-
-            let badge;
+        const tr =
+            document.createElement("tr");
 
 
-            if (
-                transaction.payment === "QRIS"
-            ) {
+        const paymentBadge =
+            transaction.payment === "QRIS"
 
-                badge =
-                    `<span class="badge badge-qris">
-                        QRIS
-                    </span>`;
+                ? `<span class="badge badge-qris">QRIS</span>`
 
-            } else {
-
-                badge =
-                    `<span class="badge badge-cash">
-                        Cash
-                    </span>`;
-
-            }
+                : `<span class="badge badge-cash">Cash</span>`;
 
 
-            tr.innerHTML = `
+        tr.innerHTML = `
 
-                <td>
-                    <strong>
-                        Nota ${index + 1}
-                    </strong>
-                </td>
+            <td>
+                <strong>Nota ${index + 1}</strong>
+            </td>
 
-                <td>
-                    ${formatTime(
-                        transaction.time
-                    )}
-                </td>
+            <td>
+                ${formatTime(transaction.time)}
+            </td>
 
-                <td>
-                    ${badge}
-                </td>
+            <td>
+                ${paymentBadge}
+            </td>
 
-                <td class="text-end fw-bold">
-                    ${rupiah(
-                        transaction.total
-                    )}
-                </td>
+            <td class="text-end fw-bold">
+                ${rupiah(transaction.total)}
+            </td>
 
-            `;
+        `;
 
 
-            tbody.appendChild(tr);
+        tbody.appendChild(tr);
 
-        }
-    );
+    });
 
 
     document
-        .getElementById(
-            "transactionSection"
-        )
+        .getElementById("transactionSection")
         .classList.remove("d-none");
 
 }
 
 
 /* =========================================================
-   HIDE
+   DISPLAY DATE
 ========================================================= */
 
-function hideSections() {
+function formatDisplayDate(dateString) {
+
+    const date = new Date(dateString + "T00:00:00");
+
+
+    return new Intl.DateTimeFormat("id-ID", {
+
+        day: "numeric",
+
+        month: "long",
+
+        year: "numeric"
+
+    }).format(date);
+
+}
+
+
+/* =========================================================
+   HIDE SECTIONS
+========================================================= */
+
+function hideAllSections() {
 
     document
-        .getElementById(
-            "summarySection"
-        )
+        .getElementById("summarySection")
         .classList.add("d-none");
 
 
     document
-        .getElementById(
-            "transactionSection"
-        )
+        .getElementById("transactionSection")
         .classList.add("d-none");
 
 
     document
-        .getElementById(
-            "loadingSection"
-        )
+        .getElementById("loadingSection")
         .classList.add("d-none");
 
 
     document
-        .getElementById(
-            "emptySection"
-        )
+        .getElementById("emptySection")
         .classList.add("d-none");
 
 }
@@ -1072,39 +787,27 @@ function hideSections() {
    DEFAULT DATE
 ========================================================= */
 
-document.addEventListener(
-    "DOMContentLoaded",
-    function() {
+document.addEventListener("DOMContentLoaded", () => {
 
-        const today =
-            new Date();
+    const today =
+        new Date();
 
+    const year =
+        today.getFullYear();
 
-        const year =
-            today.getFullYear();
+    const month =
+        String(today.getMonth() + 1)
+            .padStart(2, "0");
 
-
-        const month =
-            String(
-                today.getMonth() + 1
-            ).padStart(2, "0");
-
-
-        const day =
-            String(
-                today.getDate()
-            ).padStart(2, "0");
+    const day =
+        String(today.getDate())
+            .padStart(2, "0");
 
 
-        document
-            .getElementById(
-                "datePicker"
-            )
-            .value =
-            `${year}-${month}-${day}`;
+    document.getElementById("datePicker").value =
+        `${year}-${month}-${day}`;
 
-    }
-);
+});
 
 </script>
 
