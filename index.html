@@ -83,7 +83,10 @@ body{
     padding-bottom:3px;
     scrollbar-width:none;
 }
-.categoryTabs::-webkit-scrollbar{display:none;}
+
+.categoryTabs::-webkit-scrollbar{
+    display:none;
+}
 
 .categoryBtn{
     flex:0 0 auto;
@@ -94,6 +97,7 @@ body{
     font-size:13px;
     font-weight:600;
 }
+
 .categoryBtn.active{
     background:#0d6efd;
     color:#fff;
@@ -172,6 +176,91 @@ body{
     min-width:22px;
     text-align:center;
     font-weight:bold;
+}
+
+
+/* =========================
+   CURRENT ORDER
+   ========================= */
+
+.orderBox{
+    margin-top:16px;
+    padding-top:16px;
+    border-top:1px solid #e9ecef;
+}
+
+.orderHeader{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:10px;
+}
+
+.orderHeader h5{
+    margin:0;
+    font-weight:bold;
+}
+
+.orderCount{
+    font-size:12px;
+    color:#6c757d;
+}
+
+.orderEmpty{
+    text-align:center;
+    padding:18px 10px;
+    background:#f8f9fa;
+    border-radius:12px;
+    color:#6c757d;
+    font-size:13px;
+}
+
+.orderItem{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    padding:10px 0;
+    border-bottom:1px dashed #dee2e6;
+}
+
+.orderItem:last-child{
+    border-bottom:0;
+}
+
+.orderItemInfo{
+    min-width:0;
+    flex:1;
+}
+
+.orderItemName{
+    font-weight:bold;
+    font-size:14px;
+    line-height:1.25;
+}
+
+.orderItemDetail{
+    font-size:12px;
+    color:#6c757d;
+    margin-top:3px;
+}
+
+.orderItemSubtotal{
+    font-weight:bold;
+    font-size:14px;
+    white-space:nowrap;
+}
+
+.orderRemove{
+    width:28px;
+    height:28px;
+    border:0;
+    border-radius:50%;
+    background:#f8d7da;
+    color:#842029;
+    font-weight:bold;
+    padding:0;
+    flex:0 0 auto;
 }
 
 
@@ -338,7 +427,6 @@ body{
 
 <!-- =====================================================
      KELOLA MENU
-     DISIMPAN DI KODE, TAPI DISEMBUNYIKAN
      ===================================================== -->
 
 <div
@@ -415,29 +503,146 @@ Daftar Produk
 </h5>
 
 <div>
-<span id="syncBadge" class="badge text-bg-warning me-1" style="display:none;">0 Pending</span>
-<span id="networkBadge" class="badge text-bg-success">Online</span>
+<span
+id="syncBadge"
+class="badge text-bg-warning me-1"
+style="display:none;">
+
+0 Pending
+
+</span>
+
+<span
+id="networkBadge"
+class="badge text-bg-success">
+
+Online
+
+</span>
 </div>
 
 </div>
 
 
-<!-- PRODUCT GRID -->
+<!-- =====================================================
+     CATEGORY
+     ===================================================== -->
 
 <div class="categoryTabs mb-3">
-    <button type="button" class="categoryBtn active" onclick="setCategory('Unggulan',this)">⭐ Best Seller</button>
-    <button type="button" class="categoryBtn" onclick="setCategory('Cheesecake',this)">Cheesecake</button>
-    <button type="button" class="categoryBtn" onclick="setCategory('Dubai',this)">Dubai</button>
-    <button type="button" class="categoryBtn" onclick="setCategory('Choco',this)">Choco</button>
-    <button type="button" class="categoryBtn" onclick="setCategory('Snack',this)">Snack</button>
-    <button type="button" class="categoryBtn" onclick="setCategory('Bagia',this)">Bagia</button>
-    <button type="button" class="categoryBtn" onclick="setCategory('Semua',this)">Semua</button>
+
+<button
+type="button"
+class="categoryBtn active"
+onclick="setCategory('Unggulan',this)">
+
+⭐ Best Seller
+
+</button>
+
+<button
+type="button"
+class="categoryBtn"
+onclick="setCategory('Cheesecake',this)">
+
+Cheesecake
+
+</button>
+
+<button
+type="button"
+class="categoryBtn"
+onclick="setCategory('Dubai',this)">
+
+Dubai
+
+</button>
+
+<button
+type="button"
+class="categoryBtn"
+onclick="setCategory('Choco',this)">
+
+Choco
+
+</button>
+
+<button
+type="button"
+class="categoryBtn"
+onclick="setCategory('Snack',this)">
+
+Snack
+
+</button>
+
+<button
+type="button"
+class="categoryBtn"
+onclick="setCategory('Bagia',this)">
+
+Bagia
+
+</button>
+
+<button
+type="button"
+class="categoryBtn"
+onclick="setCategory('Semua',this)">
+
+Semua
+
+</button>
+
 </div>
+
+
+<!-- =====================================================
+     PRODUCT GRID
+     ===================================================== -->
 
 <div id="cashierList"></div>
 
 
-<!-- TOTAL -->
+<!-- =====================================================
+     CURRENT ORDER
+     ===================================================== -->
+
+<div class="orderBox">
+
+<div class="orderHeader">
+
+<h5>
+Pesanan Saat Ini
+</h5>
+
+<span
+id="orderCount"
+class="orderCount">
+
+0 item
+
+</span>
+
+</div>
+
+
+<div id="orderSummary">
+
+<div class="orderEmpty">
+
+Belum ada pesanan
+
+</div>
+
+</div>
+
+</div>
+
+
+
+<!-- =====================================================
+     TOTAL
+     ===================================================== -->
 
 <div class="alert alert-primary mt-3 mb-0">
 
@@ -670,80 +875,104 @@ const GOOGLE_SCRIPT_URL =
    DATA
    ===================================================== */
 
-let cart={};
+let cart = {};
 
 let nota =
 parseInt(
 localStorage.getItem("nota")
 ) || 1;
 
-let currentTransaction=null;
+let currentTransaction = null;
 
-let transactionProcessing=false;
+let transactionProcessing = false;
+
 
 /* =====================================================
-   OFFLINE QUEUE & NETWORK STATUS
+   OFFLINE QUEUE
    ===================================================== */
 
 let pendingTransactions =
-    JSON.parse(localStorage.getItem("pendingTransactions")) || [];
+JSON.parse(
+localStorage.getItem("pendingTransactions")
+) || [];
 
 let syncingTransactions = false;
 
-window.addEventListener("online", async function(){
+
+/* =====================================================
+   NETWORK EVENT
+   ===================================================== */
+
+window.addEventListener(
+"online",
+async function(){
 
     updateNetworkStatus();
 
     await processPendingTransactions();
 
 });
-window.addEventListener("offline", function(){
+
+
+window.addEventListener(
+"offline",
+function(){
 
     updateNetworkStatus();
 
 });
 
-function updateNetworkStatus() {
+
+function updateNetworkStatus(){
 
     const netBadge =
-        document.getElementById("networkBadge");
+    document.getElementById(
+        "networkBadge"
+    );
 
     const syncBadge =
-        document.getElementById("syncBadge");
+    document.getElementById(
+        "syncBadge"
+    );
 
-    if (navigator.onLine) {
 
-        netBadge.className =
-            "badge text-bg-success";
-
-        netBadge.innerText =
-            "Online";
-
-    } else {
+    if(navigator.onLine){
 
         netBadge.className =
-            "badge text-bg-danger";
+        "badge text-bg-success";
 
         netBadge.innerText =
-            "Offline";
+        "Online";
+
+    }else{
+
+        netBadge.className =
+        "badge text-bg-danger";
+
+        netBadge.innerText =
+        "Offline";
 
     }
 
-    if (pendingTransactions.length > 0) {
+
+    if(
+        pendingTransactions.length > 0
+    ){
 
         syncBadge.style.display =
-            "inline-block";
+        "inline-block";
 
         syncBadge.innerText =
-            pendingTransactions.length +
-            " Pending";
+        pendingTransactions.length +
+        " Pending";
 
-    } else {
+    }else{
 
         syncBadge.style.display =
-            "none";
+        "none";
 
     }
+
 }
 
 
@@ -751,24 +980,101 @@ function updateNetworkStatus() {
    MENU VERSION
    ===================================================== */
 
-const MENU_VERSION="11";
+const MENU_VERSION = "11";
 
 
-const DEFAULT_MENUS=[
+const DEFAULT_MENUS = [
 
-    {nama:"Cheesecake A",harga:40000,kategori:"Cheesecake",unggulan:true},
-    {nama:"Cheesecake B",harga:55000,kategori:"Cheesecake",unggulan:true},
-    {nama:"Dubai Chewy Cookie",harga:50000,kategori:"Dubai",unggulan:true},
-    {nama:"Strawberry Dubai Choco",harga:95000,kategori:"Dubai",unggulan:true},
-    {nama:"London Choco Cake",harga:55000,kategori:"Choco",unggulan:false},
-    {nama:"Mooncake Pudding",harga:40000,kategori:"Snack",unggulan:true},
-    {nama:"Milk Cheese Bread",harga:25000,kategori:"Snack",unggulan:false},
-    {nama:"Bakwan Goreng",harga:40000,kategori:"Snack",unggulan:true},
-    {nama:"Scoopable Nutella",harga:40000,kategori:"Choco",unggulan:true},
-    {nama:"Scoopable Kunafa",harga:55000,kategori:"Dubai",unggulan:true},
-    {nama:"Risol",harga:5000,kategori:"Snack",unggulan:false},
-    {nama:"Bagia Ori / Mocha",harga:35000,kategori:"Bagia",unggulan:false},
-    {nama:"Bagia Kacang",harga:45000,kategori:"Bagia",unggulan:false}
+    {
+        nama:"Cheesecake A",
+        harga:40000,
+        kategori:"Cheesecake",
+        unggulan:true
+    },
+
+    {
+        nama:"Cheesecake B",
+        harga:55000,
+        kategori:"Cheesecake",
+        unggulan:true
+    },
+
+    {
+        nama:"Dubai Chewy Cookie",
+        harga:50000,
+        kategori:"Dubai",
+        unggulan:true
+    },
+
+    {
+        nama:"Strawberry Dubai Choco",
+        harga:95000,
+        kategori:"Dubai",
+        unggulan:true
+    },
+
+    {
+        nama:"London Choco Cake",
+        harga:55000,
+        kategori:"Choco",
+        unggulan:false
+    },
+
+    {
+        nama:"Mooncake Pudding",
+        harga:40000,
+        kategori:"Snack",
+        unggulan:true
+    },
+
+    {
+        nama:"Milk Cheese Bread",
+        harga:25000,
+        kategori:"Snack",
+        unggulan:false
+    },
+
+    {
+        nama:"Bakwan Goreng",
+        harga:40000,
+        kategori:"Snack",
+        unggulan:true
+    },
+
+    {
+        nama:"Scoopable Nutella",
+        harga:40000,
+        kategori:"Choco",
+        unggulan:true
+    },
+
+    {
+        nama:"Scoopable Kunafa",
+        harga:55000,
+        kategori:"Dubai",
+        unggulan:true
+    },
+
+    {
+        nama:"Risol",
+        harga:5000,
+        kategori:"Snack",
+        unggulan:false
+    },
+
+    {
+        nama:"Bagia Ori / Mocha",
+        harga:35000,
+        kategori:"Bagia",
+        unggulan:false
+    },
+
+    {
+        nama:"Bagia Kacang",
+        harga:45000,
+        kategori:"Bagia",
+        unggulan:false
+    }
 
 ];
 
@@ -791,14 +1097,20 @@ if(
 savedMenuVersion !== MENU_VERSION
 ){
 
-    menus = DEFAULT_MENUS.map(
-    menu => ({
-        nama: menu.nama,
-        harga: menu.harga,
-        kategori: menu.kategori,
-        unggulan: !!menu.unggulan
-    })
-);
+    menus =
+    DEFAULT_MENUS.map(
+        menu => ({
+
+            nama:menu.nama,
+
+            harga:menu.harga,
+
+            kategori:menu.kategori,
+
+            unggulan:!!menu.unggulan
+
+        })
+    );
 
 
     localStorage.setItem(
@@ -820,26 +1132,44 @@ savedMenuVersion !== MENU_VERSION
    ===================================================== */
 
 if(Array.isArray(menus)){
-    menus=menus.map(m=>({
+
+    menus =
+    menus.map(m => ({
+
         nama:m.nama,
+
         harga:m.harga,
-        kategori:m.kategori || "Snack",
-        unggulan:!!m.unggulan
+
+        kategori:
+            m.kategori ||
+            "Snack",
+
+        unggulan:
+            !!m.unggulan
+
     }));
+
     save();
+
 }
+
 
 if(
 !Array.isArray(menus) ||
-menus.length===0
+menus.length === 0
 ){
 
     menus =
     DEFAULT_MENUS.map(
-        menu=>({
+        menu => ({
 
             nama:menu.nama,
-            harga:menu.harga
+
+            harga:menu.harga,
+
+            kategori:menu.kategori,
+
+            unggulan:!!menu.unggulan
 
         })
     );
@@ -879,7 +1209,7 @@ function save(){
 
 function rupiah(n){
 
-    return "Rp"+
+    return "Rp" +
     Number(n).toLocaleString("id-ID");
 
 }
@@ -894,9 +1224,13 @@ function escapeHtml(text){
     return String(text)
 
     .replace(/&/g,"&amp;")
+
     .replace(/</g,"&lt;")
+
     .replace(/>/g,"&gt;")
+
     .replace(/"/g,"&quot;")
+
     .replace(/'/g,"&#039;");
 
 }
@@ -924,7 +1258,7 @@ function addMenu(){
 
 
     if(
-        nama==="" ||
+        nama === "" ||
         isNaN(harga)
     ){
 
@@ -938,7 +1272,12 @@ function addMenu(){
     menus.push({
 
         nama:nama,
-        harga:harga
+
+        harga:harga,
+
+        kategori:"Snack",
+
+        unggulan:false
 
     });
 
@@ -958,6 +1297,8 @@ function addMenu(){
 
     renderMenu();
 
+    renderCashier();
+
 }
 
 
@@ -974,7 +1315,7 @@ function editMenu(index){
     );
 
 
-    if(nama===null){
+    if(nama === null){
         return;
     }
 
@@ -986,16 +1327,17 @@ function editMenu(index){
     );
 
 
-    if(harga===null){
+    if(harga === null){
         return;
     }
 
 
-    harga=parseInt(harga);
+    harga =
+    parseInt(harga);
 
 
     if(
-        nama.trim()==="" ||
+        nama.trim() === "" ||
         isNaN(harga)
     ){
 
@@ -1017,6 +1359,8 @@ function editMenu(index){
     save();
 
     renderMenu();
+
+    renderCashier();
 
 }
 
@@ -1046,6 +1390,8 @@ function deleteMenu(index){
 
     renderMenu();
 
+    renderCashier();
+
 }
 
 
@@ -1055,13 +1401,13 @@ function deleteMenu(index){
 
 function renderMenu(){
 
-    let html="";
+    let html = "";
 
 
     menus.forEach(
-        (m,i)=>{
+        (m,i) => {
 
-            html+=`
+            html += `
 
             <div class="menuItem">
 
@@ -1108,7 +1454,200 @@ function renderMenu(){
 
     document
     .getElementById("menuList")
-    .innerHTML=html;
+    .innerHTML = html;
+
+}
+
+
+/* =====================================================
+   CATEGORY
+   ===================================================== */
+
+let activeCategory = "Unggulan";
+
+
+function setCategory(
+    category,
+    button
+){
+
+    activeCategory =
+    category;
+
+
+    document
+    .querySelectorAll(".categoryBtn")
+    .forEach(btn => {
+
+        btn.classList.remove(
+            "active"
+        );
+
+    });
+
+
+    if(button){
+
+        button.classList.add(
+            "active"
+        );
+
+    }
+
+
+    renderCashier();
+
+}
+
+
+/* =====================================================
+   CATEGORY HELPER
+   ===================================================== */
+
+function normalizeCategory(value){
+
+    return String(
+        value ?? ""
+    )
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g," ");
+
+}
+
+
+function getProductCategory(item){
+
+    const explicit =
+    normalizeCategory(
+        item?.kategori ??
+        item?.category ??
+        ""
+    );
+
+
+    if(explicit){
+
+        if(
+            explicit === "bagia" ||
+            explicit.includes("bagia")
+        ){
+
+            return "bagia";
+
+        }
+
+
+        if(
+            explicit === "snack" ||
+            explicit.includes("snack")
+        ){
+
+            return "snack";
+
+        }
+
+
+        if(
+            explicit === "choco" ||
+            explicit.includes("choco")
+        ){
+
+            return "choco";
+
+        }
+
+
+        if(
+            explicit === "cheesecake" ||
+            explicit.includes("cheesecake")
+        ){
+
+            return "cheesecake";
+
+        }
+
+
+        if(
+            explicit === "dubai" ||
+            explicit.includes("dubai")
+        ){
+
+            return "dubai";
+
+        }
+
+    }
+
+
+    const text =
+    normalizeCategory([
+
+        item?.nama,
+
+        item?.name,
+
+        item?.id,
+
+        item?.kode,
+
+        item?.code,
+
+        item?.jenis
+
+    ]
+    .filter(Boolean)
+    .join(" "));
+
+
+    if(
+        text.includes("bagia")
+    ){
+
+        return "bagia";
+
+    }
+
+
+    if(
+        text.includes("snack")
+    ){
+
+        return "snack";
+
+    }
+
+
+    if(
+        text.includes("choco")
+    ){
+
+        return "choco";
+
+    }
+
+
+    if(
+        text.includes("cheesecake")
+    ){
+
+        return "cheesecake";
+
+    }
+
+
+    if(
+        text.includes("dubai") ||
+        text.includes("pudding") ||
+        text.includes("puding")
+    ){
+
+        return "dubai";
+
+    }
+
+
+    return explicit;
 
 }
 
@@ -1117,91 +1656,91 @@ function renderMenu(){
    RENDER KASIR
    ===================================================== */
 
-let activeCategory="Unggulan";
-
-function setCategory(category, button){
-    activeCategory=category;
-
-    document.querySelectorAll(".categoryBtn").forEach(btn=>{
-        btn.classList.remove("active");
-    });
-
-    if(button){
-        button.classList.add("active");
-    }
-
-    renderCashier();
-}
-
-function getProductCategory(item){
-  // Respect explicit category first.
-  const explicit = normalizeCategory(item?.kategori ?? item?.category ?? '');
-  if (explicit) {
-    if (explicit === 'bagia' || explicit.includes('bagia')) return 'bagia';
-    if (explicit === 'snack' || explicit.includes('snack')) return 'snack';
-    if (explicit === 'choco' || explicit.includes('choco')) return 'choco';
-    if (explicit === 'cheesecake' || explicit.includes('cheesecake')) return 'cheesecake';
-    if (explicit === 'dubai' || explicit.includes('dubai')) return 'dubai';
-  }
-
-  // Backward-compatible fallback for older menu records that may not have kategori.
-  const text = normalizeCategory([
-    item?.nama, item?.name, item?.id, item?.kode, item?.code, item?.jenis
-  ].filter(Boolean).join(' '));
-
-  if (text.includes('bagia')) return 'bagia';
-  if (text.includes('snack')) return 'snack';
-  if (text.includes('choco')) return 'choco';
-  if (text.includes('cheesecake') || text.includes('cheesecake')) return 'cheesecake';
-  if (text.includes('dubai') || text.includes('pudding') || text.includes('puding')) return 'dubai';
-
-  return explicit;
-}
-
-function normalizeCategory(value){
-  return String(value ?? '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ');
-}
-
 function renderCashier(){
 
-    if(!cart || typeof cart!=="object"){
-        cart={};
+    if(
+        !cart ||
+        typeof cart !== "object"
+    ){
+
+        cart = {};
+
     }
 
-    let html=`
+
+    let html = `
+
         <div class="productGrid">
+
     `;
 
-    menus.forEach((m,i)=>{
 
-        if(typeof cart[i] !== "number"){
-            cart[i]=0;
-        }
+    menus.forEach(
+        (m,i) => {
 
-        let category = getProductCategory(m);
-let featured = !!m.unggulan;
+            /*
+             * PENTING:
+             * Jangan reset cart[i] di sini.
+             * Nilai cart tetap dipertahankan
+             * ketika berpindah kategori.
+             */
 
-const categoryMap = {
-    cheesecake: "Cheesecake",
-    choco: "Choco",
-    dubai: "Dubai",
-    snack: "Snack",
-    bagia: "Bagia"
-};
+            if(
+                typeof cart[i] !== "number"
+            ){
 
-category = categoryMap[category] || "Snack";
+                cart[i] = 0;
 
-        let visible =
-            activeCategory==="Semua" ||
-            (activeCategory==="Unggulan" && featured) ||
-            activeCategory===category;
+            }
 
-        if(!visible) return;
 
-        html+=`
+            let category =
+            getProductCategory(m);
+
+
+            let featured =
+            !!m.unggulan;
+
+
+            const categoryMap = {
+
+                cheesecake:"Cheesecake",
+
+                choco:"Choco",
+
+                dubai:"Dubai",
+
+                snack:"Snack",
+
+                bagia:"Bagia"
+
+            };
+
+
+            category =
+            categoryMap[category] ||
+            "Snack";
+
+
+            let visible =
+                activeCategory === "Semua" ||
+
+                (
+                    activeCategory === "Unggulan" &&
+                    featured
+                ) ||
+
+                activeCategory === category;
+
+
+            if(!visible){
+
+                return;
+
+            }
+
+
+            html += `
 
             <div
                 class="productCard"
@@ -1218,17 +1757,31 @@ category = categoryMap[category] || "Snack";
 
                 </div>
 
+
                 <div class="productInfo">
 
-                    ${featured ? '<div class="featuredBadge">⭐ BEST SELLER</div>' : ''}
+                    ${
+                        featured
+                        ?
+                        '<div class="featuredBadge">⭐ BEST SELLER</div>'
+                        :
+                        ''
+                    }
+
 
                     <div class="productName">
+
                         ${escapeHtml(m.nama)}
+
                     </div>
 
+
                     <div class="productPrice">
+
                         ${rupiah(m.harga)}
+
                     </div>
+
 
                     <div
                         class="productBottom"
@@ -1238,21 +1791,31 @@ category = categoryMap[category] || "Snack";
                         <div class="productQty">
 
                             <button
+                                type="button"
                                 class="qtyBtn"
                                 onclick="minusQty(${i})">
+
                                 −
+
                             </button>
+
 
                             <span
                                 id="qty${i}"
                                 class="qtyNumber">
-                                0
+
+                                ${cart[i]}
+
                             </span>
 
+
                             <button
+                                type="button"
                                 class="qtyBtn"
                                 onclick="plusQty(${i})">
+
                                 +
+
                             </button>
 
                         </div>
@@ -1263,45 +1826,233 @@ category = categoryMap[category] || "Snack";
 
             </div>
 
-        `;
-    });
+            `;
 
-    html+=`
+        }
+    );
+
+
+    html += `
+
         </div>
+
     `;
 
-    document
-        .getElementById("cashierList")
-        .innerHTML=html;
 
     document
-        .getElementById("cashReceived")
-        .value="";
+    .getElementById("cashierList")
+    .innerHTML = html;
 
-    document
-        .getElementById("changeDisplay")
-        .innerText=
-        "Kembalian : Rp0";
+
+    /*
+     * Render ulang daftar order
+     * setelah produk selesai dibuat.
+     */
+
+    renderOrderSummary();
+
 
     updateTotal();
 
-    transactionProcessing=false;
+
+    transactionProcessing = false;
+
 
     document
-        .getElementById("completeButton")
-        .disabled=false;
+    .getElementById("completeButton")
+    .disabled = false;
+
 
     document
-        .getElementById("loadingBox")
-        .classList
-        .remove("active");
+    .getElementById("loadingBox")
+    .classList
+    .remove("active");
+
 
     document
-        .getElementById("paymentMethod")
-        .value="cash";
+    .getElementById("paymentMethod")
+    .value = "cash";
+
 
     paymentChanged();
+
 }
+
+
+/* =====================================================
+   ORDER SUMMARY
+   ===================================================== */
+
+function renderOrderSummary(){
+
+    const orderSummary =
+    document.getElementById(
+        "orderSummary"
+    );
+
+
+    const orderCount =
+    document.getElementById(
+        "orderCount"
+    );
+
+
+    if(!orderSummary){
+
+        return;
+
+    }
+
+
+    let html = "";
+
+    let totalQty = 0;
+
+    let itemCount = 0;
+
+
+    menus.forEach(
+        (m,i) => {
+
+            const qty =
+            cart[i] || 0;
+
+
+            if(qty <= 0){
+
+                return;
+
+            }
+
+
+            totalQty += qty;
+
+            itemCount++;
+
+
+            const subtotal =
+            m.harga * qty;
+
+
+            html += `
+
+            <div class="orderItem">
+
+                <div class="orderItemInfo">
+
+                    <div class="orderItemName">
+
+                        ${escapeHtml(m.nama)}
+
+                    </div>
+
+
+                    <div class="orderItemDetail">
+
+                        ${qty}
+                        ×
+                        ${rupiah(m.harga)}
+
+                    </div>
+
+                </div>
+
+
+                <div class="orderItemSubtotal">
+
+                    ${rupiah(subtotal)}
+
+                </div>
+
+
+                <button
+                    type="button"
+                    class="orderRemove"
+                    onclick="removeOrderItem(${i})"
+                    title="Hapus item">
+
+                    ×
+
+                </button>
+
+            </div>
+
+            `;
+
+        }
+    );
+
+
+    if(itemCount === 0){
+
+        orderSummary.innerHTML = `
+
+            <div class="orderEmpty">
+
+                Belum ada pesanan
+
+            </div>
+
+        `;
+
+    }else{
+
+        orderSummary.innerHTML =
+        html;
+
+    }
+
+
+    orderCount.innerText =
+        totalQty +
+        (
+            totalQty === 1
+            ?
+            " item"
+            :
+            " item"
+        );
+
+}
+
+
+/* =====================================================
+   REMOVE ORDER ITEM
+   ===================================================== */
+
+function removeOrderItem(index){
+
+    if(
+        transactionProcessing
+    ){
+
+        return;
+
+    }
+
+
+    cart[index] = 0;
+
+
+    const qtyElement =
+    document.getElementById(
+        "qty" + index
+    );
+
+
+    if(qtyElement){
+
+        qtyElement.innerText = "0";
+
+    }
+
+
+    updateTotal();
+
+    renderOrderSummary();
+
+}
+
 
 /* =====================================================
    TAP CARD = +1
@@ -1318,16 +2069,27 @@ function addProduct(index){
     }
 
 
-    cart[index]++;
+    cart[index] =
+    (cart[index] || 0) + 1;
 
 
-    document
-    .getElementById("qty"+index)
-    .innerText=
-    cart[index];
+    const qtyElement =
+    document.getElementById(
+        "qty" + index
+    );
+
+
+    if(qtyElement){
+
+        qtyElement.innerText =
+        cart[index];
+
+    }
 
 
     updateTotal();
+
+    renderOrderSummary();
 
 }
 
@@ -1347,16 +2109,27 @@ function plusQty(index){
     }
 
 
-    cart[index]++;
+    cart[index] =
+    (cart[index] || 0) + 1;
 
 
-    document
-    .getElementById("qty"+index)
-    .innerText=
-    cart[index];
+    const qtyElement =
+    document.getElementById(
+        "qty" + index
+    );
+
+
+    if(qtyElement){
+
+        qtyElement.innerText =
+        cart[index];
+
+    }
 
 
     updateTotal();
+
+    renderOrderSummary();
 
 }
 
@@ -1377,19 +2150,29 @@ function minusQty(index){
 
 
     if(
-        cart[index]>0
+        (cart[index] || 0) > 0
     ){
 
         cart[index]--;
 
 
-        document
-        .getElementById("qty"+index)
-        .innerText=
-        cart[index];
+        const qtyElement =
+        document.getElementById(
+            "qty" + index
+        );
+
+
+        if(qtyElement){
+
+            qtyElement.innerText =
+            cart[index];
+
+        }
 
 
         updateTotal();
+
+        renderOrderSummary();
 
     }
 
@@ -1402,11 +2185,11 @@ function minusQty(index){
 
 function getTotal(){
 
-    let total=0;
+    let total = 0;
 
 
     menus.forEach(
-        (m,i)=>{
+        (m,i) => {
 
             total +=
             m.harga *
@@ -1423,15 +2206,15 @@ function getTotal(){
 
 function updateTotal(){
 
-    let total=
+    let total =
     getTotal();
 
 
     document
     .getElementById("grandTotal")
-    .innerHTML=
-    "Total : <b>"+
-    rupiah(total)+
+    .innerHTML =
+    "Total : <b>" +
+    rupiah(total) +
     "</b>";
 
 
@@ -1441,20 +2224,23 @@ function updateTotal(){
 
 
 /* =====================================================
-   FORMAT UANG INPUT
+   FORMAT UANG
    ===================================================== */
 
 function formatCashInput(input){
 
     let value =
-    input.value.replace(/\D/g,"");
+    input.value.replace(
+        /\D/g,
+        ""
+    );
 
 
     if(
-        value===""
+        value === ""
     ){
 
-        input.value="";
+        input.value = "";
 
         calculateChange();
 
@@ -1481,36 +2267,46 @@ function paymentChanged(){
 
     let method =
     document
-    .getElementById("paymentMethod")
+    .getElementById(
+        "paymentMethod"
+    )
     .value;
 
 
     if(
-        method==="cash"
+        method === "cash"
     ){
 
         document
-        .getElementById("cashPayment")
-        .style.display=
+        .getElementById(
+            "cashPayment"
+        )
+        .style.display =
         "block";
 
 
         document
-        .getElementById("qrisPayment")
-        .style.display=
+        .getElementById(
+            "qrisPayment"
+        )
+        .style.display =
         "none";
 
     }else{
 
         document
-        .getElementById("cashPayment")
-        .style.display=
+        .getElementById(
+            "cashPayment"
+        )
+        .style.display =
         "none";
 
 
         document
-        .getElementById("qrisPayment")
-        .style.display=
+        .getElementById(
+            "qrisPayment"
+        )
+        .style.display =
         "block";
 
     }
@@ -1530,34 +2326,56 @@ function calculateChange(){
 
     let input =
     document
-    .getElementById("cashReceived")
+    .getElementById(
+        "cashReceived"
+    )
     .value;
 
 
     let received =
     parseInt(
-        input.replace(/\D/g,"")
+        input.replace(
+            /\D/g,
+            ""
+        )
     ) || 0;
 
 
     let change =
-    received-total;
+    received - total;
 
 
-    if(
-        change<0
-    ){
+    if(change < 0){
 
-        change=0;
+        change = 0;
 
     }
 
 
     document
-    .getElementById("changeDisplay")
-    .innerText=
-    "Kembalian : "+
+    .getElementById(
+        "changeDisplay"
+    )
+    .innerText =
+    "Kembalian : " +
     rupiah(change);
+
+}
+
+
+/* =====================================================
+   GENERATE TRANSACTION ID
+   ===================================================== */
+
+function generateTransactionId(){
+
+    return (
+        Date.now().toString() +
+        "-" +
+        Math.random()
+        .toString(36)
+        .substring(2,8)
+    );
 
 }
 
@@ -1565,10 +2383,6 @@ function calculateChange(){
 /* =====================================================
    COMPLETE TRANSACTION
    ===================================================== */
-const transactionId =
-    Date.now().toString() +
-    "-" +
-    Math.random().toString(36).substring(2, 8);
 
 async function completeTransaction(){
 
@@ -1581,15 +2395,17 @@ async function completeTransaction(){
     }
 
 
-    transactionProcessing=true;
+    transactionProcessing = true;
 
 
     const button =
     document
-    .getElementById("completeButton");
+    .getElementById(
+        "completeButton"
+    );
 
 
-    button.disabled=true;
+    button.disabled = true;
 
 
     let total =
@@ -1597,12 +2413,12 @@ async function completeTransaction(){
 
 
     if(
-        total<=0
+        total <= 0
     ){
 
-        transactionProcessing=false;
+        transactionProcessing = false;
 
-        button.disabled=false;
+        button.disabled = false;
 
         alert(
             "Belum ada barang dipilih"
@@ -1619,43 +2435,54 @@ async function completeTransaction(){
 
     let paymentMethod =
     document
-    .getElementById("paymentMethod")
+    .getElementById(
+        "paymentMethod"
+    )
     .value;
 
 
-    let cashReceived=0;
+    let cashReceived = 0;
 
-    let change=0;
+    let change = 0;
 
 
     if(
-        paymentMethod==="cash"
+        paymentMethod === "cash"
     ){
 
         let cashInput =
         document
-        .getElementById("cashReceived")
+        .getElementById(
+            "cashReceived"
+        )
         .value;
 
 
         cashReceived =
         parseInt(
-            cashInput.replace(/\D/g,"")
+            cashInput.replace(
+                /\D/g,
+                ""
+            )
         ) || 0;
 
 
         if(
-            cashReceived<total
+            cashReceived < total
         ){
 
-            transactionProcessing=false;
+            transactionProcessing =
+            false;
 
-            button.disabled=false;
+            button.disabled =
+            false;
+
 
             alert(
 
-                "Uang diterima kurang.\n\n"+
-                "Total: "+
+                "Uang diterima kurang.\n\n" +
+
+                "Total: " +
                 rupiah(total)
 
             );
@@ -1666,7 +2493,7 @@ async function completeTransaction(){
 
 
         change =
-        cashReceived-total;
+        cashReceived - total;
 
     }
 
@@ -1675,18 +2502,19 @@ async function completeTransaction(){
        ITEMS
        ========================= */
 
-    let items=[];
+    let items = [];
 
 
     menus.forEach(
-        (m,i)=>{
+        (m,i) => {
 
             if(
-                cart[i]>0
+                (cart[i] || 0) > 0
             ){
 
                 let subtotal =
-                m.harga*cart[i];
+                m.harga *
+                cart[i];
 
 
                 items.push({
@@ -1726,7 +2554,9 @@ async function completeTransaction(){
         "id-ID",
         {
             hour:"2-digit",
+
             minute:"2-digit",
+
             hour12:false
         }
     );
@@ -1745,33 +2575,43 @@ async function completeTransaction(){
        TRANSACTION
        ========================= */
 
-   let transaction = {
+    /*
+     * transactionId dibuat SETIAP transaksi.
+     * Tidak lagi menggunakan satu ID global.
+     */
 
-    transactionId: transactionId,
+    let transaction = {
 
-    tanggal: tanggal,
+        transactionId:
+            generateTransactionId(),
 
-    jam: jam,
+        tanggal:
+            tanggal,
 
-    nota: nomorNota,
+        jam:
+            jam,
 
-    pembayaran:
-        paymentMethod === "cash"
-        ? "Cash"
-        : "QRIS",
+        nota:
+            nomorNota,
 
-    cashReceived:
-        cashReceived,
+        pembayaran:
+            paymentMethod === "cash"
+            ? "Cash"
+            : "QRIS",
 
-    change:
-        change,
+        cashReceived:
+            cashReceived,
 
-    total:
-        total,
+        change:
+            change,
 
-    items:
-        items
-};
+        total:
+            total,
+
+        items:
+            items
+
+    };
 
 
     currentTransaction =
@@ -1784,17 +2624,23 @@ async function completeTransaction(){
 
     const loadingBox =
     document
-    .getElementById("loadingBox");
+    .getElementById(
+        "loadingBox"
+    );
 
 
     const loadingText =
     document
-    .getElementById("loadingText");
+    .getElementById(
+        "loadingText"
+    );
 
 
     const loadingSub =
     document
-    .getElementById("loadingSub");
+    .getElementById(
+        "loadingSub"
+    );
 
 
     loadingBox
@@ -1803,51 +2649,96 @@ async function completeTransaction(){
 
 
     /* =========================
-       OFFLINE CACHE & GOOGLE SHEETS
+       OFFLINE QUEUE
        ========================= */
 
-    // 1. Simpan ke antrean lokal dulu
-const alreadyQueued =
+    const alreadyQueued =
     pendingTransactions.some(
         item =>
             item.transactionId ===
             transaction.transactionId
     );
 
-if (!alreadyQueued) {
 
-    pendingTransactions.push(transaction);
+    if(!alreadyQueued){
 
-    localStorage.setItem(
-        "pendingTransactions",
-        JSON.stringify(
-            pendingTransactions
-        )
-    );
-
-}
-    updateNetworkStatus();
-
-    // 2. Coba kirim antrean ke Google Sheets
-    loadingText.innerText = "Mengirim transaksi...";
-    loadingSub.innerText = "Menyimpan data ke Google Sheets";
-
-    let isSent = await processPendingTransactions();
-
-    // Jika offline/gagal kirim, tampilkan konfirmasi transaksi offline
-    if (!isSent && !navigator.onLine) {
-        let lanjut = confirm(
-            "Tidak ada koneksi internet.\n\n" +
-            "Data transaksi SUDAH TERSIMPAN DI LOKAL dan akan otomatis terkirim saat online.\n\n" +
-            "Apakah ingin tetap mencetak nota?"
+        pendingTransactions.push(
+            transaction
         );
 
-        if (!lanjut) {
-            loadingBox.classList.remove("active");
-            transactionProcessing = false;
-            button.disabled = false;
+
+        localStorage.setItem(
+            "pendingTransactions",
+            JSON.stringify(
+                pendingTransactions
+            )
+        );
+
+    }
+
+
+    updateNetworkStatus();
+
+
+    /* =========================
+       GOOGLE SHEETS
+       ========================= */
+
+    loadingText.innerText =
+    "Mengirim transaksi...";
+
+
+    loadingSub.innerText =
+    "Menyimpan data ke Google Sheets";
+
+
+    let isSent =
+    await processPendingTransactions();
+
+
+    /*
+     * Jika offline, transaksi tetap
+     * tersimpan di localStorage.
+     */
+
+    if(
+        !isSent &&
+        !navigator.onLine
+    ){
+
+        let lanjut =
+        confirm(
+
+            "Tidak ada koneksi internet.\n\n" +
+
+            "Data transaksi SUDAH TERSIMPAN DI LOKAL " +
+
+            "dan akan otomatis terkirim saat online.\n\n" +
+
+            "Apakah ingin tetap mencetak nota?"
+
+        );
+
+
+        if(!lanjut){
+
+            loadingBox
+            .classList
+            .remove("active");
+
+
+            transactionProcessing =
+            false;
+
+
+            button.disabled =
+            false;
+
+
             return;
+
         }
+
     }
 
 
@@ -1881,9 +2772,13 @@ if (!alreadyQueued) {
         .remove("active");
 
 
-        transactionProcessing=false;
+        transactionProcessing =
+        false;
 
-        button.disabled=false;
+
+        button.disabled =
+        false;
+
 
         return;
 
@@ -1908,20 +2803,33 @@ if (!alreadyQueued) {
        ========================= */
 
     document
-    .getElementById("receipt")
-    .style.display=
+    .getElementById(
+        "receipt"
+    )
+    .style.display =
     "none";
 
-// Reset cart untuk transaksi berikutnya
-cart = {};
 
-renderCashier();
+    /*
+     * Reset hanya setelah transaksi
+     * benar-benar selesai dicetak.
+     */
 
-alert(
-    "Transaksi berhasil.\n"+
-    "No Nota: "+
-    nomorNota
-);
+    cart = {};
+
+
+    renderCashier();
+
+
+    alert(
+
+        "Transaksi berhasil.\n" +
+
+        "No Nota: " +
+
+        nomorNota
+
+    );
 
 }
 
@@ -1930,7 +2838,9 @@ alert(
    GOOGLE SHEETS
    ===================================================== */
 
-async function saveToGoogleSheets(data){
+async function saveToGoogleSheets(
+    data
+){
 
     await fetch(
 
@@ -1963,75 +2873,109 @@ async function saveToGoogleSheets(data){
    OFFLINE SYNC PROCESSOR
    ===================================================== */
 
-async function processPendingTransactions() {
+async function processPendingTransactions(){
 
-    // Jangan proses kalau offline
-    if (!navigator.onLine) {
+    if(
+        !navigator.onLine
+    ){
+
         return false;
+
     }
 
-    // Cegah dua proses sync berjalan bersamaan
-    if (syncingTransactions) {
+
+    if(
+        syncingTransactions
+    ){
+
         return false;
+
     }
 
-    if (pendingTransactions.length === 0) {
+
+    if(
+        pendingTransactions.length === 0
+    ){
+
         return true;
+
     }
+
 
     syncingTransactions = true;
 
+
     let allSuccess = true;
 
-    try {
 
-        while (
+    try{
+
+        while(
+
             navigator.onLine &&
             pendingTransactions.length > 0
-        ) {
+
+        ){
 
             const txn =
-                pendingTransactions[0];
+            pendingTransactions[0];
 
-            try {
 
-                await saveToGoogleSheets(txn);
+            try{
 
-                // Hapus HANYA transaksi paling depan
-                // setelah request selesai
+                await saveToGoogleSheets(
+                    txn
+                );
+
+
                 pendingTransactions.shift();
 
+
                 localStorage.setItem(
+
                     "pendingTransactions",
+
                     JSON.stringify(
                         pendingTransactions
                     )
+
                 );
+
 
                 updateNetworkStatus();
 
-            } catch (error) {
+            }catch(error){
 
                 console.error(
+
                     "Gagal mengirim transaksi:",
+
                     txn.nota,
+
                     error
+
                 );
+
 
                 allSuccess = false;
 
                 break;
+
             }
+
         }
 
-    } finally {
+    }finally{
 
         syncingTransactions = false;
 
         updateNetworkStatus();
+
     }
 
+
     return allSuccess;
+
 }
 
 
@@ -2043,13 +2987,13 @@ function generateReceipt(
     transaction
 ){
 
-    let itemHtml="";
+    let itemHtml = "";
 
 
     transaction.items.forEach(
-        item=>{
+        item => {
 
-            itemHtml+=`
+            itemHtml += `
 
             <div
                 style="margin-bottom:6px;">
@@ -2099,8 +3043,10 @@ function generateReceipt(
        ========================= */
 
     document
-    .getElementById("receiptInfo")
-    .innerHTML=`
+    .getElementById(
+        "receiptInfo"
+    )
+    .innerHTML = `
 
         <div class="center">
 
@@ -2111,7 +3057,9 @@ function generateReceipt(
             <br>
 
             ${transaction.tanggal}
+
             •
+
             ${transaction.jam}
 
         </div>
@@ -2124,8 +3072,10 @@ function generateReceipt(
        ========================= */
 
     document
-    .getElementById("receiptItems")
-    .innerHTML=
+    .getElementById(
+        "receiptItems"
+    )
+    .innerHTML =
     itemHtml;
 
 
@@ -2134,9 +3084,11 @@ function generateReceipt(
        ========================= */
 
     document
-    .getElementById("receiptTotal")
-    .innerHTML=
-    "TOTAL : "+
+    .getElementById(
+        "receiptTotal"
+    )
+    .innerHTML =
+    "TOTAL : " +
     rupiah(transaction.total);
 
 
@@ -2144,32 +3096,37 @@ function generateReceipt(
        PAYMENT
        ========================= */
 
-    let paymentHtml="";
+    let paymentHtml = "";
 
 
     if(
-        transaction.pembayaran==="Cash"
+        transaction.pembayaran ===
+        "Cash"
     ){
 
-        paymentHtml=`
+        paymentHtml = `
 
             Pembayaran : Cash
 
             <br>
 
             Diterima :
-            ${rupiah(transaction.cashReceived)}
+            ${rupiah(
+                transaction.cashReceived
+            )}
 
             <br>
 
             Kembalian :
-            ${rupiah(transaction.change)}
+            ${rupiah(
+                transaction.change
+            )}
 
         `;
 
     }else{
 
-        paymentHtml=`
+        paymentHtml = `
 
             Pembayaran : QRIS
 
@@ -2179,14 +3136,18 @@ function generateReceipt(
 
 
     document
-    .getElementById("receiptPayment")
-    .innerHTML=
+    .getElementById(
+        "receiptPayment"
+    )
+    .innerHTML =
     paymentHtml;
 
 
     document
-    .getElementById("receipt")
-    .style.display=
+    .getElementById(
+        "receipt"
+    )
+    .style.display =
     "block";
 
 }
@@ -2215,7 +3176,7 @@ async function printReceipt(){
     currentTransaction;
 
 
-    let content=[];
+    let content = [];
 
 
     /* =========================
@@ -2264,7 +3225,7 @@ async function printReceipt(){
         type:"text",
 
         text:
-        "No Nota : "+
+        "No Nota : " +
         transaction.nota,
 
         align:"center",
@@ -2279,8 +3240,8 @@ async function printReceipt(){
         type:"text",
 
         text:
-        transaction.tanggal+
-        " • "+
+        transaction.tanggal +
+        " • " +
         transaction.jam,
 
         align:"center"
@@ -2300,7 +3261,7 @@ async function printReceipt(){
        ========================= */
 
     transaction.items.forEach(
-        item=>{
+        item => {
 
             content.push({
 
@@ -2318,8 +3279,8 @@ async function printReceipt(){
                 type:"row",
 
                 left:
-                item.qty+
-                " x "+
+                item.qty +
+                " x " +
                 rupiah(item.harga),
 
                 right:
@@ -2372,14 +3333,15 @@ async function printReceipt(){
         type:"text",
 
         text:
-        "Pembayaran : "+
+        "Pembayaran : " +
         transaction.pembayaran
 
     });
 
 
     if(
-        transaction.pembayaran==="Cash"
+        transaction.pembayaran ===
+        "Cash"
     ){
 
         content.push({
@@ -2387,7 +3349,7 @@ async function printReceipt(){
             type:"text",
 
             text:
-            "Diterima : "+
+            "Diterima : " +
             rupiah(
                 transaction.cashReceived
             )
@@ -2400,7 +3362,7 @@ async function printReceipt(){
             type:"text",
 
             text:
-            "Kembalian : "+
+            "Kembalian : " +
             rupiah(
                 transaction.change
             )
@@ -2488,7 +3450,7 @@ async function printReceipt(){
         ){
 
             throw new Error(
-                "Cleanter error "+
+                "Cleanter error " +
                 response.status
             );
 
@@ -2500,7 +3462,8 @@ async function printReceipt(){
 
 
         if(
-            result.status==="printed"
+            result.status ===
+            "printed"
         ){
 
             return true;
@@ -2510,7 +3473,7 @@ async function printReceipt(){
 
         alert(
 
-            "Print gagal: "+
+            "Print gagal: " +
             JSON.stringify(result)
 
         );
@@ -2526,13 +3489,13 @@ async function printReceipt(){
 
         alert(
 
-            "Printer tidak terhubung.\n\n"+
+            "Printer tidak terhubung.\n\n" +
 
-            "Pastikan:\n"+
+            "Pastikan:\n" +
 
-            "1. RPP02N sudah Bluetooth paired\n"+
+            "1. RPP02N sudah Bluetooth paired\n" +
 
-            "2. Cleanter sudah terpasang\n"+
+            "2. Cleanter sudah terpasang\n" +
 
             "3. RPP02N dipilih sebagai printer di Cleanter"
 
@@ -2555,6 +3518,7 @@ renderMenu();
 renderCashier();
 
 updateNetworkStatus();
+
 
 </script>
 
