@@ -57,8 +57,8 @@ body{
 
 .productGrid{
     display:grid;
-    grid-template-columns:repeat(2,1fr);
-    gap:12px;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:14px;
 }
 
 .productCard{
@@ -70,10 +70,11 @@ body{
     user-select:none;
     transition:.12s;
     box-shadow:0 2px 8px rgba(0,0,0,.06);
+    min-width:0;
 }
 
 .productCard:active{
-    transform:scale(.96);
+    transform:scale(.97);
 }
 
 .categoryTabs{
@@ -115,8 +116,23 @@ body{
     margin-bottom:4px;
 }
 
+
+/* =========================
+   PRODUCT IMAGE
+   ========================= */
+
+/*
+ * Foto produk dibuat 1:1 agar cocok
+ * dengan foto 800x800.
+ *
+ * Desktop akan tetap punya area foto
+ * yang besar karena grid berubah menjadi
+ * 3 kolom.
+ */
+
 .productImage{
-    height:135px;
+    width:100%;
+    aspect-ratio:1 / 1;
     background:#e9ecef;
     display:flex;
     align-items:center;
@@ -131,15 +147,20 @@ body{
     display:block;
 }
 
+
+/* =========================
+   PRODUCT INFO
+   ========================= */
+
 .productInfo{
-    padding:10px;
+    padding:11px;
 }
 
 .productName{
     font-weight:bold;
     font-size:14px;
-    line-height:1.2;
-    min-height:34px;
+    line-height:1.25;
+    min-height:35px;
 }
 
 .productPrice{
@@ -377,17 +398,169 @@ body{
 
 
 /* =========================
+   TABLET
+   ========================= */
+
+@media(min-width:576px){
+
+    .productGrid{
+        grid-template-columns:repeat(3,minmax(0,1fr));
+        gap:16px;
+    }
+
+    .productInfo{
+        padding:12px;
+    }
+
+}
+
+
+/* =========================
+   DESKTOP
+   ========================= */
+
+@media(min-width:992px){
+
+    body{
+        padding:24px;
+    }
+
+    .cashierContainer{
+        max-width:1400px;
+        margin:0 auto;
+    }
+
+    .card{
+        padding:22px;
+    }
+
+    /*
+     * 3 kolom desktop.
+     * Dengan container besar, setiap kartu
+     * tetap cukup lebar dan foto 800x800
+     * tampil jelas.
+     */
+
+    .productGrid{
+        grid-template-columns:repeat(3,minmax(0,1fr));
+        gap:20px;
+    }
+
+    .productImage{
+        aspect-ratio:1 / 1;
+    }
+
+    .productInfo{
+        padding:14px;
+    }
+
+    .productName{
+        font-size:15px;
+        min-height:38px;
+    }
+
+    .productPrice{
+        font-size:16px;
+    }
+
+    .qtyBtn{
+        width:36px;
+        height:36px;
+    }
+
+}
+
+
+/* =========================
+   LARGE DESKTOP
+   ========================= */
+
+@media(min-width:1400px){
+
+    .cashierContainer{
+        max-width:1500px;
+    }
+
+    .productGrid{
+        gap:22px;
+    }
+
+    .productInfo{
+        padding:15px;
+    }
+
+    .productName{
+        font-size:16px;
+    }
+
+}
+
+
+/* =========================
    MOBILE
    ========================= */
 
-@media(max-width:380px){
+@media(max-width:575px){
 
-    .productImage{
-        height:110px;
+    body{
+        padding:8px;
+    }
+
+    .card{
+        padding:12px;
+    }
+
+    .productGrid{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:10px;
+    }
+
+    .productInfo{
+        padding:9px;
     }
 
     .productName{
         font-size:13px;
+    }
+
+    .productPrice{
+        font-size:14px;
+    }
+
+    .qtyBtn{
+        width:30px;
+        height:30px;
+    }
+
+}
+
+
+/* =========================
+   VERY SMALL MOBILE
+   ========================= */
+
+@media(max-width:380px){
+
+    .productGrid{
+        gap:8px;
+    }
+
+    .productInfo{
+        padding:8px;
+    }
+
+    .productName{
+        font-size:12px;
+    }
+
+    .productPrice{
+        font-size:13px;
+    }
+
+    .qtyBtn{
+        width:28px;
+        height:28px;
+        font-size:16px;
     }
 
 }
@@ -478,6 +651,8 @@ Tambah
 <div
 id="cashierPage"
 class="page active">
+
+<div class="cashierContainer">
 
 <div class="card">
 
@@ -789,6 +964,8 @@ Mohon tunggu
 
 </div>
 
+
+</div>
 
 </div>
 
@@ -1679,10 +1856,8 @@ function renderCashier(){
         (m,i) => {
 
             /*
-             * PENTING:
-             * Jangan reset cart[i] di sini.
-             * Nilai cart tetap dipertahankan
-             * ketika berpindah kategori.
+             * Jangan reset cart[i] ketika
+             * berpindah kategori.
              */
 
             if(
@@ -1844,13 +2019,7 @@ function renderCashier(){
     .innerHTML = html;
 
 
-    /*
-     * Render ulang daftar order
-     * setelah produk selesai dibuat.
-     */
-
     renderOrderSummary();
-
 
     updateTotal();
 
@@ -2005,13 +2174,7 @@ function renderOrderSummary(){
 
     orderCount.innerText =
         totalQty +
-        (
-            totalQty === 1
-            ?
-            " item"
-            :
-            " item"
-        );
+        " item";
 
 }
 
@@ -2429,10 +2592,6 @@ async function completeTransaction(){
     }
 
 
-    /* =========================
-       PAYMENT
-       ========================= */
-
     let paymentMethod =
     document
     .getElementById(
@@ -2498,10 +2657,6 @@ async function completeTransaction(){
     }
 
 
-    /* =========================
-       ITEMS
-       ========================= */
-
     let items = [];
 
 
@@ -2535,10 +2690,6 @@ async function completeTransaction(){
     );
 
 
-    /* =========================
-       DATE TIME
-       ========================= */
-
     let now =
     new Date();
 
@@ -2554,31 +2705,16 @@ async function completeTransaction(){
         "id-ID",
         {
             hour:"2-digit",
-
             minute:"2-digit",
-
             hour12:false
         }
     );
 
 
-    /* =========================
-       NOTA
-       ========================= */
-
     let nomorNota =
     String(nota)
     .padStart(3,"0");
 
-
-    /* =========================
-       TRANSACTION
-       ========================= */
-
-    /*
-     * transactionId dibuat SETIAP transaksi.
-     * Tidak lagi menggunakan satu ID global.
-     */
 
     let transaction = {
 
@@ -2618,10 +2754,6 @@ async function completeTransaction(){
     transaction;
 
 
-    /* =========================
-       LOADING
-       ========================= */
-
     const loadingBox =
     document
     .getElementById(
@@ -2647,10 +2779,6 @@ async function completeTransaction(){
     .classList
     .add("active");
 
-
-    /* =========================
-       OFFLINE QUEUE
-       ========================= */
 
     const alreadyQueued =
     pendingTransactions.some(
@@ -2680,10 +2808,6 @@ async function completeTransaction(){
     updateNetworkStatus();
 
 
-    /* =========================
-       GOOGLE SHEETS
-       ========================= */
-
     loadingText.innerText =
     "Mengirim transaksi...";
 
@@ -2695,11 +2819,6 @@ async function completeTransaction(){
     let isSent =
     await processPendingTransactions();
 
-
-    /*
-     * Jika offline, transaksi tetap
-     * tersimpan di localStorage.
-     */
 
     if(
         !isSent &&
@@ -2742,10 +2861,6 @@ async function completeTransaction(){
     }
 
 
-    /* =========================
-       PRINTING
-       ========================= */
-
     loadingText.innerText =
     "Mencetak nota...";
 
@@ -2785,10 +2900,6 @@ async function completeTransaction(){
     }
 
 
-    /* =========================
-       NEXT NOTA
-       ========================= */
-
     nota++;
 
 
@@ -2798,10 +2909,6 @@ async function completeTransaction(){
     );
 
 
-    /* =========================
-       RESET
-       ========================= */
-
     document
     .getElementById(
         "receipt"
@@ -2809,11 +2916,6 @@ async function completeTransaction(){
     .style.display =
     "none";
 
-
-    /*
-     * Reset hanya setelah transaksi
-     * benar-benar selesai dicetak.
-     */
 
     cart = {};
 
@@ -3038,10 +3140,6 @@ function generateReceipt(
     );
 
 
-    /* =========================
-       INFO
-       ========================= */
-
     document
     .getElementById(
         "receiptInfo"
@@ -3067,10 +3165,6 @@ function generateReceipt(
     `;
 
 
-    /* =========================
-       ITEMS
-       ========================= */
-
     document
     .getElementById(
         "receiptItems"
@@ -3078,10 +3172,6 @@ function generateReceipt(
     .innerHTML =
     itemHtml;
 
-
-    /* =========================
-       TOTAL
-       ========================= */
 
     document
     .getElementById(
@@ -3091,10 +3181,6 @@ function generateReceipt(
     "TOTAL : " +
     rupiah(transaction.total);
 
-
-    /* =========================
-       PAYMENT
-       ========================= */
 
     let paymentHtml = "";
 
@@ -3179,10 +3265,6 @@ async function printReceipt(){
     let content = [];
 
 
-    /* =========================
-       HEADER
-       ========================= */
-
     content.push({
 
         type:"text",
@@ -3215,10 +3297,6 @@ async function printReceipt(){
 
     });
 
-
-    /* =========================
-       NOTA
-       ========================= */
 
     content.push({
 
@@ -3255,10 +3333,6 @@ async function printReceipt(){
 
     });
 
-
-    /* =========================
-       ITEMS
-       ========================= */
 
     transaction.items.forEach(
         item => {
@@ -3299,10 +3373,6 @@ async function printReceipt(){
     });
 
 
-    /* =========================
-       TOTAL
-       ========================= */
-
     content.push({
 
         type:"row",
@@ -3323,10 +3393,6 @@ async function printReceipt(){
 
     });
 
-
-    /* =========================
-       PAYMENT
-       ========================= */
 
     content.push({
 
@@ -3372,10 +3438,6 @@ async function printReceipt(){
     }
 
 
-    /* =========================
-       FOOTER
-       ========================= */
-
     content.push({
 
         type:"feed",
@@ -3404,10 +3466,6 @@ async function printReceipt(){
 
     });
 
-
-    /* =========================
-       CLEANTER
-       ========================= */
 
     try{
 
