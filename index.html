@@ -55,118 +55,12 @@ body{
    PRODUCT GRID
    ========================= */
 
-/* =========================
-   PRODUCT GRID RESPONSIVE
-   ========================= */
-
-/* HP portrait */
 .productGrid{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
     gap:12px;
 }
 
-/* HP landscape */
-@media (orientation:landscape) and (max-width:767px){
-    .productGrid{
-        grid-template-columns:repeat(3,minmax(0,1fr));
-        gap:10px;
-    }
-
-    .productCard{
-        border-radius:12px;
-    }
-
-    .productInfo{
-        padding:9px;
-    }
-
-    .productName{
-        font-size:13px;
-        line-height:1.25;
-    }
-
-    .productPrice{
-        font-size:13px;
-    }
-
-    .qtyBtn{
-        width:30px;
-        height:30px;
-        font-size:16px;
-    }
-}
-
-/* Tablet portrait */
-@media (min-width:576px) and (orientation:portrait){
-    .productGrid{
-        grid-template-columns:repeat(3,minmax(0,1fr));
-        gap:14px;
-    }
-}
-
-/* Tablet / laptop landscape
-   4 kolom supaya kartu tidak terlalu besar */
-@media (min-width:768px) and (orientation:landscape){
-    .productGrid{
-        grid-template-columns:repeat(4,minmax(0,1fr));
-        gap:14px;
-    }
-
-    .productInfo{
-        padding:10px;
-    }
-
-    .productName{
-        font-size:14px;
-    }
-
-    .productPrice{
-        font-size:14px;
-    }
-
-    .qtyBtn{
-        width:32px;
-        height:32px;
-    }
-}
-
-/* Desktop portrait */
-@media (min-width:992px) and (orientation:portrait){
-    .productGrid{
-        grid-template-columns:repeat(3,minmax(0,1fr));
-        gap:16px;
-    }
-}
-
-/* Desktop landscape */
-@media (min-width:992px) and (orientation:landscape){
-    .cashierContainer{
-        max-width:1300px;
-        margin-left:auto;
-        margin-right:auto;
-    }
-
-    .productGrid{
-        grid-template-columns:repeat(4,minmax(0,1fr));
-        gap:16px;
-    }
-}
-
-/* Monitor sangat lebar */
-@media (min-width:1600px) and (orientation:landscape){
-    .productGrid{
-        grid-template-columns:repeat(4,minmax(0,1fr));
-        max-width:1280px;
-    }
-}
-
-.productImage{
-    width:100%;
-    aspect-ratio:1 / 1;
-    object-fit:cover;
-    display:block;
-}
 .productCard{
     background:#fff;
     border:1px solid #e9ecef;
@@ -182,6 +76,11 @@ body{
 .productCard:active{
     transform:scale(.97);
 }
+
+
+/* =========================
+   CATEGORY
+   ========================= */
 
 .categoryTabs{
     display:flex;
@@ -226,15 +125,6 @@ body{
 /* =========================
    PRODUCT IMAGE
    ========================= */
-
-/*
- * Foto produk dibuat 1:1 agar cocok
- * dengan foto 800x800.
- *
- * Desktop akan tetap punya area foto
- * yang besar karena grid berubah menjadi
- * 3 kolom.
- */
 
 .productImage{
     width:100%;
@@ -503,11 +393,111 @@ body{
 }
 
 
+/* =====================================================
+   RESPONSIVE FINAL
+   ===================================================== */
+
+
 /* =========================
-   TABLET
+   HP PORTRAIT
+   2 KOLOM
    ========================= */
 
-@media(min-width:576px){
+@media (max-width:575px) and (orientation:portrait){
+
+    body{
+        padding:8px;
+    }
+
+    .card{
+        padding:12px;
+    }
+
+    .productGrid{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:10px;
+    }
+
+    .productInfo{
+        padding:9px;
+    }
+
+    .productName{
+        font-size:13px;
+        line-height:1.25;
+    }
+
+    .productPrice{
+        font-size:14px;
+    }
+
+    .qtyBtn{
+        width:30px;
+        height:30px;
+    }
+
+}
+
+
+/* =========================
+   HP LANDSCAPE
+   3 KOLOM
+   ========================= */
+
+@media (max-width:767px) and (orientation:landscape){
+
+    body{
+        padding:8px;
+    }
+
+    .card{
+        padding:12px;
+    }
+
+    .productGrid{
+        grid-template-columns:repeat(3,minmax(0,1fr));
+        gap:10px;
+    }
+
+    .productCard{
+        border-radius:12px;
+    }
+
+    .productInfo{
+        padding:9px;
+    }
+
+    .productName{
+        font-size:13px;
+        line-height:1.25;
+        min-height:33px;
+    }
+
+    .productPrice{
+        font-size:13px;
+    }
+
+    .productBottom{
+        margin-top:7px;
+    }
+
+    .qtyBtn{
+        width:30px;
+        height:30px;
+        font-size:16px;
+    }
+
+}
+
+
+/* =========================
+   TABLET PORTRAIT
+   3 KOLOM
+   ========================= */
+
+@media (min-width:576px)
+and (max-width:991px)
+and (orientation:portrait){
 
     .productGrid{
         grid-template-columns:repeat(3,minmax(0,1fr));
@@ -518,14 +508,55 @@ body{
         padding:12px;
     }
 
+    .productName{
+        font-size:14px;
+    }
+
 }
 
 
 /* =========================
-   DESKTOP
+   TABLET LANDSCAPE
+   4 KOLOM
    ========================= */
 
-@media(min-width:992px){
+@media (min-width:768px)
+and (max-width:991px)
+and (orientation:landscape){
+
+    .productGrid{
+        grid-template-columns:repeat(4,minmax(0,1fr));
+        gap:14px;
+    }
+
+    .productInfo{
+        padding:10px;
+    }
+
+    .productName{
+        font-size:14px;
+        min-height:35px;
+    }
+
+    .productPrice{
+        font-size:14px;
+    }
+
+    .qtyBtn{
+        width:32px;
+        height:32px;
+    }
+
+}
+
+
+/* =========================
+   DESKTOP PORTRAIT
+   3 KOLOM
+   ========================= */
+
+@media (min-width:992px)
+and (orientation:portrait){
 
     body{
         padding:24px;
@@ -540,20 +571,9 @@ body{
         padding:22px;
     }
 
-    /*
-     * 3 kolom desktop.
-     * Dengan container besar, setiap kartu
-     * tetap cukup lebar dan foto 800x800
-     * tampil jelas.
-     */
-
     .productGrid{
         grid-template-columns:repeat(3,minmax(0,1fr));
         gap:20px;
-    }
-
-    .productImage{
-        aspect-ratio:1 / 1;
     }
 
     .productInfo{
@@ -578,55 +598,38 @@ body{
 
 
 /* =========================
-   LARGE DESKTOP
+   DESKTOP LANDSCAPE
+   4 KOLOM
    ========================= */
 
-@media(min-width:1400px){
-
-    .cashierContainer{
-        max-width:1500px;
-    }
-
-    .productGrid{
-        gap:22px;
-    }
-
-    .productInfo{
-        padding:15px;
-    }
-
-    .productName{
-        font-size:16px;
-    }
-
-}
-
-
-/* =========================
-   MOBILE
-   ========================= */
-
-@media(max-width:575px){
+@media (min-width:992px)
+and (orientation:landscape){
 
     body{
-        padding:8px;
+        padding:20px;
+    }
+
+    .cashierContainer{
+        max-width:1400px;
+        margin:0 auto;
     }
 
     .card{
-        padding:12px;
+        padding:20px;
     }
 
     .productGrid{
-        grid-template-columns:repeat(2,minmax(0,1fr));
-        gap:10px;
+        grid-template-columns:repeat(4,minmax(0,1fr));
+        gap:16px;
     }
 
     .productInfo{
-        padding:9px;
+        padding:11px;
     }
 
     .productName{
-        font-size:13px;
+        font-size:14px;
+        min-height:35px;
     }
 
     .productPrice{
@@ -634,18 +637,39 @@ body{
     }
 
     .qtyBtn{
-        width:30px;
-        height:30px;
+        width:32px;
+        height:32px;
     }
 
 }
 
 
 /* =========================
-   VERY SMALL MOBILE
+   MONITOR SANGAT LEBAR
+   TETAP 4 KOLOM
    ========================= */
 
-@media(max-width:380px){
+@media (min-width:1600px)
+and (orientation:landscape){
+
+    .cashierContainer{
+        max-width:1500px;
+    }
+
+    .productGrid{
+        grid-template-columns:repeat(4,minmax(0,1fr));
+        gap:18px;
+    }
+
+}
+
+
+/* =========================
+   VERY SMALL HP
+   ========================= */
+
+@media (max-width:380px)
+and (orientation:portrait){
 
     .productGrid{
         gap:8px;
