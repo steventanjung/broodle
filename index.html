@@ -2,3714 +2,1352 @@
 <html lang="id">
 
 <head>
-
-<meta charset="UTF-8">
-
-<meta
-name="viewport"
-content="width=device-width,initial-scale=1">
-
-<link
-href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-rel="stylesheet">
-
-<title>Kukikoe - Mooncake</title>
-
-<style>
-
-/* =========================
-   GENERAL
-   ========================= */
-
-*{
-    box-sizing:border-box;
-}
-
-body{
-    background:#f5f6f8;
-    font-family:Arial,sans-serif;
-    padding:12px;
-    margin:0;
-    color:#212529;
-}
-
-.page{
-    display:none;
-}
-
-.page.active{
-    display:block;
-}
-
-.card{
-    background:#fff;
-    border:0;
-    border-radius:16px;
-    padding:16px;
-    margin-bottom:14px;
-    box-shadow:0 3px 12px rgba(0,0,0,.07);
-}
-
-
-/* =========================
-   PRODUCT GRID
-   ========================= */
-
-.productGrid{
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:12px;
-}
-
-.productCard{
-    background:#fff;
-    border:1px solid #e9ecef;
-    border-radius:16px;
-    overflow:hidden;
-    cursor:pointer;
-    user-select:none;
-    transition:.12s;
-    box-shadow:0 2px 8px rgba(0,0,0,.06);
-    min-width:0;
-}
-
-.productCard:active{
-    transform:scale(.97);
-}
-
-
-/* =========================
-   CATEGORY
-   ========================= */
-
-.categoryTabs{
-    display:flex;
-    gap:7px;
-    overflow-x:auto;
-    padding-bottom:3px;
-    scrollbar-width:none;
-}
-
-.categoryTabs::-webkit-scrollbar{
-    display:none;
-}
-
-.categoryBtn{
-    flex:0 0 auto;
-    border:1px solid #dee2e6;
-    background:#fff;
-    border-radius:20px;
-    padding:8px 13px;
-    font-size:13px;
-    font-weight:600;
-}
-
-.categoryBtn.active{
-    background:#0d6efd;
-    color:#fff;
-    border-color:#0d6efd;
-}
-
-.featuredBadge{
-    display:inline-block;
-    font-size:10px;
-    font-weight:bold;
-    background:#fff3cd;
-    color:#856404;
-    border-radius:8px;
-    padding:3px 6px;
-    margin-bottom:4px;
-}
-
-
-/* =========================
-   PRODUCT IMAGE
-   ========================= */
-
-.productImage{
-    width:100%;
-    aspect-ratio:1 / 1;
-    background:#e9ecef;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    overflow:hidden;
-}
-
-.productImage img{
-    width:100%;
-    height:100%;
-    object-fit:cover;
-    display:block;
-}
-
-
-/* =========================
-   PRODUCT INFO
-   ========================= */
-
-.productInfo{
-    padding:11px;
-}
-
-.productName{
-    font-weight:bold;
-    font-size:14px;
-    line-height:1.25;
-    min-height:35px;
-}
-
-.productPrice{
-    color:#0d6efd;
-    font-weight:bold;
-    margin-top:4px;
-}
-
-.productBottom{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-top:9px;
-}
-
-.productQty{
-    display:flex;
-    align-items:center;
-    gap:7px;
-}
-
-.qtyBtn{
-    width:32px;
-    height:32px;
-    border:0;
-    border-radius:50%;
-    font-size:18px;
-    font-weight:bold;
-    background:#e9ecef;
-    padding:0;
-}
-
-.qtyNumber{
-    min-width:22px;
-    text-align:center;
-    font-weight:bold;
-}
-
-
-/* =========================
-   CURRENT ORDER
-   ========================= */
-
-.orderBox{
-    margin-top:16px;
-    padding-top:16px;
-    border-top:1px solid #e9ecef;
-}
-
-.orderHeader{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:10px;
-}
-
-.orderHeader h5{
-    margin:0;
-    font-weight:bold;
-}
-
-.orderCount{
-    font-size:12px;
-    color:#6c757d;
-}
-
-.orderEmpty{
-    text-align:center;
-    padding:18px 10px;
-    background:#f8f9fa;
-    border-radius:12px;
-    color:#6c757d;
-    font-size:13px;
-}
-
-.orderItem{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:10px;
-    padding:10px 0;
-    border-bottom:1px dashed #dee2e6;
-}
-
-.orderItem:last-child{
-    border-bottom:0;
-}
-
-.orderItemInfo{
-    min-width:0;
-    flex:1;
-}
-
-.orderItemName{
-    font-weight:bold;
-    font-size:14px;
-    line-height:1.25;
-}
-
-.orderItemDetail{
-    font-size:12px;
-    color:#6c757d;
-    margin-top:3px;
-}
-
-.orderItemSubtotal{
-    font-weight:bold;
-    font-size:14px;
-    white-space:nowrap;
-}
-
-.orderRemove{
-    width:28px;
-    height:28px;
-    border:0;
-    border-radius:50%;
-    background:#f8d7da;
-    color:#842029;
-    font-weight:bold;
-    padding:0;
-    flex:0 0 auto;
-}
-
-
-/* =========================
-   LOADING
-   ========================= */
-
-.loadingBox{
-    display:none;
-    text-align:center;
-    padding:20px 10px;
-}
-
-.loadingBox.active{
-    display:block;
-}
-
-.spinner{
-    width:40px;
-    height:40px;
-    border:4px solid #dee2e6;
-    border-top:4px solid #0d6efd;
-    border-radius:50%;
-    animation:spin .8s linear infinite;
-    margin:0 auto 12px;
-}
-
-@keyframes spin{
-    to{
-        transform:rotate(360deg);
-    }
-}
-
-.loadingText{
-    font-weight:bold;
-}
-
-.loadingSub{
-    font-size:13px;
-    color:#6c757d;
-    margin-top:4px;
-}
-
-
-/* =========================
-   PAYMENT
-   ========================= */
-
-.paymentBox{
-    margin-top:16px;
-    padding-top:16px;
-    border-top:1px solid #e9ecef;
-}
-
-.change{
-    font-size:18px;
-    font-weight:bold;
-    margin-top:10px;
-    padding:12px;
-    background:#f8f9fa;
-    border-radius:10px;
-}
-
-#grandTotal{
-    margin:0;
-}
-
-
-/* =========================
-   MENU MANAGEMENT
-   ========================= */
-
-.menuItem{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:10px;
-    background:#fff;
-    border:1px solid #e9ecef;
-    border-radius:12px;
-    padding:13px;
-    margin-bottom:8px;
-}
-
-.menuItem b{
-    font-size:15px;
-}
-
-
-/* =========================
-   RECEIPT
-   ========================= */
-
-#receipt{
-    width:58mm;
-    background:white;
-    padding:10px;
-    font-size:12px;
-    display:none;
-}
-
-.center{
-    text-align:center;
-}
-
-.right{
-    text-align:right;
-}
-
-.line{
-    border-top:1px dashed black;
-    margin:6px 0;
-}
-
-
-/* =====================================================
-   RESPONSIVE FINAL
-   ===================================================== */
-
-
-/* =========================
-   HP PORTRAIT
-   2 KOLOM
-   ========================= */
-
-@media (max-width:575px) and (orientation:portrait){
-
-    body{
-        padding:8px;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kukikoe - Mooncake</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    /* ========================= GENERAL ========================= */
+    * {
+      box-sizing: border-box;
     }
 
-    .card{
-        padding:12px;
+    body {
+      background: #f5f6f8;
+      font-family: Arial, sans-serif;
+      padding: 12px;
+      margin: 0;
+      color: #212529;
     }
 
-    .productGrid{
-        grid-template-columns:repeat(2,minmax(0,1fr));
-        gap:10px;
+    .page {
+      display: none;
     }
 
-    .productInfo{
-        padding:9px;
+    .page.active {
+      display: block;
     }
 
-    .productName{
-        font-size:13px;
-        line-height:1.25;
+    .card {
+      background: #fff;
+      border: 0;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, .07);
     }
 
-    .productPrice{
-        font-size:14px;
+    /* ========================= PRODUCT GRID ========================= */
+    .productGrid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
     }
 
-    .qtyBtn{
-        width:30px;
-        height:30px;
+    .productCard {
+      background: #fff;
+      border: 1px solid #e9ecef;
+      border-radius: 16px;
+      overflow: hidden;
+      cursor: pointer;
+      user-select: none;
+      transition: .12s;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+      min-width: 0;
     }
 
-}
-
-
-/* =========================
-   HP LANDSCAPE
-   3 KOLOM
-   ========================= */
-
-@media (max-width:767px) and (orientation:landscape){
-
-    body{
-        padding:8px;
+    .productCard:active {
+      transform: scale(.97);
     }
 
-    .card{
-        padding:12px;
+    /* ========================= CATEGORY ========================= */
+    .categoryTabs {
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      padding-bottom: 3px;
+      scrollbar-width: none;
     }
 
-    .productGrid{
-        grid-template-columns:repeat(3,minmax(0,1fr));
-        gap:10px;
+    .categoryTabs::-webkit-scrollbar {
+      display: none;
     }
 
-    .productCard{
-        border-radius:12px;
+    .categoryBtn {
+      flex: 0 0 auto;
+      border: 1px solid #dee2e6;
+      background: #fff;
+      border-radius: 20px;
+      padding: 8px 13px;
+      font-size: 13px;
+      font-weight: 600;
     }
 
-    .productInfo{
-        padding:9px;
+    .categoryBtn.active {
+      background: #0d6efd;
+      color: #fff;
+      border-color: #0d6efd;
     }
 
-    .productName{
-        font-size:13px;
-        line-height:1.25;
-        min-height:33px;
+    .featuredBadge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: bold;
+      background: #fff3cd;
+      color: #856404;
+      border-radius: 8px;
+      padding: 3px 6px;
+      margin-bottom: 4px;
     }
 
-    .productPrice{
-        font-size:13px;
+    /* ========================= PRODUCT IMAGE ========================= */
+    .productImage {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: #e9ecef;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
     }
 
-    .productBottom{
-        margin-top:7px;
+    .productImage img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
 
-    .qtyBtn{
-        width:30px;
-        height:30px;
-        font-size:16px;
+    /* ========================= PRODUCT INFO ========================= */
+    .productInfo {
+      padding: 11px;
     }
 
-}
-
-
-/* =========================
-   TABLET PORTRAIT
-   3 KOLOM
-   ========================= */
-
-@media (min-width:576px)
-and (max-width:991px)
-and (orientation:portrait){
-
-    .productGrid{
-        grid-template-columns:repeat(3,minmax(0,1fr));
-        gap:16px;
+    .productName {
+      font-weight: bold;
+      font-size: 14px;
+      line-height: 1.25;
+      min-height: 35px;
     }
 
-    .productInfo{
-        padding:12px;
+    .productPrice {
+      color: #0d6efd;
+      font-weight: bold;
+      margin-top: 4px;
     }
 
-    .productName{
-        font-size:14px;
+    .productBottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 9px;
     }
 
-}
-
-
-/* =========================
-   TABLET LANDSCAPE
-   4 KOLOM
-   ========================= */
-
-@media (min-width:768px)
-and (max-width:991px)
-and (orientation:landscape){
-
-    .productGrid{
-        grid-template-columns:repeat(4,minmax(0,1fr));
-        gap:14px;
+    .productQty {
+      display: flex;
+      align-items: center;
+      gap: 7px;
     }
 
-    .productInfo{
-        padding:10px;
+    .qtyBtn {
+      width: 32px;
+      height: 32px;
+      border: 0;
+      border-radius: 50%;
+      font-size: 18px;
+      font-weight: bold;
+      background: #e9ecef;
+      padding: 0;
     }
 
-    .productName{
-        font-size:14px;
-        min-height:35px;
+    .qtyNumber {
+      min-width: 22px;
+      text-align: center;
+      font-weight: bold;
     }
 
-    .productPrice{
-        font-size:14px;
+    /* ========================= CURRENT ORDER ========================= */
+    .orderBox {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #e9ecef;
     }
 
-    .qtyBtn{
-        width:32px;
-        height:32px;
+    .orderHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
     }
 
-}
-
-
-/* =========================
-   DESKTOP PORTRAIT
-   3 KOLOM
-   ========================= */
-
-@media (min-width:992px)
-and (orientation:portrait){
-
-    body{
-        padding:24px;
+    .orderHeader h5 {
+      margin: 0;
+      font-weight: bold;
     }
 
-    .cashierContainer{
-        max-width:1400px;
-        margin:0 auto;
+    .orderCount {
+      font-size: 12px;
+      color: #6c757d;
     }
 
-    .card{
-        padding:22px;
+    .orderEmpty {
+      text-align: center;
+      padding: 18px 10px;
+      background: #f8f9fa;
+      border-radius: 12px;
+      color: #6c757d;
+      font-size: 13px;
     }
 
-    .productGrid{
-        grid-template-columns:repeat(3,minmax(0,1fr));
-        gap:20px;
+    .orderItem {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px dashed #dee2e6;
     }
 
-    .productInfo{
-        padding:14px;
+    .orderItem:last-child {
+      border-bottom: 0;
     }
 
-    .productName{
-        font-size:15px;
-        min-height:38px;
+    .orderItemInfo {
+      min-width: 0;
+      flex: 1;
     }
 
-    .productPrice{
-        font-size:16px;
+    .orderItemName {
+      font-weight: bold;
+      font-size: 14px;
+      line-height: 1.25;
     }
 
-    .qtyBtn{
-        width:36px;
-        height:36px;
+    .orderItemDetail {
+      font-size: 12px;
+      color: #6c757d;
+      margin-top: 3px;
     }
 
-}
-
-
-/* =========================
-   DESKTOP LANDSCAPE
-   4 KOLOM
-   ========================= */
-
-@media (min-width:992px)
-and (orientation:landscape){
-
-    body{
-        padding:20px;
+    .orderItemSubtotal {
+      font-weight: bold;
+      font-size: 14px;
+      white-space: nowrap;
     }
 
-    .cashierContainer{
-        max-width:1400px;
-        margin:0 auto;
+    .orderRemove {
+      width: 28px;
+      height: 28px;
+      border: 0;
+      border-radius: 50%;
+      background: #f8d7da;
+      color: #842029;
+      font-weight: bold;
+      padding: 0;
+      flex: 0 0 auto;
     }
 
-    .card{
-        padding:20px;
+    /* ========================= LOADING ========================= */
+    .loadingBox {
+      display: none;
+      text-align: center;
+      padding: 20px 10px;
     }
 
-    .productGrid{
-        grid-template-columns:repeat(4,minmax(0,1fr));
-        gap:16px;
+    .loadingBox.active {
+      display: block;
     }
 
-    .productInfo{
-        padding:11px;
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #dee2e6;
+      border-top: 4px solid #0d6efd;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: 0 auto 12px;
     }
 
-    .productName{
-        font-size:14px;
-        min-height:35px;
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
     }
 
-    .productPrice{
-        font-size:14px;
+    .loadingText {
+      font-weight: bold;
     }
 
-    .qtyBtn{
-        width:32px;
-        height:32px;
+    .loadingSub {
+      font-size: 13px;
+      color: #6c757d;
+      margin-top: 4px;
     }
 
-}
-
-
-/* =========================
-   MONITOR SANGAT LEBAR
-   TETAP 4 KOLOM
-   ========================= */
-
-@media (min-width:1600px)
-and (orientation:landscape){
-
-    .cashierContainer{
-        max-width:1500px;
+    /* ========================= PAYMENT ========================= */
+    .paymentBox {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #e9ecef;
     }
 
-    .productGrid{
-        grid-template-columns:repeat(4,minmax(0,1fr));
-        gap:18px;
+    .change {
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 10px;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 10px;
     }
 
-}
-
-
-/* =========================
-   VERY SMALL HP
-   ========================= */
-
-@media (max-width:380px)
-and (orientation:portrait){
-
-    .productGrid{
-        gap:8px;
+    #grandTotal {
+      margin: 0;
     }
 
-    .productInfo{
-        padding:8px;
+    /* ========================= MENU MANAGEMENT ========================= */
+    .menuItem {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      background: #fff;
+      border: 1px solid #e9ecef;
+      border-radius: 12px;
+      padding: 13px;
+      margin-bottom: 8px;
     }
 
-    .productName{
-        font-size:12px;
+    .menuItem b {
+      font-size: 15px;
     }
 
-    .productPrice{
-        font-size:13px;
+    /* ========================= RECEIPT ========================= */
+    #receipt {
+      width: 58mm;
+      background: white;
+      padding: 10px;
+      font-size: 12px;
+      display: none;
     }
 
-    .qtyBtn{
-        width:28px;
-        height:28px;
-        font-size:16px;
+    .center {
+      text-align: center;
     }
 
-}
-
-
-/* =========================
-   PRINT
-   ========================= */
-
-@media print{
-
-    body *{
-        visibility:hidden;
+    .right {
+      text-align: right;
     }
 
-    #receipt,
-    #receipt *{
-        visibility:visible;
+    .line {
+      border-top: 1px dashed black;
+      margin: 6px 0;
     }
 
-    #receipt{
-        position:absolute;
-        left:0;
-        top:0;
-        width:58mm;
+    /* ========================= RESPONSIVE ========================= */
+    @media (max-width: 575px) and (orientation: portrait) {
+      body {
+        padding: 8px;
+      }
+
+      .card {
+        padding: 12px;
+      }
+
+      .productGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .productInfo {
+        padding: 9px;
+      }
+
+      .productName {
+        font-size: 13px;
+        line-height: 1.25;
+      }
+
+      .productPrice {
+        font-size: 14px;
+      }
+
+      .qtyBtn {
+        width: 30px;
+        height: 30px;
+      }
     }
 
-}
+    @media (max-width: 767px) and (orientation: landscape) {
+      body {
+        padding: 8px;
+      }
 
-</style>
+      .card {
+        padding: 12px;
+      }
 
+      .productGrid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .productCard {
+        border-radius: 12px;
+      }
+
+      .productInfo {
+        padding: 9px;
+      }
+
+      .productName {
+        font-size: 13px;
+        line-height: 1.25;
+        min-height: 33px;
+      }
+
+      .productPrice {
+        font-size: 13px;
+      }
+
+      .productBottom {
+        margin-top: 7px;
+      }
+
+      .qtyBtn {
+        width: 30px;
+        height: 30px;
+        font-size: 16px;
+      }
+    }
+
+    @media (min-width: 576px) and (max-width: 991px) and (orientation: portrait) {
+      .productGrid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .productInfo {
+        padding: 12px;
+      }
+
+      .productName {
+        font-size: 14px;
+      }
+    }
+
+    @media (min-width: 768px) and (max-width: 991px) and (orientation: landscape) {
+      .productGrid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .productInfo {
+        padding: 10px;
+      }
+
+      .productName {
+        font-size: 14px;
+        min-height: 35px;
+      }
+
+      .productPrice {
+        font-size: 14px;
+      }
+
+      .qtyBtn {
+        width: 32px;
+        height: 32px;
+      }
+    }
+
+    @media (min-width: 992px) and (orientation: portrait) {
+      body {
+        padding: 24px;
+      }
+
+      .cashierContainer {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .card {
+        padding: 22px;
+      }
+
+      .productGrid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 20px;
+      }
+
+      .productInfo {
+        padding: 14px;
+      }
+
+      .productName {
+        font-size: 15px;
+        min-height: 38px;
+      }
+
+      .productPrice {
+        font-size: 16px;
+      }
+
+      .qtyBtn {
+        width: 36px;
+        height: 36px;
+      }
+    }
+
+    @media (min-width: 992px) and (orientation: landscape) {
+      body {
+        padding: 20px;
+      }
+
+      .cashierContainer {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .card {
+        padding: 20px;
+      }
+
+      .productGrid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .productInfo {
+        padding: 11px;
+      }
+
+      .productName {
+        font-size: 14px;
+        min-height: 35px;
+      }
+
+      .productPrice {
+        font-size: 14px;
+      }
+
+      .qtyBtn {
+        width: 32px;
+        height: 32px;
+      }
+    }
+
+    @media (min-width: 1600px) and (orientation: landscape) {
+      .cashierContainer {
+        max-width: 1500px;
+      }
+
+      .productGrid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 18px;
+      }
+    }
+
+    @media (max-width: 380px) and (orientation: portrait) {
+      .productGrid {
+        gap: 8px;
+      }
+
+      .productInfo {
+        padding: 8px;
+      }
+
+      .productName {
+        font-size: 12px;
+      }
+
+      .productPrice {
+        font-size: 13px;
+      }
+
+      .qtyBtn {
+        width: 28px;
+        height: 28px;
+        font-size: 16px;
+      }
+    }
+
+    /* ========================= PRINT ========================= */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+
+      #receipt,
+      #receipt * {
+        visibility: visible;
+      }
+
+      #receipt {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 58mm;
+      }
+    }
+  </style>
 </head>
 
-
 <body>
-
-
-<!-- =====================================================
-     KELOLA MENU
-     ===================================================== -->
-
-<div
-id="menuPage"
-class="page">
-
-<div class="card">
-
-<h2>Tambah Menu</h2>
-
-<input
-id="nama"
-class="form-control mb-2"
-placeholder="Nama Barang">
-
-<input
-id="harga"
-class="form-control mb-2"
-type="number"
-placeholder="Harga">
-
-<button
-class="btn btn-primary"
-onclick="addMenu()">
-
-Tambah
-
-</button>
-
-</div>
-
-
-<div class="card">
-
-<h3>Daftar Menu</h3>
-
-<div id="menuList"></div>
-
-</div>
-
-</div>
-
-
-
-<!-- =====================================================
-     KASIR
-     ===================================================== -->
-
-<div
-id="cashierPage"
-class="page active">
-
-<div class="cashierContainer">
-
-<div class="card">
-
-
-<div class="mb-3">
-
-<h2 class="fw-bold mb-1">
-Kukikoe
-</h2>
-
-<div class="text-muted">
-Mooncake & Dessert
-</div>
-
-</div>
-
-
-<div
-class="d-flex justify-content-between align-items-center mb-3">
-
-<h5 class="fw-bold mb-0">
-Daftar Produk
-</h5>
-
-<div>
-<span
-id="syncBadge"
-class="badge text-bg-warning me-1"
-style="display:none;">
-
-0 Pending
-
-</span>
-
-<span
-id="networkBadge"
-class="badge text-bg-success">
-
-Online
-
-</span>
-</div>
-
-</div>
-
-
-<!-- =====================================================
-     CATEGORY
-     ===================================================== -->
-
-<div class="categoryTabs mb-3">
-
-<button
-type="button"
-class="categoryBtn active"
-onclick="setCategory('Unggulan',this)">
-
-⭐ Best Seller
-
-</button>
-
-<button
-type="button"
-class="categoryBtn"
-onclick="setCategory('Cheesecake',this)">
-
-Cheesecake
-
-</button>
-
-<button
-type="button"
-class="categoryBtn"
-onclick="setCategory('Dubai',this)">
-
-Dubai
-
-</button>
-
-<button
-type="button"
-class="categoryBtn"
-onclick="setCategory('Choco',this)">
-
-Choco
-
-</button>
-
-<button
-type="button"
-class="categoryBtn"
-onclick="setCategory('Snack',this)">
-
-Snack
-
-</button>
-
-<button
-type="button"
-class="categoryBtn"
-onclick="setCategory('Bagia',this)">
-
-Bagia
-
-</button>
-
-<button
-type="button"
-class="categoryBtn"
-onclick="setCategory('Semua',this)">
-
-Semua
-
-</button>
-
-</div>
-
-
-<!-- =====================================================
-     PRODUCT GRID
-     ===================================================== -->
-
-<div id="cashierList"></div>
-
-
-<!-- =====================================================
-     CURRENT ORDER
-     ===================================================== -->
-
-<div class="orderBox">
-
-<div class="orderHeader">
-
-<h5>
-Pesanan Saat Ini
-</h5>
-
-<span
-id="orderCount"
-class="orderCount">
-
-0 item
-
-</span>
-
-</div>
-
-
-<div id="orderSummary">
-
-<div class="orderEmpty">
-
-Belum ada pesanan
-
-</div>
-
-</div>
-
-</div>
-
-
-
-<!-- =====================================================
-     TOTAL
-     ===================================================== -->
-
-<div class="alert alert-primary mt-3 mb-0">
-
-<div class="small text-muted">
-TOTAL PEMBAYARAN
-</div>
-
-<h2
-id="grandTotal"
-class="fw-bold mb-0">
-
-Total : Rp0
-
-</h2>
-
-</div>
-
-
-
-<!-- =====================================================
-     PEMBAYARAN
-     ===================================================== -->
-
-<div class="paymentBox">
-
-<h5 class="fw-bold mb-3">
-Pembayaran
-</h5>
-
-
-<label class="form-label">
-Metode Pembayaran
-</label>
-
-
-<select
-id="paymentMethod"
-class="form-select"
-onchange="paymentChanged()">
-
-<option value="cash">
-Cash
-</option>
-
-<option value="qris">
-QRIS
-</option>
-
-</select>
-
-
-
-<!-- CASH -->
-
-<div
-id="cashPayment"
-class="mt-3">
-
-<label class="form-label">
-Uang Diterima
-</label>
-
-
-<input
-id="cashReceived"
-class="form-control form-control-lg"
-type="text"
-inputmode="numeric"
-placeholder="Masukkan nominal"
-oninput="formatCashInput(this)">
-
-
-<div
-id="changeDisplay"
-class="change">
-
-Kembalian : Rp0
-
-</div>
-
-</div>
-
-
-
-<!-- QRIS -->
-
-<div
-id="qrisPayment"
-class="alert alert-info mt-3"
-style="display:none;">
-
-<strong>
-Pembayaran QRIS
-</strong>
-
-<div class="small mt-1">
-
-Pastikan pembayaran sudah diterima
-sebelum menyelesaikan transaksi.
-
-</div>
-
-</div>
-
-
-
-<!-- =====================================================
-     TRANSAKSI
-     ===================================================== -->
-
-<button
-id="completeButton"
-class="btn btn-primary btn-lg w-100 mt-3"
-onclick="completeTransaction()">
-
-🧾 Selesaikan & Print
-
-</button>
-
-
-<!-- LOADING -->
-
-<div
-id="loadingBox"
-class="loadingBox">
-
-<div class="spinner"></div>
-
-<div
-id="loadingText"
-class="loadingText">
-
-Memproses transaksi...
-
-</div>
-
-<div
-id="loadingSub"
-class="loadingSub">
-
-Mohon tunggu
-
-</div>
-
-</div>
-
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-
-
-<!-- =====================================================
-     RECEIPT
-     ===================================================== -->
-
-<div id="receipt">
-
-<div class="center">
-
-<b>KUKIKOE</b>
-
-<br>
-
-Mooncake Festival
-
-</div>
-
-
-<div class="line"></div>
-
-
-<div
-id="receiptInfo"
-class="center">
-
-</div>
-
-
-<div class="line"></div>
-
-
-<div id="receiptItems"></div>
-
-
-<div class="line"></div>
-
-
-<div class="right">
-
-<b id="receiptTotal"></b>
-
-</div>
-
-
-<div class="line"></div>
-
-
-<div id="receiptPayment"></div>
-
-
-<div class="line"></div>
-
-
-<div class="center">
-
-Terima Kasih
-
-</div>
-
-</div>
-
-
-
-<script>
-
-
-/* =====================================================
-   GOOGLE SHEETS
-   ===================================================== */
-
-const GOOGLE_SCRIPT_URL =
-"https://script.google.com/macros/s/AKfycbwyKe1AdCJG-rRFJqQlM9u5odQKUSPUirskaqPriC63vVm7IEIgaEXkeKnm1nUdap47/exec";
-
-
-/* =====================================================
-   DATA
-   ===================================================== */
-
-let cart = {};
-
-let nota =
-parseInt(
-localStorage.getItem("nota")
-) || 1;
-
-let currentTransaction = null;
-
-let transactionProcessing = false;
-
-
-/* =====================================================
-   OFFLINE QUEUE
-   ===================================================== */
-
-let pendingTransactions =
-JSON.parse(
-localStorage.getItem("pendingTransactions")
-) || [];
-
-let syncingTransactions = false;
-
-
-/* =====================================================
-   NETWORK EVENT
-   ===================================================== */
-
-window.addEventListener(
-"online",
-async function(){
-
-    updateNetworkStatus();
-
-    await processPendingTransactions();
-
-});
-
-
-window.addEventListener(
-"offline",
-function(){
-
-    updateNetworkStatus();
-
-});
-
-
-function updateNetworkStatus(){
-
-    const netBadge =
-    document.getElementById(
-        "networkBadge"
-    );
-
-    const syncBadge =
-    document.getElementById(
-        "syncBadge"
-    );
-
-
-    if(navigator.onLine){
-
-        netBadge.className =
-        "badge text-bg-success";
-
-        netBadge.innerText =
-        "Online";
-
-    }else{
-
-        netBadge.className =
-        "badge text-bg-danger";
-
-        netBadge.innerText =
-        "Offline";
-
+  <!-- ===================================================== KELOLA MENU ===================================================== -->
+  <div id="menuPage" class="page">
+    <div class="card">
+      <h2>Tambah Menu</h2>
+      <input id="nama" class="form-control mb-2" placeholder="Nama Barang">
+      <input id="harga" class="form-control mb-2" type="number" placeholder="Harga">
+      <button class="btn btn-primary" onclick="addMenu()">Tambah</button>
+    </div>
+    <div class="card">
+      <h3>Daftar Menu</h3>
+      <div id="menuList"></div>
+    </div>
+  </div>
+
+  <!-- ===================================================== KASIR ===================================================== -->
+  <div id="cashierPage" class="page active">
+    <div class="cashierContainer">
+      <div class="card">
+        <div class="mb-3">
+          <h2 class="fw-bold mb-1">Kukikoe</h2>
+          <div class="text-muted">Mooncake & Dessert</div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold mb-0">Daftar Produk</h5>
+          <div>
+            <span id="syncBadge" class="badge text-bg-warning me-1" style="display:none;">0 Pending</span>
+            <span id="networkBadge" class="badge text-bg-success">Online</span>
+          </div>
+        </div>
+
+        <!-- CATEGORY -->
+        <div class="categoryTabs mb-3">
+          <button type="button" class="categoryBtn active" onclick="setCategory('Unggulan',this)">⭐ Best Seller</button>
+          <button type="button" class="categoryBtn" onclick="setCategory('Cheesecake',this)">Cheesecake</button>
+          <button type="button" class="categoryBtn" onclick="setCategory('Dubai',this)">Dubai</button>
+          <button type="button" class="categoryBtn" onclick="setCategory('Choco',this)">Choco</button>
+          <button type="button" class="categoryBtn" onclick="setCategory('Snack',this)">Snack</button>
+          <button type="button" class="categoryBtn" onclick="setCategory('Bagia',this)">Bagia</button>
+          <button type="button" class="categoryBtn" onclick="setCategory('Semua',this)">Semua</button>
+        </div>
+
+        <!-- PRODUCT GRID -->
+        <div id="cashierList"></div>
+
+        <!-- CURRENT ORDER -->
+        <div class="orderBox">
+          <div class="orderHeader">
+            <h5>Pesanan Saat Ini</h5>
+            <span id="orderCount" class="orderCount">0 item</span>
+          </div>
+          <div id="orderSummary">
+            <div class="orderEmpty">Belum ada pesanan</div>
+          </div>
+        </div>
+
+        <!-- TOTAL -->
+        <div class="alert alert-primary mt-3 mb-0">
+          <div class="small text-muted">TOTAL PEMBAYARAN</div>
+          <h2 id="grandTotal" class="fw-bold mb-0">Total : Rp0</h2>
+        </div>
+
+        <!-- PEMBAYARAN -->
+        <div class="paymentBox">
+          <h5 class="fw-bold mb-3">Pembayaran</h5>
+          <label class="form-label">Metode Pembayaran</label>
+          <select id="paymentMethod" class="form-select" onchange="paymentChanged()">
+            <option value="cash">Cash</option>
+            <option value="qris">QRIS</option>
+          </select>
+
+          <!-- CASH -->
+          <div id="cashPayment" class="mt-3">
+            <label class="form-label">Uang Diterima</label>
+            <input id="cashReceived" class="form-control form-control-lg" type="text" inputmode="numeric" placeholder="Masukkan nominal" value="0" oninput="formatCashInput(this)">
+            <div id="changeDisplay" class="change">Kembalian : Rp0</div>
+          </div>
+
+          <!-- QRIS -->
+          <div id="qrisPayment" class="alert alert-info mt-3" style="display:none;">
+            <strong>Pembayaran QRIS</strong>
+            <div class="small mt-1">Pastikan pembayaran sudah diterima sebelum menyelesaikan transaksi.</div>
+          </div>
+
+          <!-- TRANSAKSI -->
+          <button id="completeButton" class="btn btn-primary btn-lg w-100 mt-3" onclick="completeTransaction()">
+            🧾 Selesaikan & Print
+          </button>
+
+          <!-- LOADING -->
+          <div id="loadingBox" class="loadingBox">
+            <div class="spinner"></div>
+            <div id="loadingText" class="loadingText">Memproses transaksi...</div>
+            <div id="loadingSub" class="loadingSub">Mohon tunggu</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================== RECEIPT ===================================================== -->
+  <div id="receipt">
+    <div class="center">
+      <b>KUKIKOE</b><br>Mooncake Festival
+    </div>
+    <div class="line"></div>
+    <div id="receiptInfo" class="center"></div>
+    <div class="line"></div>
+    <div id="receiptItems"></div>
+    <div class="line"></div>
+    <div class="right">
+      <b id="receiptTotal"></b>
+    </div>
+    <div class="line"></div>
+    <div id="receiptPayment"></div>
+    <div class="line"></div>
+    <div class="center">Terima Kasih</div>
+  </div>
+
+  <script>
+    /* ===================================================== GOOGLE SHEETS ===================================================== */
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwyKe1AdCJG-rRFJqQlM9u5odQKUSPUirskaqPriC63vVm7IEIgaEXkeKnm1nUdap47/exec";
+
+    /* ===================================================== DATA TRANSAKSI ===================================================== */
+    let cart = {};
+    let nota = parseInt(localStorage.getItem("nota")) || 1;
+    let currentTransaction = null;
+    let transactionProcessing = false;
+
+    /* ===================================================== OFFLINE QUEUE ===================================================== */
+    let pendingTransactions = loadPendingTransactions();
+    let syncingTransactions = false;
+
+    function loadPendingTransactions() {
+      try {
+        const raw = localStorage.getItem("pendingTransactions");
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        console.error("Queue transaksi rusak:", error);
+        return [];
+      }
     }
 
-
-    if(
-        pendingTransactions.length > 0
-    ){
-
-        syncBadge.style.display =
-        "inline-block";
-
-        syncBadge.innerText =
-        pendingTransactions.length +
-        " Pending";
-
-    }else{
-
-        syncBadge.style.display =
-        "none";
-
+    /* ===================================================== SAVE QUEUE ===================================================== */
+    function savePendingTransactions() {
+      localStorage.setItem("pendingTransactions", JSON.stringify(pendingTransactions));
     }
 
-}
+    /* ===================================================== NETWORK EVENT ===================================================== */
+    window.addEventListener("online", function() {
+      updateNetworkStatus();
+      processPendingTransactions();
+    });
 
+    window.addEventListener("offline", function() {
+      updateNetworkStatus();
+    });
 
-/* =====================================================
-   MENU VERSION
-   ===================================================== */
+    function updateNetworkStatus() {
+      const netBadge = document.getElementById("networkBadge");
+      const syncBadge = document.getElementById("syncBadge");
 
-const MENU_VERSION = "12";
+      if (navigator.onLine) {
+        netBadge.className = "badge text-bg-success";
+        netBadge.innerText = "Online";
+      } else {
+        netBadge.className = "badge text-bg-danger";
+        netBadge.innerText = "Offline";
+      }
 
-
-const DEFAULT_MENUS = [
-
-    {
-        nama:"Cheesecake A",
-        harga:40000,
-        kategori:"Cheesecake",
-        unggulan:true
-    },
-
-    {
-        nama:"Cheesecake B",
-        harga:55000,
-        kategori:"Cheesecake",
-        unggulan:true
-    },
-
-    {
-        nama:"Dubai Chewy Cookie",
-        harga:50000,
-        kategori:"Dubai",
-        unggulan:true
-    },
-
-    {
-        nama:"Strawberry Dubai Choco",
-        harga:95000,
-        kategori:"Dubai",
-        unggulan:true
-    },
-
-    {
-        nama:"London Choco Cake",
-        harga:55000,
-        kategori:"Choco",
-        unggulan:false
-    },
-
-    {
-        nama:"Mooncake Pudding",
-        harga:40000,
-        kategori:"Snack",
-        unggulan:true
-    },
-
-    {
-        nama:"Milk Cheese Bread",
-        harga:25000,
-        kategori:"Snack",
-        unggulan:false
-    },
-
-    {
-        nama:"Bakwan Goreng",
-        harga:40000,
-        kategori:"Snack",
-        unggulan:true
-    },
-
-    {
-        nama:"Scoopable Kunafa",
-        harga:55000,
-        kategori:"Dubai",
-        unggulan:true
-    },
-
-   {
-        nama:"Scoopable Nutella",
-        harga:40000,
-        kategori:"Choco",
-        unggulan:true
-    },
-
-    {
-        nama:"Risol",
-        harga:30000,
-        kategori:"Snack",
-        unggulan:false
-    },
-
-    {
-        nama:"Bagia Ori / Mocha",
-        harga:35000,
-        kategori:"Bagia",
-        unggulan:false
-    },
-
-    {
-        nama:"Bagia Kacang",
-        harga:45000,
-        kategori:"Bagia",
-        unggulan:false
+      if (pendingTransactions.length > 0) {
+        syncBadge.style.display = "inline-block";
+        syncBadge.innerText = pendingTransactions.length + " Pending";
+      } else {
+        syncBadge.style.display = "none";
+      }
     }
 
-];
-
-
-let menus =
-JSON.parse(
-localStorage.getItem("menus")
-);
-
-
-let savedMenuVersion =
-localStorage.getItem("menuVersion");
-
-
-/* =====================================================
-   UPDATE DEFAULT MENU
-   ===================================================== */
-
-if(
-savedMenuVersion !== MENU_VERSION
-){
-
-    menus =
-    DEFAULT_MENUS.map(
-        menu => ({
-
-            nama:menu.nama,
-
-            harga:menu.harga,
-
-            kategori:menu.kategori,
-
-            unggulan:!!menu.unggulan
-
-        })
-    );
-
-
-    localStorage.setItem(
-        "menus",
-        JSON.stringify(menus)
-    );
-
-
-    localStorage.setItem(
-        "menuVersion",
-        MENU_VERSION
-    );
-
-}
-
-
-/* =====================================================
-   FALLBACK MENU
-   ===================================================== */
-
-if(Array.isArray(menus)){
-
-    menus =
-    menus.map(m => ({
-
-        nama:m.nama,
-
-        harga:m.harga,
-
-        kategori:
-            m.kategori ||
-            "Snack",
-
-        unggulan:
-            !!m.unggulan
-
-    }));
-
-    save();
-
-}
-
-
-if(
-!Array.isArray(menus) ||
-menus.length === 0
-){
-
-    menus =
-    DEFAULT_MENUS.map(
-        menu => ({
-
-            nama:menu.nama,
-
-            harga:menu.harga,
-
-            kategori:menu.kategori,
-
-            unggulan:!!menu.unggulan
-
-        })
-    );
-
-
-    localStorage.setItem(
-        "menus",
-        JSON.stringify(menus)
-    );
-
-
-    localStorage.setItem(
-        "menuVersion",
-        MENU_VERSION
-    );
-
-}
-
-
-/* =====================================================
-   SAVE MENU
-   ===================================================== */
-
-function save(){
-
-    localStorage.setItem(
-        "menus",
-        JSON.stringify(menus)
-    );
-
-}
-
-
-/* =====================================================
-   RUPIAH
-   ===================================================== */
-
-function rupiah(n){
-
-    return "Rp" +
-    Number(n).toLocaleString("id-ID");
-
-}
-
-
-/* =====================================================
-   ESCAPE HTML
-   ===================================================== */
-
-function escapeHtml(text){
-
-    return String(text)
-
-    .replace(/&/g,"&amp;")
-
-    .replace(/</g,"&lt;")
-
-    .replace(/>/g,"&gt;")
-
-    .replace(/"/g,"&quot;")
-
-    .replace(/'/g,"&#039;");
-
-}
-
-
-/* =====================================================
-   MENU MANAGEMENT
-   ===================================================== */
-
-function addMenu(){
-
-    let nama =
-    document
-    .getElementById("nama")
-    .value
-    .trim();
-
-
-    let harga =
-    parseInt(
-        document
-        .getElementById("harga")
-        .value
-    );
-
-
-    if(
-        nama === "" ||
-        isNaN(harga)
-    ){
-
+    /* ===================================================== BACKGROUND RETRY ===================================================== */
+    setInterval(function() {
+      if (navigator.onLine && pendingTransactions.length > 0) {
+        processPendingTransactions();
+      }
+    }, 15000);
+
+    /* ===================================================== MENU VERSION ===================================================== */
+    const MENU_VERSION = "12";
+    const DEFAULT_MENUS = [
+      { nama: "Cheesecake A", harga: 40000, kategori: "Cheesecake", unggulan: true },
+      { nama: "Cheesecake B", harga: 55000, kategori: "Cheesecake", unggulan: true },
+      { nama: "Dubai Chewy Cookie", harga: 50000, kategori: "Dubai", unggulan: true },
+      { nama: "Strawberry Dubai Choco", harga: 95000, kategori: "Dubai", unggulan: true },
+      { nama: "London Choco Cake", harga: 55000, kategori: "Choco", unggulan: false },
+      { nama: "Mooncake Pudding", harga: 40000, kategori: "Snack", unggulan: true },
+      { nama: "Milk Cheese Bread", harga: 25000, kategori: "Snack", unggulan: false },
+      { nama: "Bakwan Goreng", harga: 40000, kategori: "Snack", unggulan: true },
+      { nama: "Scoopable Kunafa", harga: 55000, kategori: "Dubai", unggulan: true },
+      { nama: "Scoopable Nutella", harga: 40000, kategori: "Choco", unggulan: true },
+      { nama: "Risol", harga: 30000, kategori: "Snack", unggulan: false },
+      { nama: "Bagia Ori / Mocha", harga: 35000, kategori: "Bagia", unggulan: false },
+      { nama: "Bagia Kacang", harga: 45000, kategori: "Bagia", unggulan: false }
+    ];
+
+    let menus = JSON.parse(localStorage.getItem("menus"));
+    let savedMenuVersion = localStorage.getItem("menuVersion");
+
+    /* ===================================================== UPDATE DEFAULT MENU ===================================================== */
+    if (savedMenuVersion !== MENU_VERSION) {
+      menus = DEFAULT_MENUS.map(menu => ({
+        nama: menu.nama,
+        harga: menu.harga,
+        kategori: menu.kategori,
+        unggulan: !!menu.unggulan
+      }));
+      localStorage.setItem("menus", JSON.stringify(menus));
+      localStorage.setItem("menuVersion", MENU_VERSION);
+    }
+
+    /* ===================================================== FALLBACK MENU ===================================================== */
+    if (Array.isArray(menus)) {
+      menus = menus.map(m => ({
+        nama: m.nama,
+        harga: m.harga,
+        kategori: m.kategori || "Snack",
+        unggulan: !!m.unggulan
+      }));
+      save();
+    }
+
+    if (!Array.isArray(menus) || menus.length === 0) {
+      menus = DEFAULT_MENUS.map(menu => ({
+        nama: menu.nama,
+        harga: menu.harga,
+        kategori: menu.kategori,
+        unggulan: !!menu.unggulan
+      }));
+      localStorage.setItem("menus", JSON.stringify(menus));
+      localStorage.setItem("menuVersion", MENU_VERSION);
+    }
+
+    /* ===================================================== SAVE MENU ===================================================== */
+    function save() {
+      localStorage.setItem("menus", JSON.stringify(menus));
+    }
+
+    /* ===================================================== RUPIAH ===================================================== */
+    function rupiah(n) {
+      return "Rp" + Number(n).toLocaleString("id-ID");
+    }
+
+    /* ===================================================== ESCAPE HTML ===================================================== */
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    /* ===================================================== MENU MANAGEMENT ===================================================== */
+    function addMenu() {
+      let nama = document.getElementById("nama").value.trim();
+      let harga = parseInt(document.getElementById("harga").value);
+
+      if (nama === "" || isNaN(harga)) {
         alert("Lengkapi data");
-
         return;
+      }
 
+      menus.push({ nama: nama, harga: harga, kategori: "Snack", unggulan: false });
+      save();
+      document.getElementById("nama").value = "";
+      document.getElementById("harga").value = "";
+      renderMenu();
+      renderCashier();
     }
 
+    /* ===================================================== EDIT MENU ===================================================== */
+    function editMenu(index) {
+      let nama = prompt("Nama Barang", menus[index].nama);
+      if (nama === null) return;
 
-    menus.push({
+      let harga = prompt("Harga", menus[index].harga);
+      if (harga === null) return;
 
-        nama:nama,
-
-        harga:harga,
-
-        kategori:"Snack",
-
-        unggulan:false
-
-    });
-
-
-    save();
-
-
-    document
-    .getElementById("nama")
-    .value="";
-
-
-    document
-    .getElementById("harga")
-    .value="";
-
-
-    renderMenu();
-
-    renderCashier();
-
-}
-
-
-/* =====================================================
-   EDIT MENU
-   ===================================================== */
-
-function editMenu(index){
-
-    let nama =
-    prompt(
-        "Nama Barang",
-        menus[index].nama
-    );
-
-
-    if(nama === null){
-        return;
-    }
-
-
-    let harga =
-    prompt(
-        "Harga",
-        menus[index].harga
-    );
-
-
-    if(harga === null){
-        return;
-    }
-
-
-    harga =
-    parseInt(harga);
-
-
-    if(
-        nama.trim() === "" ||
-        isNaN(harga)
-    ){
-
+      harga = parseInt(harga);
+      if (nama.trim() === "" || isNaN(harga)) {
         alert("Data tidak valid");
-
         return;
+      }
 
+      menus[index].nama = nama.trim();
+      menus[index].harga = harga;
+      save();
+      renderMenu();
+      renderCashier();
     }
 
-
-    menus[index].nama =
-    nama.trim();
-
-
-    menus[index].harga =
-    harga;
-
-
-    save();
-
-    renderMenu();
-
-    renderCashier();
-
-}
-
-
-/* =====================================================
-   DELETE MENU
-   ===================================================== */
-
-function deleteMenu(index){
-
-    if(
-        !confirm("Hapus menu?")
-    ){
-
-        return;
-
+    /* ===================================================== DELETE MENU ===================================================== */
+    function deleteMenu(index) {
+      if (!confirm("Hapus menu?")) return;
+      menus.splice(index, 1);
+      save();
+      renderMenu();
+      renderCashier();
     }
 
-
-    menus.splice(
-        index,
-        1
-    );
-
-
-    save();
-
-    renderMenu();
-
-    renderCashier();
-
-}
-
-
-/* =====================================================
-   RENDER MENU MANAGEMENT
-   ===================================================== */
-
-function renderMenu(){
-
-    let html = "";
-
-
-    menus.forEach(
-        (m,i) => {
-
-            html += `
-
-            <div class="menuItem">
-
-                <div>
-
-                    <b>
-                        ${escapeHtml(m.nama)}
-                    </b>
-
-                    <br>
-
-                    ${rupiah(m.harga)}
-
-                </div>
-
-                <div>
-
-                    <button
-                        class="btn btn-sm btn-outline-primary"
-                        onclick="editMenu(${i})">
-
-                        Edit
-
-                    </button>
-
-
-                    <button
-                        class="btn btn-sm btn-outline-danger"
-                        onclick="deleteMenu(${i})">
-
-                        Hapus
-
-                    </button>
-
-                </div>
-
+    /* ===================================================== RENDER MENU MANAGEMENT ===================================================== */
+    function renderMenu() {
+      let html = "";
+      menus.forEach((m, i) => {
+        html += `
+          <div class="menuItem">
+            <div>
+              <b>${escapeHtml(m.nama)}</b><br>
+              ${rupiah(m.harga)}
             </div>
-
-            `;
-
-        }
-    );
-
-
-    document
-    .getElementById("menuList")
-    .innerHTML = html;
-
-}
-
-
-/* =====================================================
-   CATEGORY
-   ===================================================== */
-
-let activeCategory = "Unggulan";
-
-
-function setCategory(
-    category,
-    button
-){
-
-    activeCategory =
-    category;
-
-
-    document
-    .querySelectorAll(".categoryBtn")
-    .forEach(btn => {
-
-        btn.classList.remove(
-            "active"
-        );
-
-    });
-
-
-    if(button){
-
-        button.classList.add(
-            "active"
-        );
-
-    }
-
-
-    renderCashier();
-
-}
-
-
-/* =====================================================
-   CATEGORY HELPER
-   ===================================================== */
-
-function normalizeCategory(value){
-
-    return String(
-        value ?? ""
-    )
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g," ");
-
-}
-
-
-function getProductCategory(item){
-
-    const explicit =
-    normalizeCategory(
-        item?.kategori ??
-        item?.category ??
-        ""
-    );
-
-
-    if(explicit){
-
-        if(
-            explicit === "bagia" ||
-            explicit.includes("bagia")
-        ){
-
-            return "bagia";
-
-        }
-
-
-        if(
-            explicit === "snack" ||
-            explicit.includes("snack")
-        ){
-
-            return "snack";
-
-        }
-
-
-        if(
-            explicit === "choco" ||
-            explicit.includes("choco")
-        ){
-
-            return "choco";
-
-        }
-
-
-        if(
-            explicit === "cheesecake" ||
-            explicit.includes("cheesecake")
-        ){
-
-            return "cheesecake";
-
-        }
-
-
-        if(
-            explicit === "dubai" ||
-            explicit.includes("dubai")
-        ){
-
-            return "dubai";
-
-        }
-
-    }
-
-
-    const text =
-    normalizeCategory([
-
-        item?.nama,
-
-        item?.name,
-
-        item?.id,
-
-        item?.kode,
-
-        item?.code,
-
-        item?.jenis
-
-    ]
-    .filter(Boolean)
-    .join(" "));
-
-
-    if(
-        text.includes("bagia")
-    ){
-
-        return "bagia";
-
-    }
-
-
-    if(
-        text.includes("snack")
-    ){
-
-        return "snack";
-
-    }
-
-
-    if(
-        text.includes("choco")
-    ){
-
-        return "choco";
-
-    }
-
-
-    if(
-        text.includes("cheesecake")
-    ){
-
-        return "cheesecake";
-
-    }
-
-
-    if(
-        text.includes("dubai") ||
-        text.includes("pudding") ||
-        text.includes("puding")
-    ){
-
-        return "dubai";
-
-    }
-
-
-    return explicit;
-
-}
-
-
-/* =====================================================
-   RENDER KASIR
-   ===================================================== */
-
-function renderCashier(){
-
-    if(
-        !cart ||
-        typeof cart !== "object"
-    ){
-
-        cart = {};
-
-    }
-
-
-    let html = `
-
-        <div class="productGrid">
-
-    `;
-
-
-    menus.forEach(
-        (m,i) => {
-
-            /*
-             * Jangan reset cart[i] ketika
-             * berpindah kategori.
-             */
-
-            if(
-                typeof cart[i] !== "number"
-            ){
-
-                cart[i] = 0;
-
-            }
-
-
-            let category =
-            getProductCategory(m);
-
-
-            let featured =
-            !!m.unggulan;
-
-
-            const categoryMap = {
-
-                cheesecake:"Cheesecake",
-
-                choco:"Choco",
-
-                dubai:"Dubai",
-
-                snack:"Snack",
-
-                bagia:"Bagia"
-
-            };
-
-
-            category =
-            categoryMap[category] ||
-            "Snack";
-
-
-            let visible =
-                activeCategory === "Semua" ||
-
-                (
-                    activeCategory === "Unggulan" &&
-                    featured
-                ) ||
-
-                activeCategory === category;
-
-
-            if(!visible){
-
-                return;
-
-            }
-
-
-            html += `
-
-            <div
-                class="productCard"
-                onclick="addProduct(${i})"
-            >
-
-                <div class="productImage">
-
-                    <img
-                        src="images/${i+1}.jpg"
-                        alt="${escapeHtml(m.nama)}"
-                        onerror="this.style.display='none'"
-                    >
-
-                </div>
-
-
-                <div class="productInfo">
-
-                    ${
-                        featured
-                        ?
-                        '<div class="featuredBadge">⭐ BEST SELLER</div>'
-                        :
-                        ''
-                    }
-
-
-                    <div class="productName">
-
-                        ${escapeHtml(m.nama)}
-
-                    </div>
-
-
-                    <div class="productPrice">
-
-                        ${rupiah(m.harga)}
-
-                    </div>
-
-
-                    <div
-                        class="productBottom"
-                        onclick="event.stopPropagation()"
-                    >
-
-                        <div class="productQty">
-
-                            <button
-                                type="button"
-                                class="qtyBtn"
-                                onclick="minusQty(${i})">
-
-                                −
-
-                            </button>
-
-
-                            <span
-                                id="qty${i}"
-                                class="qtyNumber">
-
-                                ${cart[i]}
-
-                            </span>
-
-
-                            <button
-                                type="button"
-                                class="qtyBtn"
-                                onclick="plusQty(${i})">
-
-                                +
-
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
+            <div>
+              <button class="btn btn-sm btn-outline-primary" onclick="editMenu(${i})">Edit</button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteMenu(${i})">Hapus</button>
             </div>
-
-            `;
-
-        }
-    );
-
-
-    html += `
-
-        </div>
-
-    `;
-
-
-    document
-    .getElementById("cashierList")
-    .innerHTML = html;
-
-
-    renderOrderSummary();
-
-    updateTotal();
-
-
-    transactionProcessing = false;
-
-
-    document
-    .getElementById("completeButton")
-    .disabled = false;
-
-
-    document
-    .getElementById("loadingBox")
-    .classList
-    .remove("active");
-
-
-    document
-    .getElementById("paymentMethod")
-    .value = "cash";
-
-
-    paymentChanged();
-
-}
-
-
-/* =====================================================
-   ORDER SUMMARY
-   ===================================================== */
-
-function renderOrderSummary(){
-
-    const orderSummary =
-    document.getElementById(
-        "orderSummary"
-    );
-
-
-    const orderCount =
-    document.getElementById(
-        "orderCount"
-    );
-
-
-    if(!orderSummary){
-
-        return;
-
+          </div>`;
+      });
+      document.getElementById("menuList").innerHTML = html;
     }
 
+    /* ===================================================== CATEGORY ===================================================== */
+    let activeCategory = "Unggulan";
 
-    let html = "";
+    function setCategory(category, button) {
+      activeCategory = category;
+      document.querySelectorAll(".categoryBtn").forEach(btn => {
+        btn.classList.remove("active");
+      });
+      if (button) button.classList.add("active");
+      renderCashier();
+    }
 
-    let totalQty = 0;
+    /* ===================================================== CATEGORY HELPER ===================================================== */
+    function normalizeCategory(value) {
+      return String(value ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
+    }
 
-    let itemCount = 0;
+    function getProductCategory(item) {
+      const explicit = normalizeCategory(item?.kategori ?? item?.category ?? "");
 
+      if (explicit) {
+        if (explicit === "bagia" || explicit.includes("bagia")) return "bagia";
+        if (explicit === "snack" || explicit.includes("snack")) return "snack";
+        if (explicit === "choco" || explicit.includes("choco")) return "choco";
+        if (explicit === "cheesecake" || explicit.includes("cheesecake")) return "cheesecake";
+        if (explicit === "dubai" || explicit.includes("dubai")) return "dubai";
+      }
 
-    menus.forEach(
-        (m,i) => {
+      const text = normalizeCategory([
+        item?.nama, item?.name, item?.id, item?.kode, item?.code, item?.jenis
+      ].filter(Boolean).join(" "));
 
-            const qty =
-            cart[i] || 0;
+      if (text.includes("bagia")) return "bagia";
+      if (text.includes("snack")) return "snack";
+      if (text.includes("choco")) return "choco";
+      if (text.includes("cheesecake")) return "cheesecake";
+      if (text.includes("dubai") || text.includes("pudding") || text.includes("puding")) return "dubai";
 
+      return explicit;
+    }
 
-            if(qty <= 0){
+    /* ===================================================== RENDER KASIR ===================================================== */
+    function renderCashier() {
+      if (!cart || typeof cart !== "object") cart = {};
 
-                return;
+      let html = `<div class="productGrid">`;
+      menus.forEach((m, i) => {
+        if (typeof cart[i] !== "number") cart[i] = 0;
 
-            }
+        let category = getProductCategory(m);
+        let featured = !!m.unggulan;
+        const categoryMap = {
+          cheesecake: "Cheesecake",
+          choco: "Choco",
+          dubai: "Dubai",
+          snack: "Snack",
+          bagia: "Bagia"
+        };
+        category = categoryMap[category] || "Snack";
 
+        let visible = activeCategory === "Semua" ||
+          (activeCategory === "Unggulan" && featured) ||
+          activeCategory === category;
 
-            totalQty += qty;
+        if (!visible) return;
 
-            itemCount++;
-
-
-            const subtotal =
-            m.harga * qty;
-
-
-            html += `
-
-            <div class="orderItem">
-
-                <div class="orderItemInfo">
-
-                    <div class="orderItemName">
-
-                        ${escapeHtml(m.nama)}
-
-                    </div>
-
-
-                    <div class="orderItemDetail">
-
-                        ${qty}
-                        ×
-                        ${rupiah(m.harga)}
-
-                    </div>
-
-                </div>
-
-
-                <div class="orderItemSubtotal">
-
-                    ${rupiah(subtotal)}
-
-                </div>
-
-
-                <button
-                    type="button"
-                    class="orderRemove"
-                    onclick="removeOrderItem(${i})"
-                    title="Hapus item">
-
-                    ×
-
-                </button>
-
+        html += `
+          <div class="productCard" onclick="addProduct(${i})">
+            <div class="productImage">
+              <img src="images/${i+1}.jpg" alt="${escapeHtml(m.nama)}" onerror="this.style.display='none'">
             </div>
-
-            `;
-
-        }
-    );
-
-
-    if(itemCount === 0){
-
-        orderSummary.innerHTML = `
-
-            <div class="orderEmpty">
-
-                Belum ada pesanan
-
+            <div class="productInfo">
+              ${featured ? '<div class="featuredBadge">⭐ BEST SELLER</div>' : ''}
+              <div class="productName">${escapeHtml(m.nama)}</div>
+              <div class="productPrice">${rupiah(m.harga)}</div>
+              <div class="productBottom" onclick="event.stopPropagation()">
+                <div class="productQty">
+                  <button type="button" class="qtyBtn" onclick="minusQty(${i})"> − </button>
+                  <span id="qty${i}" class="qtyNumber">${cart[i]}</span>
+                  <button type="button" class="qtyBtn" onclick="plusQty(${i})"> + </button>
+                </div>
+              </div>
             </div>
+          </div>`;
+      });
+      html += `</div>`;
 
-        `;
+      document.getElementById("cashierList").innerHTML = html;
+      renderOrderSummary();
+      updateTotal();
 
-    }else{
-
-        orderSummary.innerHTML =
-        html;
-
+      transactionProcessing = false;
+      document.getElementById("completeButton").disabled = false;
+      document.getElementById("loadingBox").classList.remove("active");
+      document.getElementById("paymentMethod").value = "cash";
+      paymentChanged();
     }
 
+    /* ===================================================== ORDER SUMMARY ===================================================== */
+    function renderOrderSummary() {
+      const orderSummary = document.getElementById("orderSummary");
+      const orderCount = document.getElementById("orderCount");
+      if (!orderSummary) return;
 
-    orderCount.innerText =
-        totalQty +
-        " item";
+      let html = "";
+      let totalQty = 0;
+      let itemCount = 0;
 
-}
+      menus.forEach((m, i) => {
+        const qty = cart[i] || 0;
+        if (qty <= 0) return;
 
+        totalQty += qty;
+        itemCount++;
+        const subtotal = m.harga * qty;
 
-/* =====================================================
-   REMOVE ORDER ITEM
-   ===================================================== */
+        html += `
+          <div class="orderItem">
+            <div class="orderItemInfo">
+              <div class="orderItemName">${escapeHtml(m.nama)}</div>
+              <div class="orderItemDetail">${qty} × ${rupiah(m.harga)}</div>
+            </div>
+            <div class="orderItemSubtotal">${rupiah(subtotal)}</div>
+            <button type="button" class="orderRemove" onclick="removeOrderItem(${i})" title="Hapus item"> × </button>
+          </div>`;
+      });
 
-function removeOrderItem(index){
-
-    if(
-        transactionProcessing
-    ){
-
-        return;
-
+      if (itemCount === 0) {
+        orderSummary.innerHTML = `<div class="orderEmpty">Belum ada pesanan</div>`;
+      } else {
+        orderSummary.innerHTML = html;
+      }
+      orderCount.innerText = totalQty + " item";
     }
 
-
-    cart[index] = 0;
-
-
-    const qtyElement =
-    document.getElementById(
-        "qty" + index
-    );
-
-
-    if(qtyElement){
-
-        qtyElement.innerText = "0";
-
+    /* ===================================================== REMOVE ORDER ITEM ===================================================== */
+    function removeOrderItem(index) {
+      if (transactionProcessing) return;
+      cart[index] = 0;
+      const qtyElement = document.getElementById("qty" + index);
+      if (qtyElement) qtyElement.innerText = "0";
+      updateTotal();
+      renderOrderSummary();
     }
 
-
-    updateTotal();
-
-    renderOrderSummary();
-
-}
-
-
-/* =====================================================
-   TAP CARD = +1
-   ===================================================== */
-
-function addProduct(index){
-
-    if(
-        transactionProcessing
-    ){
-
-        return;
-
+    /* ===================================================== TAP CARD = +1 ===================================================== */
+    function addProduct(index) {
+      if (transactionProcessing) return;
+      cart[index] = (cart[index] || 0) + 1;
+      const qtyElement = document.getElementById("qty" + index);
+      if (qtyElement) qtyElement.innerText = cart[index];
+      updateTotal();
+      renderOrderSummary();
     }
 
-
-    cart[index] =
-    (cart[index] || 0) + 1;
-
-
-    const qtyElement =
-    document.getElementById(
-        "qty" + index
-    );
-
-
-    if(qtyElement){
-
-        qtyElement.innerText =
-        cart[index];
-
+    /* ===================================================== PLUS ===================================================== */
+    function plusQty(index) {
+      if (transactionProcessing) return;
+      cart[index] = (cart[index] || 0) + 1;
+      const qtyElement = document.getElementById("qty" + index);
+      if (qtyElement) qtyElement.innerText = cart[index];
+      updateTotal();
+      renderOrderSummary();
     }
 
-
-    updateTotal();
-
-    renderOrderSummary();
-
-}
-
-
-/* =====================================================
-   PLUS
-   ===================================================== */
-
-function plusQty(index){
-
-    if(
-        transactionProcessing
-    ){
-
-        return;
-
-    }
-
-
-    cart[index] =
-    (cart[index] || 0) + 1;
-
-
-    const qtyElement =
-    document.getElementById(
-        "qty" + index
-    );
-
-
-    if(qtyElement){
-
-        qtyElement.innerText =
-        cart[index];
-
-    }
-
-
-    updateTotal();
-
-    renderOrderSummary();
-
-}
-
-
-/* =====================================================
-   MINUS
-   ===================================================== */
-
-function minusQty(index){
-
-    if(
-        transactionProcessing
-    ){
-
-        return;
-
-    }
-
-
-    if(
-        (cart[index] || 0) > 0
-    ){
-
+    /* ===================================================== MINUS ===================================================== */
+    function minusQty(index) {
+      if (transactionProcessing) return;
+      if ((cart[index] || 0) > 0) {
         cart[index]--;
-
-
-        const qtyElement =
-        document.getElementById(
-            "qty" + index
-        );
-
-
-        if(qtyElement){
-
-            qtyElement.innerText =
-            cart[index];
-
-        }
-
-
+        const qtyElement = document.getElementById("qty" + index);
+        if (qtyElement) qtyElement.innerText = cart[index];
         updateTotal();
-
         renderOrderSummary();
-
+      }
     }
 
-}
+    /* ===================================================== TOTAL ===================================================== */
+    function getTotal() {
+      let total = 0;
+      menus.forEach((m, i) => {
+        total += m.harga * (cart[i] || 0);
+      });
+      return total;
+    }
 
+    function updateTotal() {
+      let total = getTotal();
+      document.getElementById("grandTotal").innerHTML = "Total : <b>" + rupiah(total) + "</b>";
+      calculateChange();
+    }
 
-/* =====================================================
-   TOTAL
-   ===================================================== */
-
-function getTotal(){
-
-    let total = 0;
-
-
-    menus.forEach(
-        (m,i) => {
-
-            total +=
-            m.harga *
-            (cart[i] || 0);
-
-        }
-    );
-
-
-    return total;
-
-}
-
-
-function updateTotal(){
-
-    let total =
-    getTotal();
-
-
-    document
-    .getElementById("grandTotal")
-    .innerHTML =
-    "Total : <b>" +
-    rupiah(total) +
-    "</b>";
-
-
-    calculateChange();
-
-}
-
-
-/* =====================================================
-   FORMAT UANG
-   ===================================================== */
-
-function formatCashInput(input){
-
-    let value =
-    input.value.replace(
-        /\D/g,
-        ""
-    );
-
-
-    if(
-        value === ""
-    ){
-
-        input.value = "";
-
+    /* ===================================================== FORMAT UANG ===================================================== */
+    function formatCashInput(input) {
+      let value = input.value.replace(/\D/g, "");
+      if (value === "") {
+        input.value = "0";
         calculateChange();
-
         return;
-
+      }
+      input.value = Number(value).toLocaleString("id-ID");
+      calculateChange();
     }
 
-
-    input.value =
-    Number(value)
-    .toLocaleString("id-ID");
-
-
-    calculateChange();
-
-}
-
-
-/* =====================================================
-   PAYMENT
-   ===================================================== */
-
-function paymentChanged(){
-
-    let method =
-    document
-    .getElementById(
-        "paymentMethod"
-    )
-    .value;
-
-
-    if(
-        method === "cash"
-    ){
-
-        document
-        .getElementById(
-            "cashPayment"
-        )
-        .style.display =
-        "block";
-
-
-        document
-        .getElementById(
-            "qrisPayment"
-        )
-        .style.display =
-        "none";
-
-    }else{
-
-        document
-        .getElementById(
-            "cashPayment"
-        )
-        .style.display =
-        "none";
-
-
-        document
-        .getElementById(
-            "qrisPayment"
-        )
-        .style.display =
-        "block";
-
+    /* ===================================================== PAYMENT ===================================================== */
+    function paymentChanged() {
+      let method = document.getElementById("paymentMethod").value;
+      if (method === "cash") {
+        document.getElementById("cashPayment").style.display = "block";
+        document.getElementById("qrisPayment").style.display = "none";
+      } else {
+        document.getElementById("cashPayment").style.display = "none";
+        document.getElementById("qrisPayment").style.display = "block";
+      }
+      calculateChange();
     }
 
-}
+    /* ===================================================== KEMBALIAN ===================================================== */
+    function calculateChange() {
+      let total = getTotal();
+      let input = document.getElementById("cashReceived").value;
+      let received = parseInt(input.replace(/\D/g, "")) || 0;
+      let change = received - total;
 
-
-/* =====================================================
-   KEMBALIAN
-   ===================================================== */
-
-function calculateChange(){
-
-    let total =
-    getTotal();
-
-
-    let input =
-    document
-    .getElementById(
-        "cashReceived"
-    )
-    .value;
-
-
-    let received =
-    parseInt(
-        input.replace(
-            /\D/g,
-            ""
-        )
-    ) || 0;
-
-
-    let change =
-    received - total;
-
-
-    if(change < 0){
-
-        change = 0;
-
+      if (change < 0) change = 0;
+      document.getElementById("changeDisplay").innerText = "Kembalian : " + rupiah(change);
     }
 
+    /* ===================================================== RESET PAYMENT FORM ===================================================== */
+    function resetPaymentForm() {
+      const cashInput = document.getElementById("cashReceived");
+      if (cashInput) cashInput.value = "0";
 
-    document
-    .getElementById(
-        "changeDisplay"
-    )
-    .innerText =
-    "Kembalian : " +
-    rupiah(change);
+      const method = document.getElementById("paymentMethod");
+      if (method) method.value = "cash";
 
-}
-
-
-/* =====================================================
-   GENERATE TRANSACTION ID
-   ===================================================== */
-
-function generateTransactionId(){
-
-    return (
-        Date.now().toString() +
-        "-" +
-        Math.random()
-        .toString(36)
-        .substring(2,8)
-    );
-
-}
-
-
-/* =====================================================
-   COMPLETE TRANSACTION
-   ===================================================== */
-
-async function completeTransaction(){
-
-    if(
-        transactionProcessing
-    ){
-
-        return;
-
+      paymentChanged();
+      calculateChange();
     }
 
-
-    transactionProcessing = true;
-
-
-    const button =
-    document
-    .getElementById(
-        "completeButton"
-    );
-
-
-    button.disabled = true;
-
-
-    let total =
-    getTotal();
-
-
-    if(
-        total <= 0
-    ){
-
-        transactionProcessing = false;
-
-        button.disabled = false;
-
-        alert(
-            "Belum ada barang dipilih"
-        );
-
-        return;
-
+    /* ===================================================== GENERATE TRANSACTION ID ===================================================== */
+    function generateTransactionId() {
+      return Date.now().toString() + "-" + Math.random().toString(36).substring(2, 10);
     }
 
-
-    let paymentMethod =
-    document
-    .getElementById(
-        "paymentMethod"
-    )
-    .value;
-
-
-    let cashReceived = 0;
-
-    let change = 0;
-
-
-    if(
-        paymentMethod === "cash"
-    ){
-
-        let cashInput =
-        document
-        .getElementById(
-            "cashReceived"
-        )
-        .value;
-
-
-        cashReceived =
-        parseInt(
-            cashInput.replace(
-                /\D/g,
-                ""
-            )
-        ) || 0;
-
-
-        if(
-            cashReceived < total
-        ){
-
-            transactionProcessing =
-            false;
-
-            button.disabled =
-            false;
-
-
-            alert(
-
-                "Uang diterima kurang.\n\n" +
-
-                "Total: " +
-                rupiah(total)
-
-            );
-
-            return;
-
-        }
-
-
-        change =
-        cashReceived - total;
-
+    /* ===================================================== LOCAL TRANSACTION STORAGE ===================================================== */
+    function queueTransactionLocally(transaction) {
+      const exists = pendingTransactions.some(item => item.transactionId === transaction.transactionId);
+      if (!exists) {
+        pendingTransactions.push(transaction);
+        savePendingTransactions();
+      }
+      updateNetworkStatus();
     }
 
+    /* ===================================================== RECEIPT GENERATION & PRINT ===================================================== */
+    function generateReceipt(transaction) {
+      document.getElementById("receiptInfo").innerHTML = `
+        Nota: ${transaction.nota}<br>
+        Tgl: ${transaction.tanggal} ${transaction.jam}
+      `;
 
-    let items = [];
+      let itemsHtml = "";
+      transaction.items.forEach(item => {
+        itemsHtml += `
+          <div>${escapeHtml(item.nama)}</div>
+          <div class="right">${item.qty} x ${rupiah(item.harga)} = ${rupiah(item.subtotal)}</div>
+        `;
+      });
+      document.getElementById("receiptItems").innerHTML = itemsHtml;
+      document.getElementById("receiptTotal").innerText = "Total: " + rupiah(transaction.total);
 
-
-    menus.forEach(
-        (m,i) => {
-
-            if(
-                (cart[i] || 0) > 0
-            ){
-
-                let subtotal =
-                m.harga *
-                cart[i];
-
-
-                items.push({
-
-                    nama:m.nama,
-
-                    qty:cart[i],
-
-                    harga:m.harga,
-
-                    subtotal:subtotal
-
-                });
-
-            }
-
-        }
-    );
-
-
-    let now =
-    new Date();
-
-
-    let tanggal =
-    now.toLocaleDateString(
-        "id-ID"
-    );
-
-
-    let jam =
-    now.toLocaleTimeString(
-        "id-ID",
-        {
-            hour:"2-digit",
-            minute:"2-digit",
-            hour12:false
-        }
-    );
-
-
-    let nomorNota =
-    String(nota)
-    .padStart(3,"0");
-
-
-    let transaction = {
-
-        transactionId:
-            generateTransactionId(),
-
-        tanggal:
-            tanggal,
-
-        jam:
-            jam,
-
-        nota:
-            nomorNota,
-
-        pembayaran:
-            paymentMethod === "cash"
-            ? "Cash"
-            : "QRIS",
-
-        cashReceived:
-            cashReceived,
-
-        change:
-            change,
-
-        total:
-            total,
-
-        items:
-            items
-
-    };
-
-
-    currentTransaction =
-    transaction;
-
-
-    const loadingBox =
-    document
-    .getElementById(
-        "loadingBox"
-    );
-
-
-    const loadingText =
-    document
-    .getElementById(
-        "loadingText"
-    );
-
-
-    const loadingSub =
-    document
-    .getElementById(
-        "loadingSub"
-    );
-
-
-    loadingBox
-    .classList
-    .add("active");
-
-
-    const alreadyQueued =
-    pendingTransactions.some(
-        item =>
-            item.transactionId ===
-            transaction.transactionId
-    );
-
-
-    if(!alreadyQueued){
-
-        pendingTransactions.push(
-            transaction
-        );
-
-
-        localStorage.setItem(
-            "pendingTransactions",
-            JSON.stringify(
-                pendingTransactions
-            )
-        );
-
+      if (transaction.pembayaran === "Cash") {
+        document.getElementById("receiptPayment").innerHTML = `
+          Bayar (Cash): ${rupiah(transaction.cashReceived)}<br>
+          Kembali: ${rupiah(transaction.change)}
+        `;
+      } else {
+        document.getElementById("receiptPayment").innerHTML = `Metode: QRIS`;
+      }
     }
 
-
-    updateNetworkStatus();
-
-
-    loadingText.innerText =
-    "Mengirim transaksi...";
-
-
-    loadingSub.innerText =
-    "Menyimpan data ke Google Sheets";
-
-
-    let isSent =
-    await processPendingTransactions();
-
-
-    if(
-        !isSent &&
-        !navigator.onLine
-    ){
-
-        let lanjut =
-        confirm(
-
-            "Tidak ada koneksi internet.\n\n" +
-
-            "Data transaksi SUDAH TERSIMPAN DI LOKAL " +
-
-            "dan akan otomatis terkirim saat online.\n\n" +
-
-            "Apakah ingin tetap mencetak nota?"
-
-        );
-
-
-        if(!lanjut){
-
-            loadingBox
-            .classList
-            .remove("active");
-
-
-            transactionProcessing =
-            false;
-
-
-            button.disabled =
-            false;
-
-
-            return;
-
-        }
-
+    async function printReceipt() {
+      return new Promise((resolve) => {
+        document.getElementById("receipt").style.display = "block";
+        window.print();
+        document.getElementById("receipt").style.display = "none";
+        resolve(true);
+      });
     }
 
-
-    loadingText.innerText =
-    "Mencetak nota...";
-
-
-    loadingSub.innerText =
-    "Mengirim nota ke printer";
-
-
-    generateReceipt(
-        transaction
-    );
-
-
-    let printSuccess =
-    await printReceipt();
-
-
-    if(
-        !printSuccess
-    ){
-
-        loadingBox
-        .classList
-        .remove("active");
-
-
-        transactionProcessing =
-        false;
-
-
-        button.disabled =
-        false;
-
-
-        return;
-
-    }
-
-
-    nota++;
-
-
-    localStorage.setItem(
-        "nota",
-        nota
-    );
-
-
-    document
-    .getElementById(
-        "receipt"
-    )
-    .style.display =
-    "none";
-
-
-    cart = {};
-
-
-    renderCashier();
-
-
-    alert(
-
-        "Transaksi berhasil.\n" +
-
-        "No Nota: " +
-
-        nomorNota
-
-    );
-
-}
-
-
-/* =====================================================
-   GOOGLE SHEETS
-   ===================================================== */
-
-async function saveToGoogleSheets(
-    data
-){
-
-    await fetch(
-
-        GOOGLE_SCRIPT_URL,
-
-        {
-
-            method:"POST",
-
-            mode:"no-cors",
-
-            headers:{
-
-                "Content-Type":
-                "text/plain;charset=utf-8"
-
-            },
-
-            body:
-            JSON.stringify(data)
-
-        }
-
-    );
-
-}
-
-
-/* =====================================================
-   OFFLINE SYNC PROCESSOR
-   ===================================================== */
-
-async function processPendingTransactions(){
-
-    if(
-        !navigator.onLine
-    ){
-
-        return false;
-
-    }
-
-
-    if(
-        syncingTransactions
-    ){
-
-        return false;
-
-    }
-
-
-    if(
-        pendingTransactions.length === 0
-    ){
-
-        return true;
-
-    }
-
-
-    syncingTransactions = true;
-
-
-    let allSuccess = true;
-
-
-    try{
-
-        while(
-
-            navigator.onLine &&
-            pendingTransactions.length > 0
-
-        ){
-
-            const txn =
-            pendingTransactions[0];
-
-
-            try{
-
-                await saveToGoogleSheets(
-                    txn
-                );
-
-
-                pendingTransactions.shift();
-
-
-                localStorage.setItem(
-
-                    "pendingTransactions",
-
-                    JSON.stringify(
-                        pendingTransactions
-                    )
-
-                );
-
-
-                updateNetworkStatus();
-
-            }catch(error){
-
-                console.error(
-
-                    "Gagal mengirim transaksi:",
-
-                    txn.nota,
-
-                    error
-
-                );
-
-
-                allSuccess = false;
-
-                break;
-
-            }
-
-        }
-
-    }finally{
-
-        syncingTransactions = false;
-
+    async function processPendingTransactions() {
+      if (syncingTransactions || pendingTransactions.length === 0 || !navigator.onLine) return;
+      syncingTransactions = true;
+
+      try {
+        const transactionToSend = pendingTransactions[0];
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(transactionToSend)
+        });
+
+        pendingTransactions.shift();
+        savePendingTransactions();
         updateNetworkStatus();
-
+      } catch (err) {
+        console.error("Gagal sync ke Google Sheets:", err);
+      } finally {
+        syncingTransactions = false;
+      }
     }
 
+    /* ===================================================== COMPLETE TRANSACTION ===================================================== */
+    async function completeTransaction() {
+      if (transactionProcessing) return;
 
-    return allSuccess;
+      const total = getTotal();
+      if (total <= 0) {
+        alert("Belum ada barang dipilih");
+        return;
+      }
 
-}
+      transactionProcessing = true;
+      const button = document.getElementById("completeButton");
+      button.disabled = true;
 
+      let paymentMethod = document.getElementById("paymentMethod").value;
+      let cashReceived = 0;
+      let change = 0;
 
-/* =====================================================
-   GENERATE RECEIPT
-   ===================================================== */
-
-function generateReceipt(
-    transaction
-){
-
-    let itemHtml = "";
-
-
-    transaction.items.forEach(
-        item => {
-
-            itemHtml += `
-
-            <div
-                style="margin-bottom:6px;">
-
-                <div>
-
-                    <b>
-                        ${escapeHtml(item.nama)}
-                    </b>
-
-                </div>
-
-
-                <div
-                    style="
-                    display:flex;
-                    justify-content:space-between;
-                    ">
-
-                    <span>
-
-                        ${item.qty}
-                        x
-                        ${rupiah(item.harga)}
-
-                    </span>
-
-
-                    <span>
-
-                        ${rupiah(item.subtotal)}
-
-                    </span>
-
-                </div>
-
-            </div>
-
-            `;
-
+      if (paymentMethod === "cash") {
+        let cashInput = document.getElementById("cashReceived").value;
+        cashReceived = parseInt(cashInput.replace(/\D/g, "")) || 0;
+        if (cashReceived < total) {
+          transactionProcessing = false;
+          button.disabled = false;
+          alert("Uang diterima kurang.\n\nTotal: " + rupiah(total));
+          return;
         }
-    );
-
-
-    document
-    .getElementById(
-        "receiptInfo"
-    )
-    .innerHTML = `
-
-        <div class="center">
-
-            <b>
-                No Nota : ${transaction.nota}
-            </b>
-
-            <br>
-
-            ${transaction.tanggal}
-
-            •
-
-            ${transaction.jam}
-
-        </div>
-
-    `;
-
-
-    document
-    .getElementById(
-        "receiptItems"
-    )
-    .innerHTML =
-    itemHtml;
-
-
-    document
-    .getElementById(
-        "receiptTotal"
-    )
-    .innerHTML =
-    "TOTAL : " +
-    rupiah(transaction.total);
-
-
-    let paymentHtml = "";
-
-
-    if(
-        transaction.pembayaran ===
-        "Cash"
-    ){
-
-        paymentHtml = `
-
-            Pembayaran : Cash
-
-            <br>
-
-            Diterima :
-            ${rupiah(
-                transaction.cashReceived
-            )}
-
-            <br>
-
-            Kembalian :
-            ${rupiah(
-                transaction.change
-            )}
-
-        `;
-
-    }else{
-
-        paymentHtml = `
-
-            Pembayaran : QRIS
-
-        `;
-
-    }
-
-
-    document
-    .getElementById(
-        "receiptPayment"
-    )
-    .innerHTML =
-    paymentHtml;
-
-
-    document
-    .getElementById(
-        "receipt"
-    )
-    .style.display =
-    "block";
-
-}
-
-
-/* =====================================================
-   PRINT CLEANTER
-   ===================================================== */
-
-async function printReceipt(){
-
-    if(
-        !currentTransaction
-    ){
-
-        alert(
-            "Belum ada transaksi"
-        );
-
-        return false;
-
-    }
-
-
-    let transaction =
-    currentTransaction;
-
-
-    let content = [];
-
-
-    content.push({
-
-        type:"text",
-
-        text:"KUKIKOE",
-
-        align:"center",
-
-        bold:true,
-
-        size:"large"
-
-    });
-
-
-    content.push({
-
-        type:"text",
-
-        text:"Mooncake Festival",
-
-        align:"center"
-
-    });
-
-
-    content.push({
-
-        type:"divider"
-
-    });
-
-
-    content.push({
-
-        type:"text",
-
-        text:
-        "No Nota : " +
-        transaction.nota,
-
-        align:"center",
-
-        bold:true
-
-    });
-
-
-    content.push({
-
-        type:"text",
-
-        text:
-        transaction.tanggal +
-        " • " +
-        transaction.jam,
-
-        align:"center"
-
-    });
-
-
-    content.push({
-
-        type:"divider"
-
-    });
-
-
-    transaction.items.forEach(
-        item => {
-
-            content.push({
-
-                type:"text",
-
-                text:item.nama,
-
-                bold:true
-
-            });
-
-
-            content.push({
-
-                type:"row",
-
-                left:
-                item.qty +
-                " x " +
-                rupiah(item.harga),
-
-                right:
-                rupiah(item.subtotal)
-
-            });
-
+        change = cashReceived - total;
+      }
+
+      let items = [];
+      menus.forEach((m, i) => {
+        if ((cart[i] || 0) > 0) {
+          let subtotal = m.harga * cart[i];
+          items.push({
+            nama: m.nama,
+            qty: cart[i],
+            harga: m.harga,
+            subtotal: subtotal
+          });
         }
-    );
+      });
 
+      let now = new Date();
+      let tanggal = now.toLocaleDateString("id-ID");
+      let jam = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false });
+      let nomorNota = String(nota).padStart(3, "0");
 
-    content.push({
+      let transaction = {
+        transactionId: generateTransactionId(),
+        tanggal: tanggal,
+        jam: jam,
+        nota: nomorNota,
+        pembayaran: paymentMethod === "cash" ? "Cash" : "QRIS",
+        cashReceived: cashReceived,
+        change: change,
+        total: total,
+        items: items
+      };
 
-        type:"divider"
+      currentTransaction = transaction;
 
-    });
+      const loadingBox = document.getElementById("loadingBox");
+      const loadingText = document.getElementById("loadingText");
+      const loadingSub = document.getElementById("loadingSub");
 
+      loadingBox.classList.add("active");
+      loadingText.innerText = "Mengamankan transaksi...";
+      loadingSub.innerText = "Menyimpan data secara lokal";
 
-    content.push({
+      try {
+        queueTransactionLocally(transaction);
+      } catch (error) {
+        console.error("Gagal menyimpan transaksi lokal:", error);
+        loadingBox.classList.remove("active");
+        transactionProcessing = false;
+        button.disabled = false;
+        alert("Transaksi tidak dapat disimpan ke storage lokal.\n\nTransaksi dibatalkan untuk mencegah kehilangan data.");
+        return;
+      }
 
-        type:"row",
+      loadingText.innerText = "Mencetak nota...";
+      loadingSub.innerText = "Mengirim ke printer CleanTer";
 
-        left:"TOTAL",
+      generateReceipt(transaction);
+      let printSuccess = await printReceipt();
 
-        right:
-        rupiah(transaction.total),
+      if (!printSuccess) {
+        loadingBox.classList.remove("active");
+        transactionProcessing = false;
+        button.disabled = false;
+        return;
+      }
 
-        bold:true
+      // Reset Form & Increment Nota setelah Sukses
+      nota++;
+      localStorage.setItem("nota", nota);
+      cart = {};
+      resetPaymentForm();
+      renderCashier();
 
-    });
-
-
-    content.push({
-
-        type:"divider"
-
-    });
-
-
-    content.push({
-
-        type:"text",
-
-        text:
-        "Pembayaran : " +
-        transaction.pembayaran
-
-    });
-
-
-    if(
-        transaction.pembayaran ===
-        "Cash"
-    ){
-
-        content.push({
-
-            type:"text",
-
-            text:
-            "Diterima : " +
-            rupiah(
-                transaction.cashReceived
-            )
-
-        });
-
-
-        content.push({
-
-            type:"text",
-
-            text:
-            "Kembalian : " +
-            rupiah(
-                transaction.change
-            )
-
-        });
-
+      // Trigger sync
+      processPendingTransactions();
     }
 
-
-    content.push({
-
-        type:"feed",
-
-        lines:1
-
-    });
-
-
-    content.push({
-
-        type:"text",
-
-        text:"Terima Kasih",
-
-        align:"center"
-
-    });
-
-
-    content.push({
-
-        type:"feed",
-
-        lines:3
-
-    });
-
-
-    try{
-
-        const response =
-        await fetch(
-
-            "http://localhost:9100/print",
-
-            {
-
-                method:"POST",
-
-                headers:{
-
-                    "Content-Type":
-                    "application/json"
-
-                },
-
-                body:
-                JSON.stringify({
-
-                    cut:true,
-
-                    content:
-                    content
-
-                }),
-
-                signal:
-                AbortSignal.timeout(5000)
-
-            }
-
-        );
-
-
-        if(
-            !response.ok
-        ){
-
-            throw new Error(
-                "Cleanter error " +
-                response.status
-            );
-
-        }
-
-
-        let result =
-        await response.json();
-
-
-        if(
-            result.status ===
-            "printed"
-        ){
-
-            return true;
-
-        }
-
-
-        alert(
-
-            "Print gagal: " +
-            JSON.stringify(result)
-
-        );
-
-
-        return false;
-
-
-    }catch(error){
-
-        console.error(error);
-
-
-        alert(
-
-            "Printer tidak terhubung.\n\n" +
-
-            "Pastikan:\n" +
-
-            "1. RPP02N sudah Bluetooth paired\n" +
-
-            "2. Cleanter sudah terpasang\n" +
-
-            "3. RPP02N dipilih sebagai printer di Cleanter"
-
-        );
-
-
-        return false;
-
-    }
-
-}
-
-
-/* =====================================================
-   START
-   ===================================================== */
-
-renderMenu();
-
-renderCashier();
-
-updateNetworkStatus();
-
-
-</script>
-
+    // Inisialisasi awal saat halaman di-load
+    renderCashier();
+    renderMenu();
+    updateNetworkStatus();
+  </script>
 </body>
 
 </html>
