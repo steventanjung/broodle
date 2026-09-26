@@ -6,8 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Kukikoe - Mooncake</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
   <style>
-    /* ========================= GENERAL ========================= */
     * {
       box-sizing: border-box;
     }
@@ -37,7 +37,6 @@
       box-shadow: 0 3px 12px rgba(0, 0, 0, .07);
     }
 
-    /* ========================= PRODUCT GRID ========================= */
     .productGrid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -60,7 +59,6 @@
       transform: scale(.97);
     }
 
-    /* ========================= CATEGORY ========================= */
     .categoryTabs {
       display: flex;
       gap: 7px;
@@ -100,7 +98,6 @@
       margin-bottom: 4px;
     }
 
-    /* ========================= PRODUCT IMAGE ========================= */
     .productImage {
       width: 100%;
       aspect-ratio: 1 / 1;
@@ -118,7 +115,6 @@
       display: block;
     }
 
-    /* ========================= PRODUCT INFO ========================= */
     .productInfo {
       padding: 11px;
     }
@@ -166,7 +162,6 @@
       font-weight: bold;
     }
 
-    /* ========================= CURRENT ORDER ========================= */
     .orderBox {
       margin-top: 16px;
       padding-top: 16px;
@@ -247,7 +242,6 @@
       flex: 0 0 auto;
     }
 
-    /* ========================= LOADING ========================= */
     .loadingBox {
       display: none;
       text-align: center;
@@ -284,7 +278,6 @@
       margin-top: 4px;
     }
 
-    /* ========================= PAYMENT ========================= */
     .paymentBox {
       margin-top: 16px;
       padding-top: 16px;
@@ -304,7 +297,6 @@
       margin: 0;
     }
 
-    /* ========================= MENU MANAGEMENT ========================= */
     .menuItem {
       display: flex;
       justify-content: space-between;
@@ -321,7 +313,6 @@
       font-size: 15px;
     }
 
-    /* ========================= RECEIPT ========================= */
     #receipt {
       width: 58mm;
       background: white;
@@ -343,7 +334,6 @@
       margin: 6px 0;
     }
 
-    /* ========================= RESPONSIVE ========================= */
     @media (max-width: 575px) and (orientation: portrait) {
       body {
         padding: 8px;
@@ -571,7 +561,6 @@
       }
     }
 
-    /* ========================= PRINT ========================= */
     @media print {
       body * {
         visibility: hidden;
@@ -593,761 +582,2757 @@
 </head>
 
 <body>
+
   <!-- ===================================================== KELOLA MENU ===================================================== -->
+
   <div id="menuPage" class="page">
+
     <div class="card">
+
       <h2>Tambah Menu</h2>
-      <input id="nama" class="form-control mb-2" placeholder="Nama Barang">
-      <input id="harga" class="form-control mb-2" type="number" placeholder="Harga">
-      <button class="btn btn-primary" onclick="addMenu()">Tambah</button>
+
+      <input
+        id="nama"
+        class="form-control mb-2"
+        placeholder="Nama Barang"
+      >
+
+      <input
+        id="harga"
+        class="form-control mb-2"
+        type="number"
+        placeholder="Harga"
+      >
+
+      <button
+        class="btn btn-primary"
+        onclick="addMenu()"
+      >
+        Tambah
+      </button>
+
     </div>
+
     <div class="card">
+
       <h3>Daftar Menu</h3>
+
       <div id="menuList"></div>
+
     </div>
+
   </div>
 
+
   <!-- ===================================================== KASIR ===================================================== -->
+
   <div id="cashierPage" class="page active">
+
     <div class="cashierContainer">
+
       <div class="card">
+
         <div class="mb-3">
-          <h2 class="fw-bold mb-1">Kukikoe</h2>
-          <div class="text-muted">Mooncake & Dessert</div>
-        </div>
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="fw-bold mb-0">Daftar Produk</h5>
-          <div>
-            <span id="syncBadge" class="badge text-bg-warning me-1" style="display:none;">0 Pending</span>
-            <span id="networkBadge" class="badge text-bg-success">Online</span>
+
+          <h2 class="fw-bold mb-1">
+            Kukikoe
+          </h2>
+
+          <div class="text-muted">
+            Mooncake & Dessert
           </div>
+
         </div>
+
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+
+          <h5 class="fw-bold mb-0">
+            Daftar Produk
+          </h5>
+
+          <div>
+
+            <span
+              id="syncBadge"
+              class="badge text-bg-warning me-1"
+              style="display:none;"
+            >
+              0 Pending
+            </span>
+
+            <span
+              id="networkBadge"
+              class="badge text-bg-success"
+            >
+              Online
+            </span>
+
+          </div>
+
+        </div>
+
 
         <!-- CATEGORY -->
+
         <div class="categoryTabs mb-3">
-          <button type="button" class="categoryBtn active" onclick="setCategory('Unggulan',this)">⭐ Best Seller</button>
-          <button type="button" class="categoryBtn" onclick="setCategory('Cheesecake',this)">Cheesecake</button>
-          <button type="button" class="categoryBtn" onclick="setCategory('Dubai',this)">Dubai</button>
-          <button type="button" class="categoryBtn" onclick="setCategory('Choco',this)">Choco</button>
-          <button type="button" class="categoryBtn" onclick="setCategory('Snack',this)">Snack</button>
-          <button type="button" class="categoryBtn" onclick="setCategory('Bagia',this)">Bagia</button>
-          <button type="button" class="categoryBtn" onclick="setCategory('Semua',this)">Semua</button>
+
+          <button
+            type="button"
+            class="categoryBtn active"
+            onclick="setCategory('Unggulan',this)"
+          >
+            ⭐ Best Seller
+          </button>
+
+          <button
+            type="button"
+            class="categoryBtn"
+            onclick="setCategory('Cheesecake',this)"
+          >
+            Cheesecake
+          </button>
+
+          <button
+            type="button"
+            class="categoryBtn"
+            onclick="setCategory('Dubai',this)"
+          >
+            Dubai
+          </button>
+
+          <button
+            type="button"
+            class="categoryBtn"
+            onclick="setCategory('Choco',this)"
+          >
+            Choco
+          </button>
+
+          <button
+            type="button"
+            class="categoryBtn"
+            onclick="setCategory('Snack',this)"
+          >
+            Snack
+          </button>
+
+          <button
+            type="button"
+            class="categoryBtn"
+            onclick="setCategory('Bagia',this)"
+          >
+            Bagia
+          </button>
+
+          <button
+            type="button"
+            class="categoryBtn"
+            onclick="setCategory('Semua',this)"
+          >
+            Semua
+          </button>
+
         </div>
+
 
         <!-- PRODUCT GRID -->
+
         <div id="cashierList"></div>
 
+
         <!-- CURRENT ORDER -->
+
         <div class="orderBox">
+
           <div class="orderHeader">
-            <h5>Pesanan Saat Ini</h5>
-            <span id="orderCount" class="orderCount">0 item</span>
+
+            <h5>
+              Pesanan Saat Ini
+            </h5>
+
+            <span
+              id="orderCount"
+              class="orderCount"
+            >
+              0 item
+            </span>
+
           </div>
+
           <div id="orderSummary">
-            <div class="orderEmpty">Belum ada pesanan</div>
+
+            <div class="orderEmpty">
+              Belum ada pesanan
+            </div>
+
           </div>
+
         </div>
+
 
         <!-- TOTAL -->
+
         <div class="alert alert-primary mt-3 mb-0">
-          <div class="small text-muted">TOTAL PEMBAYARAN</div>
-          <h2 id="grandTotal" class="fw-bold mb-0">Total : Rp0</h2>
+
+          <div class="small text-muted">
+            TOTAL PEMBAYARAN
+          </div>
+
+          <h2
+            id="grandTotal"
+            class="fw-bold mb-0"
+          >
+            Total : Rp0
+          </h2>
+
         </div>
 
+
         <!-- PEMBAYARAN -->
+
         <div class="paymentBox">
-          <h5 class="fw-bold mb-3">Pembayaran</h5>
-          <label class="form-label">Metode Pembayaran</label>
-          <select id="paymentMethod" class="form-select" onchange="paymentChanged()">
-            <option value="cash">Cash</option>
-            <option value="qris">QRIS</option>
+
+          <h5 class="fw-bold mb-3">
+            Pembayaran
+          </h5>
+
+          <label class="form-label">
+            Metode Pembayaran
+          </label>
+
+          <select
+            id="paymentMethod"
+            class="form-select"
+            onchange="paymentChanged()"
+          >
+
+            <option value="cash">
+              Cash
+            </option>
+
+            <option value="qris">
+              QRIS
+            </option>
+
           </select>
 
+
           <!-- CASH -->
-          <div id="cashPayment" class="mt-3">
-            <label class="form-label">Uang Diterima</label>
-            <input id="cashReceived" class="form-control form-control-lg" type="text" inputmode="numeric" placeholder="Masukkan nominal" value="0" oninput="formatCashInput(this)">
-            <div id="changeDisplay" class="change">Kembalian : Rp0</div>
+
+          <div
+            id="cashPayment"
+            class="mt-3"
+          >
+
+            <label class="form-label">
+              Uang Diterima
+            </label>
+
+            <input
+              id="cashReceived"
+              class="form-control form-control-lg"
+              type="text"
+              inputmode="numeric"
+              placeholder="Masukkan nominal"
+              value="0"
+              oninput="formatCashInput(this)"
+            >
+
+            <div
+              id="changeDisplay"
+              class="change"
+            >
+              Kembalian : Rp0
+            </div>
+
           </div>
+
 
           <!-- QRIS -->
-          <div id="qrisPayment" class="alert alert-info mt-3" style="display:none;">
-            <strong>Pembayaran QRIS</strong>
-            <div class="small mt-1">Pastikan pembayaran sudah diterima sebelum menyelesaikan transaksi.</div>
+
+          <div
+            id="qrisPayment"
+            class="alert alert-info mt-3"
+            style="display:none;"
+          >
+
+            <strong>
+              Pembayaran QRIS
+            </strong>
+
+            <div class="small mt-1">
+              Pastikan pembayaran sudah diterima sebelum menyelesaikan transaksi.
+            </div>
+
           </div>
 
+
           <!-- TRANSAKSI -->
-          <button id="completeButton" class="btn btn-primary btn-lg w-100 mt-3" onclick="completeTransaction()">
+
+          <button
+            id="completeButton"
+            class="btn btn-primary btn-lg w-100 mt-3"
+            onclick="completeTransaction()"
+          >
             🧾 Selesaikan & Print
           </button>
 
+
           <!-- LOADING -->
-          <div id="loadingBox" class="loadingBox">
+
+          <div
+            id="loadingBox"
+            class="loadingBox"
+          >
+
             <div class="spinner"></div>
-            <div id="loadingText" class="loadingText">Memproses transaksi...</div>
-            <div id="loadingSub" class="loadingSub">Mohon tunggu</div>
+
+            <div
+              id="loadingText"
+              class="loadingText"
+            >
+              Memproses transaksi...
+            </div>
+
+            <div
+              id="loadingSub"
+              class="loadingSub"
+            >
+              Mohon tunggu
+            </div>
+
           </div>
+
         </div>
+
       </div>
+
     </div>
+
   </div>
+
 
   <!-- ===================================================== RECEIPT ===================================================== -->
+
   <div id="receipt">
+
     <div class="center">
-      <b>KUKIKOE</b><br>Mooncake Festival
+
+      <b>
+        KUKIKOE
+      </b>
+
+      <br>
+
+      Mooncake Festival
+
     </div>
+
     <div class="line"></div>
-    <div id="receiptInfo" class="center"></div>
+
+    <div
+      id="receiptInfo"
+      class="center"
+    ></div>
+
     <div class="line"></div>
+
     <div id="receiptItems"></div>
+
     <div class="line"></div>
+
     <div class="right">
+
       <b id="receiptTotal"></b>
+
     </div>
+
     <div class="line"></div>
+
     <div id="receiptPayment"></div>
+
     <div class="line"></div>
-    <div class="center">Terima Kasih</div>
+
+    <div class="center">
+      Terima Kasih
+    </div>
+
   </div>
 
-  <script>
-    /* ===================================================== GOOGLE SHEETS ===================================================== */
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxKhVQ_O89qyKVP_gHHXkZi-i-HtNud-xb8qt9WQfTuENzQyvEn3wuuCPeIhUV5Ytfz/exec";
 
-    /* ===================================================== DATA TRANSAKSI ===================================================== */
+  <script>
+
+    /* =====================================================
+       GOOGLE SHEETS
+    ===================================================== */
+
+    const GOOGLE_SCRIPT_URL =
+      "https://script.google.com/macros/s/AKfycbxKhVQ_O89qyKVP_gHHXkZi-i-HtNud-xb8qt9WQfTuENzQyvEn3wuuCPeIhUV5Ytfz/exec";
+
+
+    /* =====================================================
+       CLEANTER
+       PRINT LANGSUNG DARI WEB
+    ===================================================== */
+
+    const CLEANTER_PRINT_URL =
+      "http://localhost:9100/print";
+
+
+    /* =====================================================
+       DATA TRANSAKSI
+    ===================================================== */
+
     let cart = {};
-    let nota = parseInt(localStorage.getItem("nota")) || 1;
+
+    let nota =
+      parseInt(localStorage.getItem("nota")) || 1;
+
     let currentTransaction = null;
+
     let transactionProcessing = false;
 
-    /* ===================================================== OFFLINE QUEUE ===================================================== */
-    let pendingTransactions = loadPendingTransactions();
+
+    /* =====================================================
+       OFFLINE QUEUE
+    ===================================================== */
+
+    let pendingTransactions =
+      loadPendingTransactions();
+
     let syncingTransactions = false;
 
+
     function loadPendingTransactions() {
+
       try {
-        const raw = localStorage.getItem("pendingTransactions");
+
+        const raw =
+          localStorage.getItem("pendingTransactions");
+
         if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : [];
+
+        const parsed =
+          JSON.parse(raw);
+
+        return Array.isArray(parsed)
+          ? parsed
+          : [];
+
       } catch (error) {
-        console.error("Queue transaksi rusak:", error);
+
+        console.error(
+          "Queue transaksi rusak:",
+          error
+        );
+
         return [];
+
       }
+
     }
 
-    /* ===================================================== SAVE QUEUE ===================================================== */
+
     function savePendingTransactions() {
-      localStorage.setItem("pendingTransactions", JSON.stringify(pendingTransactions));
+
+      localStorage.setItem(
+        "pendingTransactions",
+        JSON.stringify(pendingTransactions)
+      );
+
     }
 
-    /* ===================================================== NETWORK EVENT ===================================================== */
-    window.addEventListener("online", function() {
-      updateNetworkStatus();
-      processPendingTransactions();
-    });
 
-    window.addEventListener("offline", function() {
-      updateNetworkStatus();
-    });
+    /* =====================================================
+       NETWORK
+    ===================================================== */
+
+    window.addEventListener(
+      "online",
+      function () {
+
+        updateNetworkStatus();
+
+        processPendingTransactions();
+
+      }
+    );
+
+
+    window.addEventListener(
+      "offline",
+      function () {
+
+        updateNetworkStatus();
+
+      }
+    );
+
 
     function updateNetworkStatus() {
-      const netBadge = document.getElementById("networkBadge");
-      const syncBadge = document.getElementById("syncBadge");
+
+      const netBadge =
+        document.getElementById("networkBadge");
+
+      const syncBadge =
+        document.getElementById("syncBadge");
+
 
       if (navigator.onLine) {
-        netBadge.className = "badge text-bg-success";
-        netBadge.innerText = "Online";
+
+        netBadge.className =
+          "badge text-bg-success";
+
+        netBadge.innerText =
+          "Online";
+
       } else {
-        netBadge.className = "badge text-bg-danger";
-        netBadge.innerText = "Offline";
+
+        netBadge.className =
+          "badge text-bg-danger";
+
+        netBadge.innerText =
+          "Offline";
+
       }
+
 
       if (pendingTransactions.length > 0) {
-        syncBadge.style.display = "inline-block";
-        syncBadge.innerText = pendingTransactions.length + " Pending";
+
+        syncBadge.style.display =
+          "inline-block";
+
+        syncBadge.innerText =
+          pendingTransactions.length +
+          " Pending";
+
       } else {
-        syncBadge.style.display = "none";
+
+        syncBadge.style.display =
+          "none";
+
       }
+
     }
 
-    /* ===================================================== BACKGROUND RETRY ===================================================== */
-    setInterval(function() {
-      if (navigator.onLine && pendingTransactions.length > 0) {
-        processPendingTransactions();
-      }
-    }, 15000);
 
-    /* ===================================================== MENU VERSION ===================================================== */
+    /* =====================================================
+       BACKGROUND RETRY
+    ===================================================== */
+
+    setInterval(
+      function () {
+
+        if (
+          navigator.onLine &&
+          pendingTransactions.length > 0
+        ) {
+
+          processPendingTransactions();
+
+        }
+
+      },
+      15000
+    );
+
+
+    /* =====================================================
+       MENU VERSION
+    ===================================================== */
+
     const MENU_VERSION = "12";
+
+
     const DEFAULT_MENUS = [
-      { nama: "Cheesecake A", harga: 40000, kategori: "Cheesecake", unggulan: true },
-      { nama: "Cheesecake B", harga: 55000, kategori: "Cheesecake", unggulan: true },
-      { nama: "Dubai Chewy Cookie", harga: 50000, kategori: "Dubai", unggulan: true },
-      { nama: "Strawberry Dubai Choco", harga: 95000, kategori: "Dubai", unggulan: true },
-      { nama: "London Choco Cake", harga: 55000, kategori: "Choco", unggulan: false },
-      { nama: "Mooncake Pudding", harga: 40000, kategori: "Snack", unggulan: true },
-      { nama: "Milk Cheese Bread", harga: 25000, kategori: "Snack", unggulan: false },
-      { nama: "Bakwan Goreng", harga: 40000, kategori: "Snack", unggulan: true },
-      { nama: "Scoopable Kunafa", harga: 55000, kategori: "Dubai", unggulan: true },
-      { nama: "Scoopable Nutella", harga: 40000, kategori: "Choco", unggulan: true },
-      { nama: "Risol", harga: 30000, kategori: "Snack", unggulan: false },
-      { nama: "Bagia Ori / Mocha", harga: 35000, kategori: "Bagia", unggulan: false },
-      { nama: "Bagia Kacang", harga: 45000, kategori: "Bagia", unggulan: false }
+
+      {
+        nama: "Cheesecake A",
+        harga: 40000,
+        kategori: "Cheesecake",
+        unggulan: true
+      },
+
+      {
+        nama: "Cheesecake B",
+        harga: 55000,
+        kategori: "Cheesecake",
+        unggulan: true
+      },
+
+      {
+        nama: "Dubai Chewy Cookie",
+        harga: 50000,
+        kategori: "Dubai",
+        unggulan: true
+      },
+
+      {
+        nama: "Strawberry Dubai Choco",
+        harga: 95000,
+        kategori: "Dubai",
+        unggulan: true
+      },
+
+      {
+        nama: "London Choco Cake",
+        harga: 55000,
+        kategori: "Choco",
+        unggulan: false
+      },
+
+      {
+        nama: "Mooncake Pudding",
+        harga: 40000,
+        kategori: "Snack",
+        unggulan: true
+      },
+
+      {
+        nama: "Milk Cheese Bread",
+        harga: 25000,
+        kategori: "Snack",
+        unggulan: false
+      },
+
+      {
+        nama: "Bakwan Goreng",
+        harga: 40000,
+        kategori: "Snack",
+        unggulan: true
+      },
+
+      {
+        nama: "Scoopable Kunafa",
+        harga: 55000,
+        kategori: "Dubai",
+        unggulan: true
+      },
+
+      {
+        nama: "Scoopable Nutella",
+        harga: 40000,
+        kategori: "Choco",
+        unggulan: true
+      },
+
+      {
+        nama: "Risol",
+        harga: 30000,
+        kategori: "Snack",
+        unggulan: false
+      },
+
+      {
+        nama: "Bagia Ori / Mocha",
+        harga: 35000,
+        kategori: "Bagia",
+        unggulan: false
+      },
+
+      {
+        nama: "Bagia Kacang",
+        harga: 45000,
+        kategori: "Bagia",
+        unggulan: false
+      }
+
     ];
 
-    let menus = JSON.parse(localStorage.getItem("menus"));
-    let savedMenuVersion = localStorage.getItem("menuVersion");
 
-    /* ===================================================== UPDATE DEFAULT MENU ===================================================== */
-    if (savedMenuVersion !== MENU_VERSION) {
-      menus = DEFAULT_MENUS.map(menu => ({
-        nama: menu.nama,
-        harga: menu.harga,
-        kategori: menu.kategori,
-        unggulan: !!menu.unggulan
-      }));
-      localStorage.setItem("menus", JSON.stringify(menus));
-      localStorage.setItem("menuVersion", MENU_VERSION);
+    let menus =
+      JSON.parse(
+        localStorage.getItem("menus")
+      );
+
+    let savedMenuVersion =
+      localStorage.getItem("menuVersion");
+
+
+    if (
+      savedMenuVersion !==
+      MENU_VERSION
+    ) {
+
+      menus =
+        DEFAULT_MENUS.map(
+          menu => ({
+            nama: menu.nama,
+            harga: menu.harga,
+            kategori: menu.kategori,
+            unggulan: !!menu.unggulan
+          })
+        );
+
+      localStorage.setItem(
+        "menus",
+        JSON.stringify(menus)
+      );
+
+      localStorage.setItem(
+        "menuVersion",
+        MENU_VERSION
+      );
+
     }
 
-    /* ===================================================== FALLBACK MENU ===================================================== */
+
     if (Array.isArray(menus)) {
-      menus = menus.map(m => ({
-        nama: m.nama,
-        harga: m.harga,
-        kategori: m.kategori || "Snack",
-        unggulan: !!m.unggulan
-      }));
+
+      menus =
+        menus.map(
+          m => ({
+            nama: m.nama,
+            harga: m.harga,
+            kategori:
+              m.kategori || "Snack",
+            unggulan:
+              !!m.unggulan
+          })
+        );
+
       save();
+
     }
 
-    if (!Array.isArray(menus) || menus.length === 0) {
-      menus = DEFAULT_MENUS.map(menu => ({
-        nama: menu.nama,
-        harga: menu.harga,
-        kategori: menu.kategori,
-        unggulan: !!menu.unggulan
-      }));
-      localStorage.setItem("menus", JSON.stringify(menus));
-      localStorage.setItem("menuVersion", MENU_VERSION);
+
+    if (
+      !Array.isArray(menus) ||
+      menus.length === 0
+    ) {
+
+      menus =
+        DEFAULT_MENUS.map(
+          menu => ({
+            nama: menu.nama,
+            harga: menu.harga,
+            kategori: menu.kategori,
+            unggulan: !!menu.unggulan
+          })
+        );
+
+      localStorage.setItem(
+        "menus",
+        JSON.stringify(menus)
+      );
+
+      localStorage.setItem(
+        "menuVersion",
+        MENU_VERSION
+      );
+
     }
 
-    /* ===================================================== SAVE MENU ===================================================== */
+
+    /* =====================================================
+       SAVE MENU
+    ===================================================== */
+
     function save() {
-      localStorage.setItem("menus", JSON.stringify(menus));
+
+      localStorage.setItem(
+        "menus",
+        JSON.stringify(menus)
+      );
+
     }
 
-    /* ===================================================== RUPIAH ===================================================== */
+
+    /* =====================================================
+       RUPIAH
+    ===================================================== */
+
     function rupiah(n) {
-      return "Rp" + Number(n).toLocaleString("id-ID");
+
+      return "Rp" +
+        Number(n).toLocaleString("id-ID");
+
     }
 
-    /* ===================================================== ESCAPE HTML ===================================================== */
+
+    /* =====================================================
+       ESCAPE HTML
+    ===================================================== */
+
     function escapeHtml(text) {
+
       return String(text)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+
     }
 
-    /* ===================================================== MENU MANAGEMENT ===================================================== */
-    function addMenu() {
-      let nama = document.getElementById("nama").value.trim();
-      let harga = parseInt(document.getElementById("harga").value);
 
-      if (nama === "" || isNaN(harga)) {
-        alert("Lengkapi data");
+    /* =====================================================
+       MENU MANAGEMENT
+    ===================================================== */
+
+    function addMenu() {
+
+      let nama =
+        document
+          .getElementById("nama")
+          .value
+          .trim();
+
+      let harga =
+        parseInt(
+          document
+            .getElementById("harga")
+            .value
+        );
+
+
+      if (
+        nama === "" ||
+        isNaN(harga)
+      ) {
+
+        alert(
+          "Lengkapi data"
+        );
+
         return;
+
       }
 
-      menus.push({ nama: nama, harga: harga, kategori: "Snack", unggulan: false });
+
+      menus.push({
+
+        nama: nama,
+
+        harga: harga,
+
+        kategori: "Snack",
+
+        unggulan: false
+
+      });
+
+
       save();
-      document.getElementById("nama").value = "";
-      document.getElementById("harga").value = "";
+
+
+      document
+        .getElementById("nama")
+        .value = "";
+
+      document
+        .getElementById("harga")
+        .value = "";
+
+
       renderMenu();
+
       renderCashier();
+
     }
 
-    /* ===================================================== EDIT MENU ===================================================== */
+
+    /* =====================================================
+       EDIT MENU
+    ===================================================== */
+
     function editMenu(index) {
-      let nama = prompt("Nama Barang", menus[index].nama);
+
+      let nama =
+        prompt(
+          "Nama Barang",
+          menus[index].nama
+        );
+
       if (nama === null) return;
 
-      let harga = prompt("Harga", menus[index].harga);
+
+      let harga =
+        prompt(
+          "Harga",
+          menus[index].harga
+        );
+
       if (harga === null) return;
 
+
       harga = parseInt(harga);
-      if (nama.trim() === "" || isNaN(harga)) {
-        alert("Data tidak valid");
+
+
+      if (
+        nama.trim() === "" ||
+        isNaN(harga)
+      ) {
+
+        alert(
+          "Data tidak valid"
+        );
+
         return;
+
       }
 
-      menus[index].nama = nama.trim();
-      menus[index].harga = harga;
+
+      menus[index].nama =
+        nama.trim();
+
+      menus[index].harga =
+        harga;
+
+
       save();
+
       renderMenu();
+
       renderCashier();
+
     }
 
-    /* ===================================================== DELETE MENU ===================================================== */
+
+    /* =====================================================
+       DELETE MENU
+    ===================================================== */
+
     function deleteMenu(index) {
-      if (!confirm("Hapus menu?")) return;
-      menus.splice(index, 1);
+
+      if (
+        !confirm("Hapus menu?")
+      ) return;
+
+
+      menus.splice(
+        index,
+        1
+      );
+
+
       save();
+
       renderMenu();
+
       renderCashier();
+
     }
 
-    /* ===================================================== RENDER MENU MANAGEMENT ===================================================== */
+
+    /* =====================================================
+       RENDER MENU
+    ===================================================== */
+
     function renderMenu() {
+
       let html = "";
-      menus.forEach((m, i) => {
-        html += `
-          <div class="menuItem">
-            <div>
-              <b>${escapeHtml(m.nama)}</b><br>
-              ${rupiah(m.harga)}
+
+
+      menus.forEach(
+        (m, i) => {
+
+          html += `
+
+            <div class="menuItem">
+
+              <div>
+
+                <b>
+                  ${escapeHtml(m.nama)}
+                </b>
+
+                <br>
+
+                ${rupiah(m.harga)}
+
+              </div>
+
+              <div>
+
+                <button
+                  class="btn btn-sm btn-outline-primary"
+                  onclick="editMenu(${i})"
+                >
+                  Edit
+                </button>
+
+                <button
+                  class="btn btn-sm btn-outline-danger"
+                  onclick="deleteMenu(${i})"
+                >
+                  Hapus
+                </button>
+
+              </div>
+
             </div>
-            <div>
-              <button class="btn btn-sm btn-outline-primary" onclick="editMenu(${i})">Edit</button>
-              <button class="btn btn-sm btn-outline-danger" onclick="deleteMenu(${i})">Hapus</button>
-            </div>
-          </div>`;
-      });
-      document.getElementById("menuList").innerHTML = html;
+
+          `;
+
+        }
+      );
+
+
+      document
+        .getElementById("menuList")
+        .innerHTML = html;
+
     }
 
-    /* ===================================================== CATEGORY ===================================================== */
-    let activeCategory = "Unggulan";
 
-    function setCategory(category, button) {
-      activeCategory = category;
-      document.querySelectorAll(".categoryBtn").forEach(btn => {
-        btn.classList.remove("active");
-      });
-      if (button) button.classList.add("active");
+    /* =====================================================
+       CATEGORY
+    ===================================================== */
+
+    let activeCategory =
+      "Unggulan";
+
+
+    function setCategory(
+      category,
+      button
+    ) {
+
+      activeCategory =
+        category;
+
+
+      document
+        .querySelectorAll(
+          ".categoryBtn"
+        )
+        .forEach(
+          btn =>
+            btn.classList.remove(
+              "active"
+            )
+        );
+
+
+      if (button) {
+
+        button.classList.add(
+          "active"
+        );
+
+      }
+
+
       renderCashier();
+
     }
 
-    /* ===================================================== CATEGORY HELPER ===================================================== */
-    function normalizeCategory(value) {
-      return String(value ?? "")
+
+    /* =====================================================
+       CATEGORY HELPER
+    ===================================================== */
+
+    function normalizeCategory(
+      value
+    ) {
+
+      return String(
+        value ?? ""
+      )
         .trim()
         .toLowerCase()
-        .replace(/\s+/g, " ");
+        .replace(
+          /\s+/g,
+          " "
+        );
+
     }
 
-    function getProductCategory(item) {
-      const explicit = normalizeCategory(item?.kategori ?? item?.category ?? "");
+
+    function getProductCategory(
+      item
+    ) {
+
+      const explicit =
+        normalizeCategory(
+          item?.kategori ??
+          item?.category ??
+          ""
+        );
+
 
       if (explicit) {
-        if (explicit === "bagia" || explicit.includes("bagia")) return "bagia";
-        if (explicit === "snack" || explicit.includes("snack")) return "snack";
-        if (explicit === "choco" || explicit.includes("choco")) return "choco";
-        if (explicit === "cheesecake" || explicit.includes("cheesecake")) return "cheesecake";
-        if (explicit === "dubai" || explicit.includes("dubai")) return "dubai";
+
+        if (
+          explicit === "bagia" ||
+          explicit.includes("bagia")
+        )
+          return "bagia";
+
+        if (
+          explicit === "snack" ||
+          explicit.includes("snack")
+        )
+          return "snack";
+
+        if (
+          explicit === "choco" ||
+          explicit.includes("choco")
+        )
+          return "choco";
+
+        if (
+          explicit === "cheesecake" ||
+          explicit.includes("cheesecake")
+        )
+          return "cheesecake";
+
+        if (
+          explicit === "dubai" ||
+          explicit.includes("dubai")
+        )
+          return "dubai";
+
       }
 
-      const text = normalizeCategory([
-        item?.nama, item?.name, item?.id, item?.kode, item?.code, item?.jenis
-      ].filter(Boolean).join(" "));
 
-      if (text.includes("bagia")) return "bagia";
-      if (text.includes("snack")) return "snack";
-      if (text.includes("choco")) return "choco";
-      if (text.includes("cheesecake")) return "cheesecake";
-      if (text.includes("dubai") || text.includes("pudding") || text.includes("puding")) return "dubai";
+      const text =
+        normalizeCategory(
+          [
+            item?.nama,
+            item?.name,
+            item?.id,
+            item?.kode,
+            item?.code,
+            item?.jenis
+          ]
+            .filter(Boolean)
+            .join(" ")
+        );
+
+
+      if (
+        text.includes("bagia")
+      )
+        return "bagia";
+
+      if (
+        text.includes("snack")
+      )
+        return "snack";
+
+      if (
+        text.includes("choco")
+      )
+        return "choco";
+
+      if (
+        text.includes("cheesecake")
+      )
+        return "cheesecake";
+
+      if (
+        text.includes("dubai") ||
+        text.includes("pudding") ||
+        text.includes("puding")
+      )
+        return "dubai";
+
 
       return explicit;
+
     }
 
-    /* ===================================================== RENDER KASIR ===================================================== */
+
+    /* =====================================================
+       RENDER KASIR
+    ===================================================== */
+
     function renderCashier() {
-      if (!cart || typeof cart !== "object") cart = {};
 
-      let html = `<div class="productGrid">`;
-      menus.forEach((m, i) => {
-        if (typeof cart[i] !== "number") cart[i] = 0;
+      if (
+        !cart ||
+        typeof cart !== "object"
+      )
+        cart = {};
 
-        let category = getProductCategory(m);
-        let featured = !!m.unggulan;
-        const categoryMap = {
-          cheesecake: "Cheesecake",
-          choco: "Choco",
-          dubai: "Dubai",
-          snack: "Snack",
-          bagia: "Bagia"
-        };
-        category = categoryMap[category] || "Snack";
 
-        let visible = activeCategory === "Semua" ||
-          (activeCategory === "Unggulan" && featured) ||
-          activeCategory === category;
+      let html =
+        `<div class="productGrid">`;
 
-        if (!visible) return;
 
-        html += `
-          <div class="productCard" onclick="addProduct(${i})">
-            <div class="productImage">
-              <img src="images/${i+1}.jpg" alt="${escapeHtml(m.nama)}" onerror="this.style.display='none'">
-            </div>
-            <div class="productInfo">
-              ${featured ? '<div class="featuredBadge">⭐ BEST SELLER</div>' : ''}
-              <div class="productName">${escapeHtml(m.nama)}</div>
-              <div class="productPrice">${rupiah(m.harga)}</div>
-              <div class="productBottom" onclick="event.stopPropagation()">
-                <div class="productQty">
-                  <button type="button" class="qtyBtn" onclick="minusQty(${i})"> − </button>
-                  <span id="qty${i}" class="qtyNumber">${cart[i]}</span>
-                  <button type="button" class="qtyBtn" onclick="plusQty(${i})"> + </button>
-                </div>
+      menus.forEach(
+        (m, i) => {
+
+          if (
+            typeof cart[i] !==
+            "number"
+          )
+            cart[i] = 0;
+
+
+          let category =
+            getProductCategory(m);
+
+          let featured =
+            !!m.unggulan;
+
+
+          const categoryMap = {
+
+            cheesecake:
+              "Cheesecake",
+
+            choco:
+              "Choco",
+
+            dubai:
+              "Dubai",
+
+            snack:
+              "Snack",
+
+            bagia:
+              "Bagia"
+
+          };
+
+
+          category =
+            categoryMap[category] ||
+            "Snack";
+
+
+          let visible =
+            activeCategory ===
+              "Semua" ||
+
+            (
+              activeCategory ===
+              "Unggulan" &&
+              featured
+            ) ||
+
+            activeCategory ===
+              category;
+
+
+          if (!visible)
+            return;
+
+
+          html += `
+
+            <div
+              class="productCard"
+              onclick="addProduct(${i})"
+            >
+
+              <div class="productImage">
+
+                <img
+                  src="images/${i + 1}.jpg"
+                  alt="${escapeHtml(m.nama)}"
+                  onerror="this.style.display='none'"
+                >
+
               </div>
-            </div>
-          </div>`;
-      });
-      html += `</div>`;
 
-      document.getElementById("cashierList").innerHTML = html;
+              <div class="productInfo">
+
+                ${
+                  featured
+                    ? '<div class="featuredBadge">⭐ BEST SELLER</div>'
+                    : ''
+                }
+
+                <div class="productName">
+                  ${escapeHtml(m.nama)}
+                </div>
+
+                <div class="productPrice">
+                  ${rupiah(m.harga)}
+                </div>
+
+                <div
+                  class="productBottom"
+                  onclick="event.stopPropagation()"
+                >
+
+                  <div class="productQty">
+
+                    <button
+                      type="button"
+                      class="qtyBtn"
+                      onclick="minusQty(${i})"
+                    >
+                      −
+                    </button>
+
+                    <span
+                      id="qty${i}"
+                      class="qtyNumber"
+                    >
+                      ${cart[i]}
+                    </span>
+
+                    <button
+                      type="button"
+                      class="qtyBtn"
+                      onclick="plusQty(${i})"
+                    >
+                      +
+                    </button>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          `;
+
+        }
+      );
+
+
+      html +=
+        `</div>`;
+
+
+      document
+        .getElementById("cashierList")
+        .innerHTML = html;
+
+
       renderOrderSummary();
+
       updateTotal();
 
-      transactionProcessing = false;
-      document.getElementById("completeButton").disabled = false;
-      document.getElementById("loadingBox").classList.remove("active");
-      document.getElementById("paymentMethod").value = "cash";
+
+      transactionProcessing =
+        false;
+
+
+      document
+        .getElementById(
+          "completeButton"
+        )
+        .disabled = false;
+
+
+      document
+        .getElementById(
+          "loadingBox"
+        )
+        .classList
+        .remove("active");
+
+
+      document
+        .getElementById(
+          "paymentMethod"
+        )
+        .value = "cash";
+
+
       paymentChanged();
+
     }
 
-    /* ===================================================== ORDER SUMMARY ===================================================== */
+
+    /* =====================================================
+       ORDER SUMMARY
+    ===================================================== */
+
     function renderOrderSummary() {
-      const orderSummary = document.getElementById("orderSummary");
-      const orderCount = document.getElementById("orderCount");
-      if (!orderSummary) return;
+
+      const orderSummary =
+        document.getElementById(
+          "orderSummary"
+        );
+
+      const orderCount =
+        document.getElementById(
+          "orderCount"
+        );
+
+
+      if (!orderSummary)
+        return;
+
 
       let html = "";
+
       let totalQty = 0;
+
       let itemCount = 0;
 
-      menus.forEach((m, i) => {
-        const qty = cart[i] || 0;
-        if (qty <= 0) return;
 
-        totalQty += qty;
-        itemCount++;
-        const subtotal = m.harga * qty;
+      menus.forEach(
+        (m, i) => {
 
-        html += `
-          <div class="orderItem">
-            <div class="orderItemInfo">
-              <div class="orderItemName">${escapeHtml(m.nama)}</div>
-              <div class="orderItemDetail">${qty} × ${rupiah(m.harga)}</div>
+          const qty =
+            cart[i] || 0;
+
+
+          if (qty <= 0)
+            return;
+
+
+          totalQty += qty;
+
+          itemCount++;
+
+
+          const subtotal =
+            m.harga * qty;
+
+
+          html += `
+
+            <div class="orderItem">
+
+              <div class="orderItemInfo">
+
+                <div class="orderItemName">
+                  ${escapeHtml(m.nama)}
+                </div>
+
+                <div class="orderItemDetail">
+                  ${qty} × ${rupiah(m.harga)}
+                </div>
+
+              </div>
+
+              <div class="orderItemSubtotal">
+                ${rupiah(subtotal)}
+              </div>
+
+              <button
+                type="button"
+                class="orderRemove"
+                onclick="removeOrderItem(${i})"
+                title="Hapus item"
+              >
+                ×
+              </button>
+
             </div>
-            <div class="orderItemSubtotal">${rupiah(subtotal)}</div>
-            <button type="button" class="orderRemove" onclick="removeOrderItem(${i})" title="Hapus item"> × </button>
-          </div>`;
-      });
+
+          `;
+
+        }
+      );
+
 
       if (itemCount === 0) {
-        orderSummary.innerHTML = `<div class="orderEmpty">Belum ada pesanan</div>`;
+
+        orderSummary.innerHTML =
+          `<div class="orderEmpty">
+            Belum ada pesanan
+          </div>`;
+
       } else {
-        orderSummary.innerHTML = html;
+
+        orderSummary.innerHTML =
+          html;
+
       }
-      orderCount.innerText = totalQty + " item";
+
+
+      orderCount.innerText =
+        totalQty + " item";
+
     }
 
-    /* ===================================================== REMOVE ORDER ITEM ===================================================== */
+
+    /* =====================================================
+       REMOVE ORDER ITEM
+    ===================================================== */
+
     function removeOrderItem(index) {
-      if (transactionProcessing) return;
+
+      if (transactionProcessing)
+        return;
+
+
       cart[index] = 0;
-      const qtyElement = document.getElementById("qty" + index);
-      if (qtyElement) qtyElement.innerText = "0";
+
+
+      const qtyElement =
+        document.getElementById(
+          "qty" + index
+        );
+
+
+      if (qtyElement)
+        qtyElement.innerText =
+          "0";
+
+
       updateTotal();
+
       renderOrderSummary();
+
     }
 
-    /* ===================================================== TAP CARD = +1 ===================================================== */
+
+    /* =====================================================
+       TAP CARD
+    ===================================================== */
+
     function addProduct(index) {
-      if (transactionProcessing) return;
-      cart[index] = (cart[index] || 0) + 1;
-      const qtyElement = document.getElementById("qty" + index);
-      if (qtyElement) qtyElement.innerText = cart[index];
+
+      if (transactionProcessing)
+        return;
+
+
+      cart[index] =
+        (cart[index] || 0) + 1;
+
+
+      const qtyElement =
+        document.getElementById(
+          "qty" + index
+        );
+
+
+      if (qtyElement)
+        qtyElement.innerText =
+          cart[index];
+
+
       updateTotal();
+
       renderOrderSummary();
+
     }
 
-    /* ===================================================== PLUS ===================================================== */
+
+    /* =====================================================
+       PLUS
+    ===================================================== */
+
     function plusQty(index) {
-      if (transactionProcessing) return;
-      cart[index] = (cart[index] || 0) + 1;
-      const qtyElement = document.getElementById("qty" + index);
-      if (qtyElement) qtyElement.innerText = cart[index];
+
+      if (transactionProcessing)
+        return;
+
+
+      cart[index] =
+        (cart[index] || 0) + 1;
+
+
+      const qtyElement =
+        document.getElementById(
+          "qty" + index
+        );
+
+
+      if (qtyElement)
+        qtyElement.innerText =
+          cart[index];
+
+
       updateTotal();
+
       renderOrderSummary();
+
     }
 
-    /* ===================================================== MINUS ===================================================== */
+
+    /* =====================================================
+       MINUS
+    ===================================================== */
+
     function minusQty(index) {
-      if (transactionProcessing) return;
-      if ((cart[index] || 0) > 0) {
+
+      if (transactionProcessing)
+        return;
+
+
+      if (
+        (cart[index] || 0) > 0
+      ) {
+
         cart[index]--;
-        const qtyElement = document.getElementById("qty" + index);
-        if (qtyElement) qtyElement.innerText = cart[index];
+
+
+        const qtyElement =
+          document.getElementById(
+            "qty" + index
+          );
+
+
+        if (qtyElement)
+          qtyElement.innerText =
+            cart[index];
+
+
         updateTotal();
+
         renderOrderSummary();
+
       }
+
     }
 
-    /* ===================================================== TOTAL ===================================================== */
+
+    /* =====================================================
+       TOTAL
+    ===================================================== */
+
     function getTotal() {
+
       let total = 0;
-      menus.forEach((m, i) => {
-        total += m.harga * (cart[i] || 0);
-      });
+
+
+      menus.forEach(
+        (m, i) => {
+
+          total +=
+            m.harga *
+            (cart[i] || 0);
+
+        }
+      );
+
+
       return total;
+
     }
+
 
     function updateTotal() {
-      let total = getTotal();
-      document.getElementById("grandTotal").innerHTML = "Total : <b>" + rupiah(total) + "</b>";
+
+      let total =
+        getTotal();
+
+
+      document
+        .getElementById(
+          "grandTotal"
+        )
+        .innerHTML =
+          "Total : <b>" +
+          rupiah(total) +
+          "</b>";
+
+
       calculateChange();
+
     }
 
-    /* ===================================================== FORMAT UANG ===================================================== */
-    function formatCashInput(input) {
-      let value = input.value.replace(/\D/g, "");
+
+    /* =====================================================
+       FORMAT UANG
+    ===================================================== */
+
+    function formatCashInput(
+      input
+    ) {
+
+      let value =
+        input.value.replace(
+          /\D/g,
+          ""
+        );
+
+
       if (value === "") {
+
         input.value = "0";
+
         calculateChange();
+
         return;
+
       }
-      input.value = Number(value).toLocaleString("id-ID");
+
+
+      input.value =
+        Number(value)
+          .toLocaleString(
+            "id-ID"
+          );
+
+
       calculateChange();
+
     }
 
-    /* ===================================================== PAYMENT ===================================================== */
+
+    /* =====================================================
+       PAYMENT
+    ===================================================== */
+
     function paymentChanged() {
-      let method = document.getElementById("paymentMethod").value;
+
+      let method =
+        document
+          .getElementById(
+            "paymentMethod"
+          )
+          .value;
+
+
       if (method === "cash") {
-        document.getElementById("cashPayment").style.display = "block";
-        document.getElementById("qrisPayment").style.display = "none";
+
+        document
+          .getElementById(
+            "cashPayment"
+          )
+          .style.display =
+          "block";
+
+
+        document
+          .getElementById(
+            "qrisPayment"
+          )
+          .style.display =
+          "none";
+
       } else {
-        document.getElementById("cashPayment").style.display = "none";
-        document.getElementById("qrisPayment").style.display = "block";
+
+        document
+          .getElementById(
+            "cashPayment"
+          )
+          .style.display =
+          "none";
+
+
+        document
+          .getElementById(
+            "qrisPayment"
+          )
+          .style.display =
+          "block";
+
       }
+
+
       calculateChange();
+
     }
 
-    /* ===================================================== KEMBALIAN ===================================================== */
+
+    /* =====================================================
+       KEMBALIAN
+    ===================================================== */
+
     function calculateChange() {
-      let total = getTotal();
-      let input = document.getElementById("cashReceived").value;
-      let received = parseInt(input.replace(/\D/g, "")) || 0;
-      let change = received - total;
 
-      if (change < 0) change = 0;
-      document.getElementById("changeDisplay").innerText = "Kembalian : " + rupiah(change);
+      let total =
+        getTotal();
+
+
+      let input =
+        document
+          .getElementById(
+            "cashReceived"
+          )
+          .value;
+
+
+      let received =
+        parseInt(
+          input.replace(
+            /\D/g,
+            ""
+          )
+        ) || 0;
+
+
+      let change =
+        received - total;
+
+
+      if (change < 0)
+        change = 0;
+
+
+      document
+        .getElementById(
+          "changeDisplay"
+        )
+        .innerText =
+          "Kembalian : " +
+          rupiah(change);
+
     }
 
-    /* ===================================================== RESET PAYMENT FORM ===================================================== */
-    function resetPaymentForm() {
-      const cashInput = document.getElementById("cashReceived");
-      if (cashInput) cashInput.value = "0";
 
-      const method = document.getElementById("paymentMethod");
-      if (method) method.value = "cash";
+    /* =====================================================
+       RESET PAYMENT
+    ===================================================== */
+
+    function resetPaymentForm() {
+
+      const cashInput =
+        document.getElementById(
+          "cashReceived"
+        );
+
+
+      if (cashInput)
+        cashInput.value = "0";
+
+
+      const method =
+        document.getElementById(
+          "paymentMethod"
+        );
+
+
+      if (method)
+        method.value = "cash";
+
 
       paymentChanged();
+
       calculateChange();
+
     }
 
-    /* ===================================================== GENERATE TRANSACTION ID ===================================================== */
+
+    /* =====================================================
+       TRANSACTION ID
+    ===================================================== */
+
     function generateTransactionId() {
-      return Date.now().toString() + "-" + Math.random().toString(36).substring(2, 10);
+
+      return (
+        Date.now().toString() +
+        "-" +
+        Math.random()
+          .toString(36)
+          .substring(2, 10)
+      );
+
     }
 
-    /* ===================================================== LOCAL TRANSACTION STORAGE ===================================================== */
-    function queueTransactionLocally(transaction) {
-      const exists = pendingTransactions.some(item => item.transactionId === transaction.transactionId);
+
+    /* =====================================================
+       LOCAL QUEUE
+    ===================================================== */
+
+    function queueTransactionLocally(
+      transaction
+    ) {
+
+      const exists =
+        pendingTransactions.some(
+          item =>
+            item.transactionId ===
+            transaction.transactionId
+        );
+
+
       if (!exists) {
-        pendingTransactions.push(transaction);
+
+        pendingTransactions.push(
+          transaction
+        );
+
         savePendingTransactions();
+
       }
+
+
       updateNetworkStatus();
+
     }
 
-    /* ===================================================== RECEIPT GENERATION & PRINT ===================================================== */
-    function generateReceipt(transaction) {
-      document.getElementById("receiptInfo").innerHTML = `
-        Nota: ${transaction.nota}<br>
-        Tgl: ${transaction.tanggal} ${transaction.jam}
-      `;
+
+    /* =====================================================
+       RECEIPT
+    ===================================================== */
+
+    function generateReceipt(
+      transaction
+    ) {
+
+      document
+        .getElementById(
+          "receiptInfo"
+        )
+        .innerHTML = `
+
+          Nota:
+          ${transaction.nota}
+
+          <br>
+
+          Tgl:
+          ${transaction.tanggal}
+          ${transaction.jam}
+
+        `;
+
 
       let itemsHtml = "";
-      transaction.items.forEach(item => {
-        itemsHtml += `
-          <div>${escapeHtml(item.nama)}</div>
-          <div class="right">${item.qty} x ${rupiah(item.harga)} = ${rupiah(item.subtotal)}</div>
-        `;
-      });
-      document.getElementById("receiptItems").innerHTML = itemsHtml;
-      document.getElementById("receiptTotal").innerText = "Total: " + rupiah(transaction.total);
 
-      if (transaction.pembayaran === "Cash") {
-        document.getElementById("receiptPayment").innerHTML = `
-          Bayar (Cash): ${rupiah(transaction.cashReceived)}<br>
-          Kembali: ${rupiah(transaction.change)}
-        `;
+
+      transaction.items.forEach(
+        item => {
+
+          itemsHtml += `
+
+            <div>
+              ${escapeHtml(item.nama)}
+            </div>
+
+            <div class="right">
+
+              ${item.qty}
+              x
+              ${rupiah(item.harga)}
+              =
+              ${rupiah(item.subtotal)}
+
+            </div>
+
+          `;
+
+        }
+      );
+
+
+      document
+        .getElementById(
+          "receiptItems"
+        )
+        .innerHTML =
+        itemsHtml;
+
+
+      document
+        .getElementById(
+          "receiptTotal"
+        )
+        .innerText =
+          "Total: " +
+          rupiah(
+            transaction.total
+          );
+
+
+      if (
+        transaction.pembayaran ===
+        "Cash"
+      ) {
+
+        document
+          .getElementById(
+            "receiptPayment"
+          )
+          .innerHTML = `
+
+            Bayar (Cash):
+            ${rupiah(
+              transaction.cashReceived
+            )}
+
+            <br>
+
+            Kembali:
+            ${rupiah(
+              transaction.change
+            )}
+
+          `;
+
       } else {
-        document.getElementById("receiptPayment").innerHTML = `Metode: QRIS`;
+
+        document
+          .getElementById(
+            "receiptPayment"
+          )
+          .innerHTML =
+          "Metode: QRIS";
+
       }
+
     }
 
-    async function printReceipt() {
-      return new Promise((resolve) => {
-        document.getElementById("receipt").style.display = "block";
-        window.print();
-        document.getElementById("receipt").style.display = "none";
-        resolve(true);
-      });
+
+    /* =====================================================
+       PRINT CLEANTER
+       LANGSUNG WEB -> LOCAL PRINT APP
+    ===================================================== */
+
+    async function printReceipt(
+      transaction
+    ) {
+
+      try {
+
+        const controller =
+          new AbortController();
+
+
+        const timeout =
+          setTimeout(
+            () => {
+              controller.abort();
+            },
+            5000
+          );
+
+
+        /*
+         * Buat isi nota sebagai array.
+         * Tidak memakai window.print().
+         */
+
+        const content = [];
+
+
+        content.push(
+          "       KUKIKOE"
+        );
+
+        content.push(
+          "    Mooncake Festival"
+        );
+
+        content.push(
+          "------------------------------"
+        );
+
+        content.push(
+          "Nota : " +
+          transaction.nota
+        );
+
+        content.push(
+          "Tgl  : " +
+          transaction.tanggal
+        );
+
+        content.push(
+          "Jam  : " +
+          transaction.jam
+        );
+
+        content.push(
+          "------------------------------"
+        );
+
+
+        transaction.items.forEach(
+          item => {
+
+            content.push(
+              item.nama
+            );
+
+            content.push(
+              item.qty +
+              " x " +
+              rupiah(item.harga) +
+              " = " +
+              rupiah(item.subtotal)
+            );
+
+          }
+        );
+
+
+        content.push(
+          "------------------------------"
+        );
+
+        content.push(
+          "TOTAL : " +
+          rupiah(transaction.total)
+        );
+
+
+        if (
+          transaction.pembayaran ===
+          "Cash"
+        ) {
+
+          content.push(
+            "Bayar : " +
+            rupiah(
+              transaction.cashReceived
+            )
+          );
+
+          content.push(
+            "Kembali : " +
+            rupiah(
+              transaction.change
+            )
+          );
+
+        } else {
+
+          content.push(
+            "Metode : QRIS"
+          );
+
+        }
+
+
+        content.push(
+          "------------------------------"
+        );
+
+        content.push(
+          "        Terima Kasih"
+        );
+
+
+        const response =
+          await fetch(
+            CLEANTER_PRINT_URL,
+            {
+
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body:
+                JSON.stringify({
+                  content:
+                    content,
+                  cut: true
+                }),
+
+              signal:
+                controller.signal
+
+            }
+          );
+
+
+        clearTimeout(timeout);
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            "Printer HTTP " +
+            response.status
+          );
+
+        }
+
+
+        let result = null;
+
+
+        try {
+
+          result =
+            await response.json();
+
+        } catch (e) {
+
+          /*
+           * Kalau CleanTer tidak mengirim JSON,
+           * tetapi HTTP berhasil, tetap dianggap
+           * berhasil.
+           */
+
+          result = null;
+
+        }
+
+
+        if (
+          result &&
+          result.status &&
+          result.status !==
+          "printed"
+        ) {
+
+          throw new Error(
+            "Printer menolak transaksi."
+          );
+
+        }
+
+
+        return true;
+
+
+      } catch (error) {
+
+        console.error(
+          "Gagal print CleanTer:",
+          error
+        );
+
+
+        alert(
+          "Print gagal.\n\n" +
+          "Pastikan aplikasi CleanTer " +
+          "sedang aktif.\n\n" +
+          "Error: " +
+          error.message
+        );
+
+
+        return false;
+
+      }
+
     }
+
+
+    /* =====================================================
+       GOOGLE SHEETS BACKGROUND SYNC
+       TIDAK MENGHENTIKAN PRINT
+    ===================================================== */
 
     async function processPendingTransactions() {
-      if (syncingTransactions || pendingTransactions.length === 0 || !navigator.onLine) return;
+
+      if (
+        syncingTransactions ||
+        pendingTransactions.length === 0 ||
+        !navigator.onLine
+      ) {
+
+        return;
+
+      }
+
+
       syncingTransactions = true;
 
-      try {
-        const transactionToSend = pendingTransactions[0];
-        await fetch(GOOGLE_SCRIPT_URL, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(transactionToSend)
-        });
 
-        pendingTransactions.shift();
-        savePendingTransactions();
+      try {
+
+        /*
+         * Jangan shift sebelum request berhasil.
+         */
+
+        const transactionToSend =
+          pendingTransactions[0];
+
+
+        await fetch(
+          GOOGLE_SCRIPT_URL,
+          {
+
+            method: "POST",
+
+            mode: "no-cors",
+
+            headers: {
+              /*
+               * text/plain menghindari
+               * preflight CORS.
+               */
+              "Content-Type":
+                "text/plain;charset=utf-8"
+            },
+
+            body:
+              JSON.stringify(
+                transactionToSend
+              )
+
+          }
+        );
+
+
+        /*
+         * Karena Apps Script dipanggil
+         * dengan no-cors, response tidak
+         * bisa dibaca browser.
+         *
+         * Jika fetch tidak reject,
+         * request dianggap terkirim.
+         *
+         * Apps Script sendiri mempunyai
+         * Transaction ID untuk mencegah
+         * duplikat.
+         */
+
+        if (
+          pendingTransactions.length > 0 &&
+          pendingTransactions[0]
+            .transactionId ===
+            transactionToSend
+              .transactionId
+        ) {
+
+          pendingTransactions.shift();
+
+          savePendingTransactions();
+
+        }
+
+
         updateNetworkStatus();
+
+
+        /*
+         * Kalau masih ada queue,
+         * lanjut kirim berikutnya.
+         */
+
+        if (
+          pendingTransactions.length >
+          0
+        ) {
+
+          setTimeout(
+            () => {
+              processPendingTransactions();
+            },
+            300
+          );
+
+        }
+
+
       } catch (err) {
-        console.error("Gagal sync ke Google Sheets:", err);
+
+        console.error(
+          "Gagal sync Google Sheets:",
+          err
+        );
+
+        /*
+         * JANGAN hapus dari queue.
+         * Akan dicoba lagi nanti.
+         */
+
+        updateNetworkStatus();
+
       } finally {
-        syncingTransactions = false;
+
+        syncingTransactions =
+          false;
+
       }
+
     }
 
-    /* ===================================================== COMPLETE TRANSACTION ===================================================== */
-    async function completeTransaction() {
-      if (transactionProcessing) return;
 
-      const total = getTotal();
-      if (total <= 0) {
-        alert("Belum ada barang dipilih");
+    /* =====================================================
+       COMPLETE TRANSACTION
+       PRINT DULU - GOOGLE SHEETS BACKGROUND
+    ===================================================== */
+
+    async function completeTransaction() {
+
+      if (transactionProcessing)
         return;
+
+
+      const total =
+        getTotal();
+
+
+      if (total <= 0) {
+
+        alert(
+          "Belum ada barang dipilih"
+        );
+
+        return;
+
       }
 
-      transactionProcessing = true;
-      const button = document.getElementById("completeButton");
-      button.disabled = true;
 
-      let paymentMethod = document.getElementById("paymentMethod").value;
+      transactionProcessing =
+        true;
+
+
+      const button =
+        document.getElementById(
+          "completeButton"
+        );
+
+
+      button.disabled =
+        true;
+
+
+      let paymentMethod =
+        document
+          .getElementById(
+            "paymentMethod"
+          )
+          .value;
+
+
       let cashReceived = 0;
+
       let change = 0;
 
-      if (paymentMethod === "cash") {
-        let cashInput = document.getElementById("cashReceived").value;
-        cashReceived = parseInt(cashInput.replace(/\D/g, "")) || 0;
-        if (cashReceived < total) {
-          transactionProcessing = false;
-          button.disabled = false;
-          alert("Uang diterima kurang.\n\nTotal: " + rupiah(total));
+
+      if (
+        paymentMethod ===
+        "cash"
+      ) {
+
+        let cashInput =
+          document
+            .getElementById(
+              "cashReceived"
+            )
+            .value;
+
+
+        cashReceived =
+          parseInt(
+            cashInput.replace(
+              /\D/g,
+              ""
+            )
+          ) || 0;
+
+
+        if (
+          cashReceived <
+          total
+        ) {
+
+          transactionProcessing =
+            false;
+
+
+          button.disabled =
+            false;
+
+
+          alert(
+            "Uang diterima kurang.\n\n" +
+            "Total: " +
+            rupiah(total)
+          );
+
+
           return;
+
         }
-        change = cashReceived - total;
+
+
+        change =
+          cashReceived -
+          total;
+
       }
+
+
+      /* =====================================================
+         BENTUK ITEM TRANSAKSI
+      ===================================================== */
 
       let items = [];
-      menus.forEach((m, i) => {
-        if ((cart[i] || 0) > 0) {
-          let subtotal = m.harga * cart[i];
-          items.push({
-            nama: m.nama,
-            qty: cart[i],
-            harga: m.harga,
-            subtotal: subtotal
-          });
-        }
-      });
 
-      let now = new Date();
-      let tanggal = now.toLocaleDateString("id-ID");
-      let jam = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false });
-      let nomorNota = String(nota).padStart(3, "0");
+
+      menus.forEach(
+        (m, i) => {
+
+          if (
+            (cart[i] || 0) > 0
+          ) {
+
+            let subtotal =
+              m.harga *
+              cart[i];
+
+
+            items.push({
+
+              nama:
+                m.nama,
+
+              qty:
+                cart[i],
+
+              harga:
+                m.harga,
+
+              subtotal:
+                subtotal
+
+            });
+
+          }
+
+        }
+      );
+
+
+      /* =====================================================
+         WAKTU TRANSAKSI
+      ===================================================== */
+
+      let now =
+        new Date();
+
+
+      let tanggal =
+        now.toLocaleDateString(
+          "id-ID"
+        );
+
+
+      let jam =
+        now.toLocaleTimeString(
+          "id-ID",
+          {
+            hour:
+              "2-digit",
+            minute:
+              "2-digit",
+            hour12:
+              false
+          }
+        );
+
+
+      let nomorNota =
+        String(nota)
+          .padStart(
+            3,
+            "0"
+          );
+
+
+      /* =====================================================
+         SATU TRANSACTION ID
+      ===================================================== */
 
       let transaction = {
-        transactionId: generateTransactionId(),
-        tanggal: tanggal,
-        jam: jam,
-        nota: nomorNota,
-        pembayaran: paymentMethod === "cash" ? "Cash" : "QRIS",
-        cashReceived: cashReceived,
-        change: change,
-        total: total,
-        items: items
+
+        transactionId:
+          generateTransactionId(),
+
+        tanggal:
+          tanggal,
+
+        jam:
+          jam,
+
+        nota:
+          nomorNota,
+
+        pembayaran:
+          paymentMethod ===
+          "cash"
+            ? "Cash"
+            : "QRIS",
+
+        cashReceived:
+          cashReceived,
+
+        change:
+          change,
+
+        total:
+          total,
+
+        items:
+          items
+
       };
 
-      currentTransaction = transaction;
 
-      const loadingBox = document.getElementById("loadingBox");
-      const loadingText = document.getElementById("loadingText");
-      const loadingSub = document.getElementById("loadingSub");
+      currentTransaction =
+        transaction;
 
-      loadingBox.classList.add("active");
-      loadingText.innerText = "Mengamankan transaksi...";
-      loadingSub.innerText = "Menyimpan data secara lokal";
+
+      const loadingBox =
+        document.getElementById(
+          "loadingBox"
+        );
+
+
+      const loadingText =
+        document.getElementById(
+          "loadingText"
+        );
+
+
+      const loadingSub =
+        document.getElementById(
+          "loadingSub"
+        );
+
+
+      loadingBox.classList.add(
+        "active"
+      );
+
+
+      loadingText.innerText =
+        "Mengamankan transaksi...";
+
+
+      loadingSub.innerText =
+        "Menyimpan data lokal";
+
+
+      /* =====================================================
+         SIMPAN LOKAL TERLEBIH DAHULU
+      ===================================================== */
 
       try {
-        queueTransactionLocally(transaction);
+
+        queueTransactionLocally(
+          transaction
+        );
+
       } catch (error) {
-        console.error("Gagal menyimpan transaksi lokal:", error);
-        loadingBox.classList.remove("active");
-        transactionProcessing = false;
-        button.disabled = false;
-        alert("Transaksi tidak dapat disimpan ke storage lokal.\n\nTransaksi dibatalkan untuk mencegah kehilangan data.");
+
+        console.error(
+          "Gagal menyimpan transaksi:",
+          error
+        );
+
+
+        loadingBox.classList.remove(
+          "active"
+        );
+
+
+        transactionProcessing =
+          false;
+
+
+        button.disabled =
+          false;
+
+
+        alert(
+          "Transaksi tidak dapat disimpan ke storage lokal.\n\n" +
+          "Transaksi dibatalkan untuk mencegah kehilangan data."
+        );
+
+
         return;
+
       }
 
-      loadingText.innerText = "Mencetak nota...";
-      loadingSub.innerText = "Mengirim ke printer CleanTer";
 
-      generateReceipt(transaction);
-      let printSuccess = await printReceipt();
+      /* =====================================================
+         LANGSUNG PRINT
+         TIDAK MENUNGGU GOOGLE
+      ===================================================== */
+
+      loadingText.innerText =
+        "Mencetak nota...";
+
+
+      loadingSub.innerText =
+        "Mengirim langsung ke CleanTer";
+
+
+      generateReceipt(
+        transaction
+      );
+
+
+      const printSuccess =
+        await printReceipt(
+          transaction
+        );
+
+
+      /* =====================================================
+         PRINT GAGAL
+      ===================================================== */
 
       if (!printSuccess) {
-        loadingBox.classList.remove("active");
-        transactionProcessing = false;
-        button.disabled = false;
+
+        loadingBox.classList.remove(
+          "active"
+        );
+
+
+        transactionProcessing =
+          false;
+
+
+        button.disabled =
+          false;
+
+
+        /*
+         * Transaksi TETAP ada di queue.
+         * Jangan dihapus karena Google Sheets
+         * tetap perlu menerima transaksi tersebut.
+         *
+         * Keranjang juga tidak di-reset supaya
+         * user bisa mencoba print lagi.
+         */
+
         return;
+
       }
 
-      // Reset Form & Increment Nota setelah Sukses
+
+      /* =====================================================
+         PRINT BERHASIL
+      ===================================================== */
+
       nota++;
-      localStorage.setItem("nota", nota);
+
+      localStorage.setItem(
+        "nota",
+        nota
+      );
+
+
       cart = {};
+
+
+      /*
+       * Cash kembali 0
+       */
+
       resetPaymentForm();
+
+
+      /*
+       * Reset tampilan
+       */
+
       renderCashier();
 
-      // Trigger sync
+
+      currentTransaction =
+        null;
+
+
+      /*
+       * =================================================
+       * PENTING:
+       * GOOGLE SHEETS BARU DIJALANKAN SETELAH PRINT.
+       *
+       * TIDAK DI-AWAIT.
+       * Jadi printer tidak menunggu Google Sheets.
+       * =================================================
+       */
+
       processPendingTransactions();
+
     }
 
-    // Inisialisasi awal saat halaman di-load
+
+    /* =====================================================
+       INIT
+    ===================================================== */
+
     renderCashier();
+
     renderMenu();
+
     updateNetworkStatus();
+
   </script>
+
 </body>
 
 </html>
