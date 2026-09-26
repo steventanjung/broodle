@@ -947,13 +947,13 @@ and (orientation:portrait){
 
 
                     <input
-    id="cashReceived"
-    class="form-control form-control-lg"
-    type="text"
-    inputmode="numeric"
-    placeholder="Masukkan nominal"
-    oninput="formatCashInput(this)"
-    onkeydown="if(event.key === 'Enter'){ event.preventDefault(); completeTransaction(); }">
+                        id="cashReceived"
+                        class="form-control form-control-lg"
+                        type="text"
+                        inputmode="numeric"
+                        placeholder="Masukkan nominal"
+                        oninput="formatCashInput(this)"
+                        onkeydown="if(event.key==='Enter'){event.preventDefault();completeTransaction();}">
 
 
                     <div
@@ -1103,7 +1103,7 @@ and (orientation:portrait){
    ===================================================== */
 
 const GOOGLE_SCRIPT_URL =
-    "https://script.google.com/macros/s/AKfycbwyKe1AdCJG-rRFJqQlM9u5odQKUSPUirskaqPriC63vVm7IEIgaEXkeKnm1nUdap47/exec";
+    "https://script.google.com/macros/s/AKfycbxKhVQ_O89qyKVP_gHHXkZi-i-HtNud-xb8qt9WQfTuENzQyvEn3wuuCPeIhUV5Ytfz/exec";
 
 
 /* =====================================================
@@ -2783,79 +2783,135 @@ function queueTransaction(transaction){
 async function completeTransaction(){
 
     if(transactionProcessing){
+
         return;
+
     }
 
-    const total = getTotal();
+
+    const total =
+        getTotal();
+
 
     if(total <= 0){
-        alert("Belum ada barang dipilih");
+
+        alert(
+            "Belum ada barang dipilih"
+        );
+
         return;
+
     }
 
+
     const paymentMethod =
-        document.getElementById("paymentMethod").value;
+        document
+        .getElementById(
+            "paymentMethod"
+        )
+        .value;
+
 
     if(paymentMethod === "cash"){
 
         const cashInput =
-            document.getElementById("cashReceived").value;
+            document
+            .getElementById(
+                "cashReceived"
+            )
+            .value;
+
 
         const cashReceived =
             parseInt(
-                cashInput.replace(/\D/g, "")
+                cashInput.replace(
+                    /\D/g,
+                    ""
+                )
             ) || 0;
 
-        if(cashReceived < total){
+
+        if(
+            cashReceived < total
+        ){
 
             alert(
+
                 "Uang diterima kurang.\n\n" +
+
                 "Total: " +
+
                 rupiah(total)
+
             );
 
             return;
+
         }
+
     }
+
 
     const transaction =
         buildTransaction();
 
+
     if(!transaction){
 
-        alert("Data pembayaran tidak valid.");
+        alert(
+            "Data pembayaran tidak valid."
+        );
 
         return;
+
     }
+
 
     transactionProcessing = true;
 
+
     const button =
-        document.getElementById("completeButton");
+        document.getElementById(
+            "completeButton"
+        );
+
 
     const loadingBox =
-        document.getElementById("loadingBox");
+        document.getElementById(
+            "loadingBox"
+        );
+
 
     const loadingText =
-        document.getElementById("loadingText");
+        document.getElementById(
+            "loadingText"
+        );
+
 
     const loadingSub =
-        document.getElementById("loadingSub");
+        document.getElementById(
+            "loadingSub"
+        );
+
 
     button.disabled = true;
 
-    currentTransaction = transaction;
+
+    currentTransaction =
+        transaction;
 
 
     /* =================================================
-       1. SIMPAN TRANSAKSI TERLEBIH DAHULU
+       1. SIMPAN TRANSAKSI KE LOCAL STORAGE TERLEBIH DAHULU
        ================================================= */
 
-    queueTransaction(transaction);
+    queueTransaction(
+        transaction
+    );
 
 
     /* =================================================
-       2. UPLOAD GOOGLE SHEETS DI BACKGROUND
+       2. MULAI UPLOAD GOOGLE SHEETS DI BACKGROUND
        ================================================= */
 
     processPendingTransactions()
@@ -2873,16 +2929,22 @@ async function completeTransaction(){
        3. LANGSUNG PRINT
        ================================================= */
 
-    loadingBox.classList.add("active");
+    loadingBox
+        .classList
+        .add("active");
+
 
     loadingText.innerText =
         "Mencetak nota...";
+
 
     loadingSub.innerText =
         "Menyiapkan printer";
 
 
-    generateReceipt(transaction);
+    generateReceipt(
+        transaction
+    );
 
 
     const printSuccess =
@@ -2895,13 +2957,21 @@ async function completeTransaction(){
 
     if(!printSuccess){
 
-        loadingBox.classList.remove("active");
+        loadingBox
+            .classList
+            .remove("active");
 
-        transactionProcessing = false;
 
-        button.disabled = false;
+        transactionProcessing =
+            false;
+
+
+        button.disabled =
+            false;
+
 
         return;
+
     }
 
 
@@ -2910,6 +2980,7 @@ async function completeTransaction(){
        ================================================= */
 
     nota++;
+
 
     localStorage.setItem(
         "nota",
@@ -2923,33 +2994,40 @@ async function completeTransaction(){
 
     cart = {};
 
-    currentTransaction = null;
+
+    currentTransaction =
+        null;
 
 
-    /* Reset input pembayaran */
     resetPaymentForm();
 
 
-    /* Reset receipt */
     document
-        .getElementById("receipt")
-        .style.display = "none";
+        .getElementById(
+            "receipt"
+        )
+        .style.display =
+            "none";
 
 
-    /* Render ulang kasir */
     renderCashier();
 
 
     /* =================================================
-       7. PENTING:
-       * unlock halaman SETELAH PRINT SELESAI
+       7. UNLOCK HALAMAN
        ================================================= */
 
-    transactionProcessing = false;
+    transactionProcessing =
+        false;
 
-    button.disabled = false;
 
-    loadingBox.classList.remove("active");
+    button.disabled =
+        false;
+
+
+    loadingBox
+        .classList
+        .remove("active");
 
 
     /* =================================================
@@ -2968,10 +3046,15 @@ async function completeTransaction(){
 
 
     alert(
+
         "Transaksi berhasil.\n" +
+
         "No Nota: " +
+
         transaction.nota
+
     );
+
 }
 
 
@@ -2986,10 +3069,12 @@ function resetPaymentForm(){
             "cashReceived"
         );
 
+
     const changeDisplay =
         document.getElementById(
             "changeDisplay"
         );
+
 
     const paymentMethod =
         document.getElementById(
@@ -2997,7 +3082,6 @@ function resetPaymentForm(){
         );
 
 
-    /* Kosongkan uang diterima */
     if(cashReceived){
 
         cashReceived.value = "";
@@ -3005,7 +3089,6 @@ function resetPaymentForm(){
     }
 
 
-    /* Reset kembalian */
     if(changeDisplay){
 
         changeDisplay.innerText =
@@ -3014,15 +3097,14 @@ function resetPaymentForm(){
     }
 
 
-    /* Kembali ke Cash */
     if(paymentMethod){
 
-        paymentMethod.value = "cash";
+        paymentMethod.value =
+            "cash";
 
     }
 
 
-    /* Pastikan tampilan Cash aktif */
     paymentChanged();
 
 }
@@ -3096,7 +3178,8 @@ async function processPendingTransactions(){
     }
 
 
-    syncingTransactions = true;
+    syncingTransactions =
+        true;
 
 
     let allSuccess = true;
@@ -3114,7 +3197,7 @@ async function processPendingTransactions(){
             /*
              * Selalu ambil transaksi pertama.
              *
-             * JANGAN hapus sebelum upload selesai.
+             * JANGAN hapus sebelum request selesai.
              */
 
             const transaction =
@@ -3131,8 +3214,8 @@ async function processPendingTransactions(){
                 /*
                  * Request selesai.
                  *
-                 * Sekarang baru keluarkan
-                 * transaksi dari queue.
+                 * Baru keluarkan transaksi
+                 * dari queue.
                  */
 
                 pendingTransactions.shift();
@@ -3156,11 +3239,13 @@ async function processPendingTransactions(){
 
 
                 /*
-                 * Transaksi tetap berada
+                 * Transaksi tetap tersimpan
                  * di localStorage.
                  */
 
-                allSuccess = false;
+                allSuccess =
+                    false;
+
 
                 break;
 
@@ -3170,7 +3255,9 @@ async function processPendingTransactions(){
 
     }finally{
 
-        syncingTransactions = false;
+        syncingTransactions =
+            false;
+
 
         updateNetworkStatus();
 
