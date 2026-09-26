@@ -247,43 +247,6 @@
       flex: 0 0 auto;
     }
 
-    /* ========================= LOADING ========================= */
-    .loadingBox {
-      display: none;
-      text-align: center;
-      padding: 20px 10px;
-    }
-
-    .loadingBox.active {
-      display: block;
-    }
-
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 4px solid #dee2e6;
-      border-top: 4px solid #0d6efd;
-      border-radius: 50%;
-      animation: spin .8s linear infinite;
-      margin: 0 auto 12px;
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    .loadingText {
-      font-weight: bold;
-    }
-
-    .loadingSub {
-      font-size: 13px;
-      color: #6c757d;
-      margin-top: 4px;
-    }
-
     /* ========================= PAYMENT ========================= */
     .paymentBox {
       margin-top: 16px;
@@ -321,28 +284,6 @@
       font-size: 15px;
     }
 
-    /* ========================= RECEIPT ========================= */
-    #receipt {
-      width: 58mm;
-      background: white;
-      padding: 10px;
-      font-size: 12px;
-      display: none;
-    }
-
-    .center {
-      text-align: center;
-    }
-
-    .right {
-      text-align: right;
-    }
-
-    .line {
-      border-top: 1px dashed black;
-      margin: 6px 0;
-    }
-
     /* ========================= RESPONSIVE ========================= */
     @media (max-width: 575px) and (orientation: portrait) {
       body { padding: 8px; }
@@ -354,84 +295,13 @@
       .qtyBtn { width: 30px; height: 30px; }
     }
 
-    @media (max-width: 767px) and (orientation: landscape) {
-      body { padding: 8px; }
-      .card { padding: 12px; }
-      .productGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-      .productCard { border-radius: 12px; }
-      .productInfo { padding: 9px; }
-      .productName { font-size: 13px; line-height: 1.25; min-height: 33px; }
-      .productPrice { font-size: 13px; }
-      .productBottom { margin-top: 7px; }
-      .qtyBtn { width: 30px; height: 30px; font-size: 16px; }
+    @media (min-width: 576px) {
+      .productGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
     }
 
-    @media (min-width: 576px) and (max-width: 991px) and (orientation: portrait) {
-      .productGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-      .productInfo { padding: 12px; }
-      .productName { font-size: 14px; }
-    }
-
-    @media (min-width: 768px) and (max-width: 991px) and (orientation: landscape) {
-      .productGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
-      .productInfo { padding: 10px; }
-      .productName { font-size: 14px; min-height: 35px; }
-      .productPrice { font-size: 14px; }
-      .qtyBtn { width: 32px; height: 32px; }
-    }
-
-    @media (min-width: 992px) and (orientation: portrait) {
-      body { padding: 24px; }
-      .cashierContainer { max-width: 1400px; margin: 0 auto; }
-      .card { padding: 22px; }
-      .productGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
-      .productInfo { padding: 14px; }
-      .productName { font-size: 15px; min-height: 38px; }
-      .productPrice { font-size: 16px; }
-      .qtyBtn { width: 36px; height: 36px; }
-    }
-
-    @media (min-width: 992px) and (orientation: landscape) {
-      body { padding: 20px; }
-      .cashierContainer { max-width: 1400px; margin: 0 auto; }
-      .card { padding: 20px; }
+    @media (min-width: 992px) {
+      .cashierContainer { max-width: 1200px; margin: 0 auto; }
       .productGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-      .productInfo { padding: 11px; }
-      .productName { font-size: 14px; min-height: 35px; }
-      .productPrice { font-size: 14px; }
-      .qtyBtn { width: 32px; height: 32px; }
-    }
-
-    @media (min-width: 1600px) and (orientation: landscape) {
-      .cashierContainer { max-width: 1500px; }
-      .productGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
-    }
-
-    @media (max-width: 380px) and (orientation: portrait) {
-      .productGrid { gap: 8px; }
-      .productInfo { padding: 8px; }
-      .productName { font-size: 12px; }
-      .productPrice { font-size: 13px; }
-      .qtyBtn { width: 28px; height: 28px; font-size: 16px; }
-    }
-
-    /* ========================= PRINT ========================= */
-    @media print {
-      body * {
-        visibility: hidden;
-      }
-
-      #receipt,
-      #receipt * {
-        visibility: visible;
-      }
-
-      #receipt {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 58mm;
-      }
     }
   </style>
 </head>
@@ -524,35 +394,9 @@
           <button id="completeButton" class="btn btn-primary btn-lg w-100 mt-3" onclick="completeTransaction()">
             🧾 Selesaikan & Print
           </button>
-
-          <!-- LOADING -->
-          <div id="loadingBox" class="loadingBox">
-            <div class="spinner"></div>
-            <div id="loadingText" class="loadingText">Memproses transaksi...</div>
-            <div id="loadingSub" class="loadingSub">Mohon tunggu</div>
-          </div>
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- RECEIPT -->
-  <div id="receipt">
-    <div class="center">
-      <b>KUKIKOE</b><br>Mooncake Festival
-    </div>
-    <div class="line"></div>
-    <div id="receiptInfo" class="center"></div>
-    <div class="line"></div>
-    <div id="receiptItems"></div>
-    <div class="line"></div>
-    <div class="right">
-      <b id="receiptTotal"></b>
-    </div>
-    <div class="line"></div>
-    <div id="receiptPayment"></div>
-    <div class="line"></div>
-    <div class="center">Terima Kasih</div>
   </div>
 
   <script>
@@ -606,13 +450,13 @@
             body: JSON.stringify(transactionToSend)
           });
 
-          // Sukses terkirim -> hapus dari queue lokal
+          // Sukses terkirim -> hapus dari antrean lokal
           pendingTransactions.shift();
           savePendingTransactions();
           updateNetworkStatus();
         } catch (err) {
           console.error("Gagal sync ke Google Sheets (akan dicoba lagi nanti):", err);
-          break; // Stop loop jika error koneksi
+          break; // Stop loop jika jaringan bermasalah
         }
       }
       syncingTransactions = false;
@@ -834,7 +678,6 @@
 
       transactionProcessing = false;
       document.getElementById("completeButton").disabled = false;
-      document.getElementById("loadingBox").classList.remove("active");
       document.getElementById("paymentMethod").value = "cash";
       paymentChanged();
     }
@@ -957,40 +800,70 @@
       return Date.now().toString() + "-" + Math.random().toString(36).substring(2, 10);
     }
 
-    /* ===================================================== PRINT & TRANSAKSI ===================================================== */
-    function generateReceipt(transaction) {
-      document.getElementById("receiptInfo").innerHTML = `
-        Nota: ${transaction.nota}<br>
-        Tgl: ${transaction.tanggal} ${transaction.jam}
-      `;
-
-      let itemsHtml = "";
+    /* ===================================================== PRINT RAWBT (INTENT AUTOMATIC) ===================================================== */
+    function buildRawBTText(transaction) {
+      let text = "";
+      
+      // Header Nota
+      text += "\x1B\x61\x01"; // Center align
+      text += "\x1B\x21\x30"; // Large font size
+      text += "KUKIKOE\n";
+      text += "\x1B\x21\x00"; // Normal font size
+      text += "Mooncake Festival\n";
+      text += "--------------------------------\n";
+      
+      // Info Transaksi
+      text += "\x1B\x61\x00"; // Left align
+      text += "Nota: " + transaction.nota + "\n";
+      text += "Tgl : " + transaction.tanggal + " " + transaction.jam + "\n";
+      text += "--------------------------------\n";
+      
+      // Rincian Item
       transaction.items.forEach(item => {
-        itemsHtml += `
-          <div>${escapeHtml(item.nama)}</div>
-          <div class="right">${item.qty} x ${rupiah(item.harga)} = ${rupiah(item.subtotal)}</div>
-        `;
+        text += item.nama + "\n";
+        let detail = item.qty + " x " + rupiah(item.harga);
+        let sub = rupiah(item.subtotal);
+        let spaceCount = 32 - (detail.length + sub.length);
+        if (spaceCount < 1) spaceCount = 1;
+        text += detail + " ".repeat(spaceCount) + sub + "\n";
       });
-      document.getElementById("receiptItems").innerHTML = itemsHtml;
-      document.getElementById("receiptTotal").innerText = "Total: " + rupiah(transaction.total);
-
+      
+      text += "--------------------------------\n";
+      
+      // Total & Pembayaran
+      text += "\x1B\x61\x02"; // Right align
+      text += "\x1B\x45\x01"; // Bold ON
+      text += "TOTAL: " + rupiah(transaction.total) + "\n";
+      text += "\x1B\x45\x00"; // Bold OFF
+      
       if (transaction.pembayaran === "Cash") {
-        document.getElementById("receiptPayment").innerHTML = `
-          Bayar (Cash): ${rupiah(transaction.cashReceived)}<br>
-          Kembali: ${rupiah(transaction.change)}
-        `;
+        text += "Bayar (Cash): " + rupiah(transaction.cashReceived) + "\n";
+        text += "Kembali: " + rupiah(transaction.change) + "\n";
       } else {
-        document.getElementById("receiptPayment").innerHTML = `Metode: QRIS`;
+        text += "Metode: QRIS\n";
       }
+      
+      text += "--------------------------------\n";
+      text += "\x1B\x61\x01"; // Center align
+      text += "Terima Kasih\n\n\n\n"; // Feed paper
+      text += "\x1D\x56\x41\x00"; // Cut paper
+
+      return text;
     }
 
-    function printReceipt() {
+    function printReceipt(transaction) {
       return new Promise((resolve) => {
-        const receiptEl = document.getElementById("receipt");
-        receiptEl.style.display = "block";
-        window.print();
-        receiptEl.style.display = "none";
-        resolve(true);
+        try {
+          let receiptText = buildRawBTText(transaction);
+          let intentUrl = "intent:" + encodeURIComponent(receiptText) + "#URI;scheme=rawbt;package=ru.a404m.rawbt;end;";
+          window.location.href = intentUrl;
+        } catch (err) {
+          console.error("Gagal cetak otomatis via RawBT:", err);
+        }
+        
+        setTimeout(() => {
+          resolve(true);
+        }, 300);
       });
     }
 
@@ -1050,21 +923,20 @@
         items: items
       };
 
-      // 1. Simpan Lokal Dulu (Jaminan offline safe)
+      // 1. Simpan Ke Antrean Lokal HP (Jaminan Offline Safe)
       queueTransactionLocally(transaction);
 
-      // 2. Langsung Print
-      generateReceipt(transaction);
-      await printReceipt();
+      // 2. Langsung Cetak Otomatis via RawBT
+      await printReceipt(transaction);
 
-      // 3. Increment Nota & Reset Kasir
+      // 3. Update Nota & Reset Layar Kassa
       nota++;
       localStorage.setItem("nota", nota);
       cart = {};
       resetPaymentForm();
       renderCashier();
 
-      // 4. Trigger Upload Background ke Google Sheets
+      // 4. Upload ke Google Sheets di Background
       processPendingTransactions();
     }
 
