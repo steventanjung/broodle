@@ -947,12 +947,13 @@ and (orientation:portrait){
 
 
                     <input
-                        id="cashReceived"
-                        class="form-control form-control-lg"
-                        type="text"
-                        inputmode="numeric"
-                        placeholder="Masukkan nominal"
-                        oninput="formatCashInput(this)">
+    id="cashReceived"
+    class="form-control form-control-lg"
+    type="text"
+    inputmode="numeric"
+    placeholder="Masukkan nominal"
+    oninput="formatCashInput(this)"
+    onkeydown="if(event.key === 'Enter'){ event.preventDefault(); completeTransaction(); }">
 
 
                     <div
