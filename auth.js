@@ -392,6 +392,39 @@ function resetPassword(username, newPassword){
 
 
 /*
+ * Ganti password sendiri: wajib menyebut password saat
+ * ini, supaya sesi yang tertinggal di perangkat orang
+ * lain tidak cukup untuk mengambil alih akun.
+ */
+
+async function changePassword(username, currentPassword, newPassword){
+
+    const target = findUser(username);
+
+    if(
+        !target ||
+        !(await verifyPassword(currentPassword, target.password))
+    ){
+        return {
+            ok:false,
+            wrongCurrent:true,
+            error:"Password saat ini salah."
+        };
+    }
+
+    if(currentPassword === newPassword){
+        return {
+            ok:false,
+            error:"Password baru harus berbeda dari yang lama."
+        };
+    }
+
+    return resetPassword(target.username, newPassword);
+
+}
+
+
+/*
  * Selalu jalankan scrypt walau user tidak ada,
  * supaya waktu respons tidak membocorkan
  * username mana yang terdaftar.
@@ -595,5 +628,6 @@ module.exports = {
     createUser,
     removeUser,
     resetPassword,
+    changePassword,
     wouldRemoveLastSuperadmin
 };

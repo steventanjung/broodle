@@ -46,7 +46,10 @@
             <b id="whoName"></b>
             <span id="whoRole"></span>
         </div>
-        <button id="logoutButton" type="button" class="btn btn-ghost btn-icon" title="Keluar" aria-label="Keluar">
+        <button id="profileButton" type="button" class="btn btn-ghost btn-icon" title="Profil" aria-label="Profil" hidden>
+            <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#user"/></svg>
+        </button>
+                <button id="logoutButton" type="button" class="btn btn-ghost btn-icon" title="Keluar" aria-label="Keluar">
             <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#logout"/></svg>
         </button>
     </div>
@@ -258,10 +261,42 @@
         <div id="reportContent" class="viz" hidden>
 
             <div class="kpis">
-                <div class="panel kpi"><span>Pendapatan</span><strong id="kpiTotal" class="num"></strong></div>
-                <div class="panel kpi"><span>Transaksi</span><strong id="kpiCount" class="num"></strong></div>
-                <div class="panel kpi"><span>Rata-rata / transaksi</span><strong id="kpiAverage" class="num"></strong></div>
-                <div class="panel kpi"><span>Item terjual</span><strong id="kpiItems" class="num"></strong></div>
+                <div class="panel kpi">
+                    <div class="kpi-head"><span>Pendapatan</span>
+                        <button type="button" class="info-btn" aria-label="Penjelasan Pendapatan" aria-expanded="false">
+                            <svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#info"/></svg>
+                            <span class="info-tip" role="tooltip">Total nilai semua transaksi pada rentang tanggal yang dipilih.</span>
+                        </button>
+                    </div>
+                    <strong id="kpiTotal" class="num"></strong>
+                </div>
+                <div class="panel kpi">
+                    <div class="kpi-head"><span>Transaksi</span>
+                        <button type="button" class="info-btn" aria-label="Penjelasan Transaksi" aria-expanded="false">
+                            <svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#info"/></svg>
+                            <span class="info-tip" role="tooltip">Jumlah nota yang tercatat pada rentang tanggal ini.</span>
+                        </button>
+                    </div>
+                    <strong id="kpiCount" class="num"></strong>
+                </div>
+                <div class="panel kpi">
+                    <div class="kpi-head"><span>Rata-rata / transaksi</span>
+                        <button type="button" class="info-btn" aria-label="Penjelasan Rata-rata / transaksi" aria-expanded="false">
+                            <svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#info"/></svg>
+                            <span class="info-tip" role="tooltip">Pendapatan dibagi jumlah transaksi: rata-rata belanja per nota.</span>
+                        </button>
+                    </div>
+                    <strong id="kpiAverage" class="num"></strong>
+                </div>
+                <div class="panel kpi">
+                    <div class="kpi-head"><span>Item terjual</span>
+                        <button type="button" class="info-btn" aria-label="Penjelasan Item terjual" aria-expanded="false">
+                            <svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#info"/></svg>
+                            <span class="info-tip" role="tooltip">Total jumlah barang yang terjual dari semua nota, bukan jumlah jenis produk.</span>
+                        </button>
+                    </div>
+                    <strong id="kpiItems" class="num"></strong>
+                </div>
             </div>
 
             <div class="panel" style="margin-bottom:16px">
@@ -280,19 +315,35 @@
                 </div>
             </div>
 
-            <div class="panel">
+            <div id="txPanel" class="panel" style="scroll-margin-top:72px">
                 <div class="panel-head">
-                    <h2 style="font-size:15px">Transaksi</h2>
-                    <span id="txCount" class="small muted"></span>
+                    <div>
+                        <h2 style="font-size:15px">Transaksi</h2>
+                        <span id="txCount" class="small muted"></span>
+                    </div>
+                    <label class="toolbar small muted" for="txPageSize">
+                        Per halaman
+                        <select id="txPageSize" class="input" style="width:auto;padding:4px 8px">
+                            <option>10</option><option>25</option><option>50</option><option>100</option>
+                        </select>
+                    </label>
                 </div>
                 <div style="overflow-x:auto">
                     <table class="tx-table">
                         <thead>
-                            <tr><th>Nota</th><th>Waktu</th><th>Bayar</th><th class="r">Total</th><th></th></tr>
+                            <tr id="txHead">
+                                <th data-sort="nota" aria-sort="none"><button type="button" class="th-sort">Nota <svg class="i i-sm sort-ico" aria-hidden="true"><use href="/assets/icons.svg#chevron-down"/></svg></button></th>
+                                <th data-sort="waktu" aria-sort="descending"><button type="button" class="th-sort">Waktu <svg class="i i-sm sort-ico" aria-hidden="true"><use href="/assets/icons.svg#chevron-down"/></svg></button></th>
+                                <th data-sort="produk" aria-sort="none"><button type="button" class="th-sort">Produk <svg class="i i-sm sort-ico" aria-hidden="true"><use href="/assets/icons.svg#chevron-down"/></svg></button></th>
+                                <th data-sort="bayar" aria-sort="none"><button type="button" class="th-sort">Bayar <svg class="i i-sm sort-ico" aria-hidden="true"><use href="/assets/icons.svg#chevron-down"/></svg></button></th>
+                                <th data-sort="total" aria-sort="none" class="r"><button type="button" class="th-sort">Total <svg class="i i-sm sort-ico" aria-hidden="true"><use href="/assets/icons.svg#chevron-down"/></svg></button></th>
+                                <th class="tx-chev"></th>
+                            </tr>
                         </thead>
                         <tbody id="txBody"></tbody>
                     </table>
                 </div>
+                <div id="txPager" class="pager" hidden></div>
             </div>
 
         </div>
@@ -479,6 +530,45 @@
         <div class="dialog-foot">
             <button type="button" class="btn" data-close>Batal</button>
             <button id="passwordSave" type="submit" class="btn btn-primary">Simpan</button>
+        </div>
+    </form>
+</dialog>
+
+
+<dialog id="profileDialog">
+    <form id="profileForm">
+        <div class="dialog-head">
+            <h2>Profil</h2>
+            <button type="button" class="btn btn-ghost btn-icon btn-sm" data-close aria-label="Tutup">
+                <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#x"/></svg>
+            </button>
+        </div>
+        <div class="dialog-body">
+            <div class="row" style="padding:0">
+                <div class="avatar" id="profileAvatar"></div>
+                <div class="row-main">
+                    <span class="row-title" id="profileName"></span>
+                    <span class="row-sub"><svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#shield"/></svg> Superadmin</span>
+                </div>
+            </div>
+            <h3 style="font-size:14px">Ganti password</h3>
+            <div class="field">
+                <label class="label" for="pfCurrent">Password saat ini</label>
+                <input id="pfCurrent" name="currentPassword" class="input" type="password" required autocomplete="current-password">
+            </div>
+            <div class="field">
+                <label class="label" for="pfNew">Password baru</label>
+                <input id="pfNew" name="newPassword" class="input" type="password" required minlength="8" autocomplete="new-password">
+                <span class="hint">Minimal 8 karakter.</span>
+            </div>
+            <div class="field">
+                <label class="label" for="pfConfirm">Ulangi password baru</label>
+                <input id="pfConfirm" name="confirm" class="input" type="password" required minlength="8" autocomplete="new-password">
+            </div>
+        </div>
+        <div class="dialog-foot">
+            <button type="button" class="btn" data-close>Batal</button>
+            <button id="profileSave" type="submit" class="btn btn-primary">Simpan password</button>
         </div>
     </form>
 </dialog>

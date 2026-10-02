@@ -4,7 +4,7 @@
 
 (() => {
 
-    const { $, $$, icon, escapeHtml, rupiah, parseNumber, numberFmt, api, toast } = App;
+    const { $, $$, isTouchDevice, icon, escapeHtml, rupiah, parseNumber, numberFmt, api, toast } = App;
 
     const PRINTER_URL = "http://localhost:9100/print";
 
@@ -849,7 +849,8 @@
             if(btn && !cartLocked()){
                 payment = btn.dataset.payment;
                 renderPayment();
-                if(payment === "cash"){
+                /* Tablet: keyboard layar akan menutupi tombol uang cepat, jadi tidak otomatis. */
+                if(payment === "cash" && !isTouchDevice()){
                     $("#cashInput").focus();
                 }
             }

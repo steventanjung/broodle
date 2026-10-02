@@ -16,6 +16,9 @@ const App = (() => {
 
     /* --- helper DOM & format --- */
 
+    /* Layar sentuh: jangan buka keyboard layar otomatis kalau tidak perlu. */
+    const isTouchDevice = () => matchMedia("(pointer:coarse)").matches;
+
     const $  = (sel, root = document) => root.querySelector(sel);
     const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
@@ -270,7 +273,7 @@ const App = (() => {
     }, true);
 
     /* Klik backdrop menutup dialog. */
-    document.addEventListener("mousedown", e => {
+    document.addEventListener("pointerdown", e => {
         if(e.target.tagName === "DIALOG"){
             e.target.close();
         }
@@ -329,7 +332,7 @@ const App = (() => {
 
     return {
         STORE,
-        $, $$, icon, escapeHtml, rupiah, parseNumber, numberFmt,
+        $, $$, isTouchDevice, icon, escapeHtml, rupiah, parseNumber, numberFmt,
         api, isSuperadmin, logout, get session(){ return session; },
         on, emit,
         get menus(){ return menus; }, setMenus, refreshMenus, categories,

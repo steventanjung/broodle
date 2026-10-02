@@ -281,6 +281,8 @@
 
     let tooltip = null;
 
+    const isTouch = ev => ev.pointerType === "touch" || ev.pointerType === "pen";
+
     function showTip(ev, title, value){
 
         if(!tooltip){
@@ -295,9 +297,19 @@
         tooltip.style.display = "block";
 
         const w = tooltip.offsetWidth;
-        const x = ev.clientX + w + 24 > innerWidth ? ev.clientX - w - 12 : ev.clientX + 14;
+        const h = tooltip.offsetHeight;
 
-        tooltip.style.left = x + "px";
+        if(isTouch(ev)){
+
+            /* Di atas jari, supaya tidak tertutup. */
+            tooltip.style.left = Math.min(Math.max(ev.clientX - w / 2, 8), innerWidth - w - 8) + "px";
+            tooltip.style.top = Math.max(ev.clientY - h - 28, 8) + "px";
+
+            return;
+
+        }
+
+        tooltip.style.left = (ev.clientX + w + 24 > innerWidth ? ev.clientX - w - 12 : ev.clientX + 14) + "px";
         tooltip.style.top = (ev.clientY + 14) + "px";
 
     }
@@ -309,21 +321,33 @@
        GRAFIK
        ================================================= */
 
-    function renderTrend(points){
+    /* Penjualan harian: skala tetap minimal 0–20jt supaya antar-periode bisa dibandingkan. */
+    const DAILY_MIN_TOP = 20e6;
+    const DAILY_STEP = 2e6;
+
+    function renderTrend(points, fixedScale){
 
         const el = $("#trendChart");
 
         const W = 760, H = 230, L = 52, R = 12, T = 16, B = 28;
         const pw = W - L - R, ph = H - T - B;
 
-        const max = niceCeiling(Math.max(0, ...points.map(p => p.value)));
+        const dataMax = Math.max(0, ...points.map(p => p.value));
+
+        /* Skala tetap: gridline tiap 2jt (sampai 30jt). Di atas itu langkahnya melebar supaya garis tidak terlalu rapat. */
+        const dailyStep = dataMax <= 30e6 ? DAILY_STEP : niceCeiling(dataMax / 10);
+        const max = fixedScale
+            ? Math.max(DAILY_MIN_TOP, Math.ceil(dataMax / dailyStep) * dailyStep)
+            : niceCeiling(dataMax);
         const n = points.length;
         const step = n > 1 ? pw / (n - 1) : 0;
 
         const x = i => n > 1 ? L + i * step : L + pw / 2;
         const y = v => T + ph - (max ? (v / max) * ph : 0);
 
-        const ticks = max ? [0, max / 2, max] : [0];
+        const ticks = !max ? [0]
+            : fixedScale ? Array.from({ length: Math.round(max / dailyStep) + 1 }, (_, k) => k * dailyStep)
+            : [0, max / 2, max];
 
         const grid = ticks.map(t =>
             `<line x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--grid-line)"/>
@@ -370,11 +394,23 @@
         const cross = $(".crosshair", el);
         const dot = $(".hover-dot", el);
 
-        el.onpointermove = ev => {
+        /*
+         * Mouse: tooltip mengikuti kursor. Sentuh: ketuk atau geser
+         * jari di grafik, tooltip tetap tampil sampai ketuk di luar.
+         * Di layar sentuh target event terkunci di elemen pertama yang
+         * disentuh, jadi elemen di bawah jari dicari lewat koordinat.
+         */
+        const clear = () => {
+            cross.style.display = "none";
+            dot.style.display = "none";
+            hideTip();
+        };
 
-            const rect = ev.target.closest("rect[data-i]");
+        const hover = ev => {
 
-            if(!rect){
+            const rect = document.elementFromPoint(ev.clientX, ev.clientY)?.closest("rect[data-i]");
+
+            if(!rect || !el.contains(rect)){
                 return;
             }
 
@@ -392,11 +428,10 @@
 
         };
 
-        el.onpointerleave = () => {
-            cross.style.display = "none";
-            dot.style.display = "none";
-            hideTip();
-        };
+        el.onpointerdown = hover;
+        el.onpointermove = hover;
+        el.onpointercancel = clear;
+        el.onpointerleave = ev => isTouch(ev) || clear();
 
     }
 
@@ -420,14 +455,24 @@
             </div>
         `).join("");
 
-        el.onpointermove = ev => {
-            const row = ev.target.closest(".bar-row");
-            if(!row){ return hideTip(); }
+        const hover = ev => {
+
+            const row = document.elementFromPoint(ev.clientX, ev.clientY)?.closest(".bar-row");
+
+            if(!row || !el.contains(row)){
+                return hideTip();
+            }
+
             const p = products[row.dataset.i];
+
             showTip(ev, p.product, `${p.qty} terjual · ${rupiah(p.subtotal)}`);
+
         };
 
-        el.onpointerleave = hideTip;
+        el.onpointerdown = hover;
+        el.onpointermove = hover;
+        el.onpointercancel = hideTip;
+        el.onpointerleave = ev => isTouch(ev) || hideTip();
 
     }
 
@@ -473,25 +518,149 @@
     }
 
 
-    let currentTransactions = [];
+    /* --- tabel transaksi: urutkan + halaman --- */
+
+    const PAGE_SIZES = [10, 25, 50, 100];
+
+    let allTx = [];
+    let sortedTx = [];
+    let sortKey = "waktu";
+    let sortDir = "desc";
+    let page = 1;
+    let pageSize = PAGE_SIZES.includes(Number(localStorage.getItem("txPageSize")))
+        ? Number(localStorage.getItem("txPageSize"))
+        : 25;
+
+    const productNames = t => t.items.map(i => i.product).join(", ");
+
+    const SORTERS = {
+        nota:   t => Number(t.nota) || 0,
+        waktu:  t => t.date + " " + t.time,
+        produk: t => productNames(t).toLowerCase(),
+        bayar:  t => t.payment,
+        total:  t => t.total
+    };
+
+    /* Arah awal saat kolom baru diklik: angka & waktu turun dulu, teks A–Z. */
+    const DEFAULT_DIR = { nota: "desc", waktu: "desc", total: "desc", produk: "asc", bayar: "asc" };
+
+
+    function sortTransactions(){
+
+        const get = SORTERS[sortKey];
+        const dir = sortDir === "asc" ? 1 : -1;
+
+        sortedTx = allTx.slice().sort((a, b) => {
+
+            const x = get(a), y = get(b);
+
+            const diff = typeof x === "number" ? x - y : x.localeCompare(y, "id");
+
+            /* Nilai sama: yang terbaru di atas. */
+            return diff * dir || SORTERS.waktu(b).localeCompare(SORTERS.waktu(a));
+
+        });
+
+    }
+
 
     function renderTable(transactions){
 
-        currentTransactions = transactions;
+        allTx = transactions;
+        page = 1;
 
-        const multiDay = new Set(transactions.map(t => t.date)).size > 1;
+        $("#txPageSize").value = pageSize;
 
-        $("#txCount").textContent = transactions.length + " transaksi";
+        sortTransactions();
+        renderPage();
 
-        $("#txBody").innerHTML = transactions.map((t, i) => `
-            <tr class="tx-row" data-i="${i}" aria-expanded="false" tabindex="0">
+    }
+
+
+    function renderPage(){
+
+        const total = sortedTx.length;
+        const pages = Math.max(1, Math.ceil(total / pageSize));
+
+        page = Math.min(Math.max(page, 1), pages);
+
+        const start = (page - 1) * pageSize;
+        const slice = sortedTx.slice(start, start + pageSize);
+
+        const multiDay = new Set(allTx.map(t => t.date)).size > 1;
+
+        $("#txCount").textContent = total + " transaksi";
+
+        $$("#txHead th[data-sort]").forEach(th =>
+            th.setAttribute("aria-sort",
+                th.dataset.sort === sortKey ? (sortDir === "asc" ? "ascending" : "descending") : "none"));
+
+        $("#txBody").innerHTML = slice.map((t, k) => {
+
+            const extra = t.items.length - 1;
+
+            return `
+            <tr class="tx-row" data-i="${start + k}" aria-expanded="false" tabindex="0">
                 <td><b>${escapeHtml(String(t.nota).padStart(3, "0"))}</b></td>
                 <td class="num">${multiDay ? fmtShort.format(fromISO(t.date)) + ", " : ""}${escapeHtml(t.time)}</td>
-                <td><span class="badge ${t.payment === "QRIS" ? "badge-accent" : ""}">${t.payment === "QRIS" ? icon("qr", "i-sm") + "QRIS" : icon("cash", "i-sm") + "Cash"}</span></td>
+                <td class="tx-products" title="${escapeHtml(productNames(t))}">${escapeHtml(t.items[0]?.product || "-")}${extra > 0 ? ` <span class="muted">+${extra}</span>` : ""}</td>
+                <td><span class="badge ${t.payment === "QRIS" ? "badge-accent" : ""}">${t.payment === "QRIS" ? icon("qr", "i-sm") + '<span class="pay-text">QRIS</span>' : icon("cash", "i-sm") + '<span class="pay-text">Cash</span>'}</span></td>
                 <td class="r num"><b>${rupiah(t.total)}</b></td>
-                <td class="r" style="width:36px">${icon("chevron-down", "i-sm")}</td>
-            </tr>
-        `).join("");
+                <td class="r tx-chev" style="width:36px">${icon("chevron-down", "i-sm")}</td>
+            </tr>`;
+
+        }).join("");
+
+        renderPager(total, pages, start, slice.length);
+
+    }
+
+
+    /* 1 … 4 [5] 6 … 20 */
+    function pageList(current, pages){
+
+        const set = new Set([1, pages, current - 1, current, current + 1]);
+
+        const nums = [...set].filter(n => n >= 1 && n <= pages).sort((a, b) => a - b);
+
+        const out = [];
+
+        nums.forEach((n, i) => {
+            if(i > 0 && n - nums[i - 1] > 1){
+                out.push("gap");
+            }
+            out.push(n);
+        });
+
+        return out;
+
+    }
+
+
+    function renderPager(total, pages, start, shown){
+
+        const pager = $("#txPager");
+
+        pager.hidden = total === 0;
+
+        if(total === 0){
+            return;
+        }
+
+        const btn = (label, target, extra = "") =>
+            `<button type="button" class="btn btn-sm ${extra}" data-page="${target}"
+                ${target < 1 || target > pages ? "disabled" : ""}>${label}</button>`;
+
+        pager.innerHTML = `
+            <span class="small muted">Menampilkan ${start + 1}–${start + shown} dari ${total}</span>
+            <div class="pager-controls" ${pages === 1 ? "hidden" : ""}>
+                ${btn(icon("chevron-down", "i-sm pager-prev"), page - 1, "btn-icon")}
+                ${pageList(page, pages).map(n => n === "gap"
+                    ? `<span class="muted">…</span>`
+                    : `<button type="button" class="btn btn-sm ${n === page ? "btn-primary" : ""}" data-page="${n}" ${n === page ? 'aria-current="page"' : ""}>${n}</button>`
+                ).join("")}
+                ${btn(icon("chevron-down", "i-sm pager-next"), page + 1, "btn-icon")}
+            </div>`;
 
     }
 
@@ -507,10 +676,10 @@
             return;
         }
 
-        const t = currentTransactions[tr.dataset.i];
+        const t = sortedTx[tr.dataset.i];
 
         tr.insertAdjacentHTML("afterend", `
-            <tr class="tx-items"><td colspan="5"><ul>
+            <tr class="tx-items"><td colspan="6"><ul>
                 ${t.items.map(item => `
                     <li><span>${escapeHtml(item.product)} <span class="muted num">${item.qty} × ${rupiah(item.price)}</span></span>
                         <span class="num">${rupiah(item.subtotal)}</span></li>`).join("")}
@@ -611,7 +780,7 @@
         $("#trendTitle").textContent = from === to ? "Penjualan per jam" : "Penjualan harian";
 
         renderKpis(agg);
-        renderTrend(agg.trend);
+        renderTrend(agg.trend, from !== to);
         renderProducts(foldTop(agg.products, 8));
         renderPayments(agg.cash, agg.qris);
         renderTable(transactions);
@@ -631,8 +800,85 @@
         ["#dateFrom", "#dateTo"].forEach(sel =>
             $(sel).addEventListener("change", () => { preset = null; render(); }));
 
+        /* Ketuk di luar grafik: tooltip & garis bantu hilang. */
+        document.addEventListener("pointerdown", e => {
+
+            if(!e.target.closest("#trendChart, #productChart")){
+                hideTip();
+                $$(".crosshair, .hover-dot").forEach(n => n.style.display = "none");
+            }
+
+            if(!e.target.closest(".info-btn")){
+                $$(".info-btn[aria-expanded=true]").forEach(b => b.setAttribute("aria-expanded", "false"));
+            }
+
+        });
+
+        /* Ikon info: ketuk untuk buka/tutup (di layar sentuh tidak ada hover). */
+        document.addEventListener("click", e => {
+
+            const btn = e.target.closest(".info-btn");
+
+            $$(".info-btn[aria-expanded=true]").forEach(b => b !== btn && b.setAttribute("aria-expanded", "false"));
+
+            if(btn){
+                btn.setAttribute("aria-expanded", btn.getAttribute("aria-expanded") !== "true");
+            }
+
+        });
+
+        document.addEventListener("keydown", e => {
+            if(e.key === "Escape"){
+                $$(".info-btn[aria-expanded=true]").forEach(b => b.setAttribute("aria-expanded", "false"));
+            }
+        });
+
         $("#reportRefresh").addEventListener("click", () => load(true));
         $("#reportRetry").addEventListener("click", () => load(true));
+
+        $("#txHead").addEventListener("click", e => {
+
+            const th = e.target.closest("th[data-sort]");
+
+            if(!th){
+                return;
+            }
+
+            if(sortKey === th.dataset.sort){
+                sortDir = sortDir === "asc" ? "desc" : "asc";
+            }else{
+                sortKey = th.dataset.sort;
+                sortDir = DEFAULT_DIR[sortKey];
+            }
+
+            page = 1;
+            sortTransactions();
+            renderPage();
+
+        });
+
+        $("#txPageSize").addEventListener("change", e => {
+            pageSize = Number(e.target.value);
+            localStorage.setItem("txPageSize", pageSize);
+            page = 1;
+            renderPage();
+        });
+
+        $("#txPager").addEventListener("click", e => {
+
+            const btn = e.target.closest("[data-page]");
+
+            if(!btn || btn.disabled){
+                return;
+            }
+
+            page = Number(btn.dataset.page);
+            renderPage();
+
+            /* Pager ada di bawah tabel panjang: kembali ke awal tabel. */
+            $("#txPanel").scrollIntoView({ block: "start", behavior: "smooth" });
+
+        });
 
         $("#txBody").addEventListener("click", e => {
             const tr = e.target.closest(".tx-row");

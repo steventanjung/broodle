@@ -10,11 +10,11 @@
  *
  * Password diminta lewat prompt, tidak lewat
  * argumen — argumen tersimpan di shell history.
+ * Jalankan di terminal biasa (Terminal / iTerm / terminal VS Code).
  */
 
 const fs       = require("node:fs");
 const path     = require("node:path");
-const readline = require("node:readline");
 
 /* Pakai DATA_DIR yang sama dengan server. */
 const envFile = path.join(__dirname, "..", ".env");
@@ -25,55 +25,84 @@ if(fs.existsSync(envFile)){
 const auth = require("../auth.js");
 
 
-function ask(question, hidden){
+/*
+ * Di terminal biasa: password diketik tanpa tampil (mode raw).
+ * Kalau stdin bukan terminal (pipe / prompt tanpa TTY): baca
+ * semua baris sekali di awal — dua readline terpisah saling
+ * menghilangkan input, akibatnya password salah tersimpan.
+ */
+
+const pipedLines =
+    process.stdin.isTTY
+        ? null
+        : fs.readFileSync(0, "utf8").split(/\r?\n/);
+
+
+function readHidden(prompt){
 
     return new Promise(resolve => {
 
-        const rl =
-            readline.createInterface({
-                input: process.stdin,
-                output: process.stdout,
-                terminal: true
-            });
+        const stdin = process.stdin;
 
-        if(hidden){
+        process.stdout.write(prompt);
 
-            /* Jangan tampilkan password di layar. */
-            rl._writeToOutput = function(chunk){
+        stdin.setRawMode(true);
+        stdin.resume();
+        stdin.setEncoding("utf8");
 
-                if(rl.stdoutMuted){
+        let typed = "";
 
-                    rl.output.write("");
+        const onData = chunk => {
+
+            for(const ch of chunk){
+
+                if(ch === "\r" || ch === "\n"){
+
+                    stdin.setRawMode(false);
+                    stdin.pause();
+                    stdin.off("data", onData);
+
+                    process.stdout.write("\n");
+
+                    resolve(typed);
 
                     return;
 
                 }
 
-                rl.output.write(chunk);
+                if(ch === "\u0003"){
+                    process.stdout.write("\n");
+                    process.exit(130);
+                }
 
-            };
+                if(ch === "\u007f" || ch === "\b"){
+                    typed = typed.slice(0, -1);
+                }else{
+                    typed += ch;
+                }
 
-        }
-
-        rl.question(question, answer => {
-
-            rl.stdoutMuted = false;
-
-            if(hidden){
-                rl.output.write("\n");
             }
 
-            rl.close();
+        };
 
-            resolve(answer);
-
-        });
-
-        if(hidden){
-            rl.stdoutMuted = true;
-        }
+        stdin.on("data", onData);
 
     });
+
+}
+
+
+async function ask(question){
+
+    if(pipedLines){
+
+        process.stdout.write(question + "\n");
+
+        return pipedLines.shift() ?? "";
+
+    }
+
+    return readHidden(question);
 
 }
 
@@ -81,7 +110,7 @@ function ask(question, hidden){
 async function askPassword(){
 
     const first =
-        await ask("Password baru: ", true);
+        await ask("Password baru: ");
 
     const passwordError =
         auth.validatePassword(first);
@@ -95,7 +124,7 @@ async function askPassword(){
     }
 
     const second =
-        await ask("Ulangi password: ", true);
+        await ask("Ulangi password: ");
 
     if(first !== second){
 

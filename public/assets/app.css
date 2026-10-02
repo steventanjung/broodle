@@ -39,7 +39,12 @@
 *::before,
 *::after{ box-sizing:border-box; }
 
-html{ -webkit-text-size-adjust:100%; }
+html{
+    -webkit-text-size-adjust:100%;
+    /* Tidak ada zoom dobel-ketuk: ketuk cepat produk berulang tidak boleh memperbesar halaman. */
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+}
 
 body{
     margin:0;
@@ -60,7 +65,7 @@ button{ cursor:pointer; }
 .muted{ color:var(--muted); }
 .small{ font-size:13px; }
 .mobile-only{ display:none !important; }
-@media (max-width:900px){ .mobile-only{ display:inline-flex !important; } }
+@media (max-width:760px){ .mobile-only{ display:inline-flex !important; } }
 .sr-only{
     position:absolute; width:1px; height:1px; overflow:hidden;
     clip:rect(0 0 0 0); white-space:nowrap;
@@ -90,7 +95,6 @@ button{ cursor:pointer; }
     font-weight:600; font-size:14px; white-space:nowrap;
     transition:background .12s, border-color .12s;
 }
-.btn:hover{ background:var(--surface-2); }
 .btn:disabled{ opacity:.55; cursor:not-allowed; }
 .btn:focus-visible,
 .input:focus-visible,
@@ -98,13 +102,9 @@ button{ cursor:pointer; }
 .tab:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
 
 .btn-primary{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
-.btn-primary:hover{ background:var(--accent-hover); border-color:var(--accent-hover); }
 .btn-danger{ color:var(--danger); }
-.btn-danger:hover{ background:var(--danger-soft); border-color:var(--danger); }
 .btn-solid-danger{ background:var(--danger); border-color:var(--danger); color:#fff; }
-.btn-solid-danger:hover{ background:#9a1d14; }
 .btn-ghost{ border-color:transparent; background:transparent; }
-.btn-ghost:hover{ background:var(--surface-2); }
 .btn-lg{ min-height:52px; font-size:16px; padding:0 18px; }
 .btn-block{ width:100%; }
 .btn-icon{ width:40px; padding:0; }
@@ -171,7 +171,6 @@ button{ cursor:pointer; }
     background:var(--surface); color:var(--text-2);
     font-size:14px; font-weight:600;
 }
-.chip:hover{ border-color:var(--border-strong); color:var(--text); }
 .chip[aria-pressed="true"]{ background:var(--text); border-color:var(--text); color:#fff; }
 
 .segmented{
@@ -238,7 +237,6 @@ button{ cursor:pointer; }
     background:none; color:var(--text-2); font-weight:600; font-size:14px;
     text-decoration:none;
 }
-.tab:hover{ color:var(--text); }
 .tab[aria-current="page"]{ color:var(--accent); border-bottom-color:var(--accent); }
 
 .topbar-end{ margin-left:auto; display:flex; align-items:center; gap:10px; }
@@ -301,7 +299,7 @@ button{ cursor:pointer; }
    ===================================================== */
 
 .pos{
-    display:grid; grid-template-columns:minmax(0,1fr) 380px;
+    display:grid; grid-template-columns:minmax(0,1fr) clamp(320px, 36vw, 380px);
     min-height:calc(100vh - var(--topbar-h));
 }
 
@@ -310,7 +308,7 @@ button{ cursor:pointer; }
 
 .product-grid{
     display:grid; gap:12px;
-    grid-template-columns:repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));
 }
 
 .product{
@@ -321,7 +319,6 @@ button{ cursor:pointer; }
     transition:border-color .12s, transform .08s;
     -webkit-tap-highlight-color:transparent; user-select:none;
 }
-.product:hover{ border-color:var(--border-strong); }
 .product:active{ transform:scale(.98); }
 .product.in-cart{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
 
@@ -386,7 +383,6 @@ button{ cursor:pointer; }
     display:flex; align-items:center; justify-content:center;
     border:1px solid var(--border); background:var(--surface);
 }
-.stepper button:hover{ background:var(--surface-2); }
 .stepper input{
     width:40px; height:30px; text-align:center; font-weight:600;
     border:1px solid transparent; border-radius:var(--radius-sm); background:none;
@@ -409,7 +405,6 @@ button{ cursor:pointer; }
     min-height:34px; border:1px solid var(--border); border-radius:var(--radius-sm);
     background:var(--surface); font-size:13px; font-weight:600;
 }
-.quick-cash button:hover{ background:var(--surface-2); }
 
 .change-row{
     display:flex; justify-content:space-between; align-items:center;
@@ -432,7 +427,7 @@ button{ cursor:pointer; }
 /* Bar ringkas di HP */
 .cart-bar{ display:none; }
 
-@media (max-width:900px){
+@media (max-width:760px){
     .pos{ grid-template-columns:1fr; }
     .catalog{ padding:12px 12px 96px; }
     .product-grid{ grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px; }
@@ -476,7 +471,6 @@ button{ cursor:pointer; }
 .row-price{ width:110px; text-align:right; font-weight:600; font-size:14px; }
 
 button.row{ width:100%; border:0; border-bottom:1px solid var(--border); background:none; text-align:left; }
-button.row:hover{ background:var(--surface-2); }
 
 .thumb{
     width:48px; height:48px; flex:none; overflow:hidden;
@@ -514,7 +508,8 @@ button.row:hover{ background:var(--surface-2); }
    ===================================================== */
 
 dialog{
-    width:min(440px, calc(100vw - 24px)); max-height:calc(100vh - 24px);
+    width:min(440px, calc(100vw - 24px)); max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px);
+    overflow-y:auto; overscroll-behavior:contain;
     padding:0; border:0; border-radius:12px;
     background:var(--surface); color:var(--text); box-shadow:var(--shadow-lg);
 }
@@ -555,7 +550,7 @@ dialog::backdrop{ background:rgba(28,26,23,.45); }
 @media (max-width:760px){
     body.has-tabs .toasts{ bottom:84px; }
 }
-@media (max-width:900px){
+@media (max-width:760px){
     .toasts{ bottom:84px; }
 }
 
@@ -572,7 +567,27 @@ dialog::backdrop{ background:rgba(28,26,23,.45); }
 
 .kpis{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:12px; margin-bottom:16px; }
 .kpi{ padding:14px 16px; }
-.kpi span{ display:block; font-size:13px; color:var(--muted); font-weight:600; }
+.kpi-head{ display:flex; align-items:center; justify-content:space-between; gap:6px; }
+.kpi-head > span{ font-size:13px; color:var(--muted); font-weight:600; }
+
+.info-btn{
+    position:relative; display:inline-flex; align-items:center; justify-content:center;
+    flex:none; width:28px; height:28px; margin:-4px -6px -4px 0; padding:0;
+    border:0; border-radius:50%; background:none; color:var(--muted);
+}
+.info-btn[aria-expanded="true"]{ color:var(--text); background:var(--surface-2); }
+.info-btn:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+
+.info-tip{
+    position:absolute; top:calc(100% + 6px); left:0; z-index:20;
+    width:220px; padding:8px 10px; border-radius:var(--radius-sm);
+    background:var(--text); color:#fff; box-shadow:var(--shadow-lg);
+    font-size:12.5px; font-weight:500; line-height:1.4; text-align:left;
+    display:none; cursor:default;
+}
+.kpi:nth-child(even) .info-tip{ left:auto; right:0; }
+.info-btn:focus-visible .info-tip,
+.info-btn[aria-expanded="true"] .info-tip{ display:block; }
 .kpi strong{ display:block; font-size:24px; font-weight:700; letter-spacing:-.02em; margin-top:4px; }
 .kpi small{ display:block; font-size:12.5px; color:var(--text-2); margin-top:2px; }
 
@@ -619,8 +634,28 @@ dialog::backdrop{ background:rgba(28,26,23,.45); }
 }
 .tx-table td{ padding:11px 16px; border-bottom:1px solid var(--border); }
 .tx-table .r{ text-align:right; }
+.th-sort{
+    display:inline-flex; align-items:center; gap:2px; padding:0; border:0; background:none;
+    color:inherit; font:inherit; font-weight:600; cursor:pointer;
+}
+.th-sort:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:3px; }
+.tx-table th.r .th-sort{ flex-direction:row-reverse; }
+.sort-ico{ opacity:0; transition:transform .15s; }
+th[aria-sort="ascending"] .sort-ico{ opacity:1; transform:rotate(180deg); }
+th[aria-sort="descending"] .sort-ico{ opacity:1; }
+th[aria-sort="ascending"], th[aria-sort="descending"]{ color:var(--text); }
+.tx-products{ max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+.pager{
+    display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+    padding:12px 16px; border-top:1px solid var(--border);
+}
+.pager-controls{ display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+.pager-controls .btn{ min-width:32px; }
+.pager-prev{ transform:rotate(90deg); }
+.pager-next{ transform:rotate(-90deg); }
+
 .tx-row{ cursor:pointer; }
-.tx-row:hover td{ background:var(--surface-2); }
 .tx-row .i{ color:var(--muted); transition:transform .15s; }
 .tx-row[aria-expanded="true"] .i{ transform:rotate(180deg); }
 .tx-items td{ background:var(--surface-2); padding:4px 16px 12px 44px; }
@@ -629,8 +664,15 @@ dialog::backdrop{ background:rgba(28,26,23,.45); }
 .tx-items li:last-child{ border-bottom:0; }
 
 @media (max-width:600px){
-    .tx-table th, .tx-table td{ padding:10px 10px; }
-    .tx-items td{ padding-left:16px; }
+    .tx-table th, .tx-table td{ padding:10px 5px; }
+    .tx-table th:first-child, .tx-table .tx-row td:first-child{ padding-left:12px; }
+    .tx-table th:nth-last-child(2), .tx-table .tx-row td:nth-last-child(2){ padding-right:12px; }
+    .tx-table .tx-items td{ padding:4px 12px 10px 16px; }
+    .tx-table{ font-size:13px; }
+    .tx-products{ max-width:84px; }
+    .tx-chev, .pay-text{ display:none; }
+    .tx-table .badge{ padding:3px 6px; }
+    .pager{ justify-content:center; }
 }
 
 .skeleton{ height:120px; border-radius:var(--radius); background:linear-gradient(90deg, var(--surface-2), #f7f6f3, var(--surface-2)); background-size:200% 100%; animation:shimmer 1.2s linear infinite; }
@@ -649,4 +691,86 @@ dialog::backdrop{ background:rgba(28,26,23,.45); }
 .login-card .error{
     padding:9px 12px; border-radius:var(--radius-sm);
     background:var(--danger-soft); color:var(--danger); font-size:14px;
+}
+
+
+/* =====================================================
+   SENTUH (tablet / HP)
+   -----------------------------------------------------
+   Hover tidak ada di layar sentuh: gaya hover hanya untuk
+   mouse, dan tiap tombol punya efek :active saat ditekan.
+   ===================================================== */
+
+@media (hover:hover){
+    .btn:hover{ background:var(--surface-2); }
+    .btn-primary:hover{ background:var(--accent-hover); border-color:var(--accent-hover); }
+    .btn-danger:hover{ background:var(--danger-soft); border-color:var(--danger); }
+    .btn-solid-danger:hover{ background:#9a1d14; }
+    .btn-ghost:hover{ background:var(--surface-2); }
+    .chip:hover{ border-color:var(--border-strong); color:var(--text); }
+    .tab:hover{ color:var(--text); }
+    .product:hover{ border-color:var(--border-strong); }
+    .stepper button:hover{ background:var(--surface-2); }
+    .quick-cash button:hover{ background:var(--surface-2); }
+    button.row:hover{ background:var(--surface-2); }
+    .th-sort:hover{ color:var(--text); }
+    .tx-row:hover td{ background:var(--surface-2); }
+    .info-btn:hover{ color:var(--text); background:var(--surface-2); }
+    .info-btn:hover .info-tip{ display:block; }
+}
+
+.btn:active{ background:var(--surface-2); }
+.btn-primary:active{ background:var(--accent-hover); border-color:var(--accent-hover); }
+.btn-danger:active{ background:var(--danger-soft); border-color:var(--danger); }
+.btn-solid-danger:active{ background:#9a1d14; }
+.chip:active{ background:var(--surface-2); }
+.chip[aria-pressed="true"]:active{ background:var(--text); }
+.stepper button:active,
+.quick-cash button:active,
+.product-minus:active{ background:var(--border); }
+.tx-row:active td,
+.row[data-id]:active,
+.th-sort:active{ background:var(--surface-2); }
+.row[data-id]{ cursor:pointer; }
+
+.product{ -webkit-touch-callout:none; }
+img{ -webkit-user-drag:none; user-select:none; }
+#trendChart svg{ touch-action:pan-y; }
+
+@media (pointer:coarse){
+
+    /* Target ketuk minimal 44px. */
+    .btn{ min-height:44px; }
+    .btn-sm{ min-height:44px; padding:0 14px; }
+    .btn-icon, .btn-icon.btn-sm{ width:44px; min-height:44px; }
+    .btn-lg{ min-height:56px; }
+    .chip{ min-height:44px; }
+    .segmented button{ min-height:48px; }
+
+    /* Input 16px: iOS Safari memperbesar halaman saat fokus kalau lebih kecil. */
+    .input, select.input{ min-height:48px; font-size:16px; }
+    .input-lg{ min-height:56px; font-size:22px; }
+    .report-filters .range .input{ min-height:44px; }
+    .stepper input{ font-size:16px; }
+
+    .stepper button{ width:44px; height:44px; }
+    .stepper input{ width:52px; height:44px; }
+    .quick-cash button{ min-height:44px; font-size:14px; }
+    .product-qty{ min-width:32px; height:32px; }
+    .product-minus{ width:44px; height:44px; top:46px; }
+    .product-star{ width:28px; height:28px; }
+
+    .switch{ padding:14px 12px; }
+    .switch-track{ width:46px; height:26px; }
+    .switch-track::after{ width:20px; height:20px; }
+    .switch input:checked + .switch-track::after{ transform:translateX(20px); }
+
+    .row{ padding-top:12px; padding-bottom:12px; }
+    .tx-table td{ padding-top:14px; padding-bottom:14px; }
+    .th-sort{ min-height:44px; }
+    .pager-controls .btn{ min-width:44px; }
+    .tab{ min-height:44px; }
+
+    /* Ikon info: area ketuk besar tapi ikonnya tetap kecil. */
+    .info-btn{ width:44px; height:44px; margin:-14px -14px -14px 0; }
 }

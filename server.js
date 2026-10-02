@@ -403,6 +403,46 @@ async function handleUsersResetPassword(req, res, user, target){
 }
 
 
+/*
+ * Ganti password akun sendiri. Percobaan password lama
+ * yang salah dibatasi seperti login (per akun).
+ */
+
+async function handleChangePassword(req, res, user){
+
+    const key = "pw:" + user.username.toLowerCase();
+
+    if(loginBlocked(key)){
+        return json(res, 429, { error: "Terlalu banyak percobaan. Coba lagi 10 menit." });
+    }
+
+    const payload = await readJson(req);
+
+    const result = await auth.changePassword(
+        user.username,
+        String(payload.currentPassword || ""),
+        payload.newPassword
+    );
+
+    if(!result.ok){
+
+        if(result.wrongCurrent){
+            recordFailure(key);
+        }
+
+        return json(res, 400, { error: result.error });
+
+    }
+
+    loginAttempts.delete(key);
+
+    console.log(`[akun] ${user.username} mengganti passwordnya sendiri`);
+
+    json(res, 200, { ok: true });
+
+}
+
+
 /* =====================================================
    MENU
    Semua user boleh membaca; hanya superadmin mengubah.
@@ -645,6 +685,7 @@ const ROUTES = [
     ["POST",   /^\/api\/login$/,                         handleLogin,              "public"],
     ["POST",   /^\/api\/logout$/,                        handleLogout,             "public"],
     ["GET",    /^\/api\/me$/,                            handleMe,                 "user"],
+    ["POST",   /^\/api\/me\/password$/,                  handleChangePassword,     "superadmin"],
     ["POST",   /^\/api\/submit$/,                        handleSubmit,             "user"],
     ["GET",    /^\/api\/menu$/,                          handleMenuList,           "user"],
     ["POST",   /^\/api\/menu$/,                          handleMenuCreate,         "superadmin"],

@@ -6,7 +6,7 @@
 
 (() => {
 
-    const { $, $$, icon, escapeHtml, rupiah, parseNumber, numberFmt, api, toast, busy } = App;
+    const { $, $$, isTouchDevice, icon, escapeHtml, rupiah, parseNumber, numberFmt, api, toast, busy } = App;
 
 
     /* =================================================
@@ -83,10 +83,10 @@
                         : rupiah(m.harga)}</span>
                     <div class="row-end">
                         <button type="button" class="btn btn-ghost btn-icon star-toggle" data-action="star"
-                            aria-pressed="${m.unggulan}" title="${m.unggulan ? "Hapus dari Best Seller" : "Jadikan Best Seller"}">
+                            aria-pressed="${m.unggulan}" aria-label="Best Seller" title="${m.unggulan ? "Hapus dari Best Seller" : "Jadikan Best Seller"}">
                             ${icon("star")}
                         </button>
-                        <button type="button" class="btn btn-ghost btn-icon" data-action="edit" title="Ubah">${icon("pencil")}</button>
+                        <button type="button" class="btn btn-ghost btn-icon" data-action="edit" aria-label="Ubah" title="Ubah">${icon("pencil")}</button>
                     </div>
                 </div>
             `).join("");
@@ -170,7 +170,10 @@
         syncPriceHint();
 
         $("#productDialog").showModal();
-        form.nama.focus();
+        /* Ubah produk di tablet: jangan langsung memunculkan keyboard layar. */
+        if(!menu || !isTouchDevice()){
+            form.nama.focus();
+        }
 
     }
 
@@ -444,7 +447,7 @@
                     </div>
                     <div class="row-end">
                         <button type="button" class="btn btn-sm" data-action="password">${icon("key", "i-sm")}<span class="hide-sm">Ganti password</span></button>
-                        ${self ? "" : `<button type="button" class="btn btn-sm btn-danger btn-icon" data-action="delete" title="Hapus akun">${icon("trash", "i-sm")}</button>`}
+                        ${self ? "" : `<button type="button" class="btn btn-sm btn-danger btn-icon" data-action="delete" aria-label="Hapus akun" title="Hapus akun">${icon("trash", "i-sm")}</button>`}
                     </div>
                 </div>
             `;
@@ -565,6 +568,57 @@
 
 
     /* =================================================
+       PROFIL (ganti password sendiri)
+       ================================================= */
+
+    function bindProfile(){
+
+        const dlg = $("#profileDialog");
+        const form = $("#profileForm");
+
+        $("#profileButton").hidden = false;
+
+        $("#profileButton").addEventListener("click", () => {
+            form.reset();
+            $("#profileName").textContent = App.session.username;
+            $("#profileAvatar").textContent = App.session.username[0];
+            dlg.showModal();
+            form.currentPassword.focus();
+        });
+
+        form.addEventListener("submit", async event => {
+
+            event.preventDefault();
+
+            if(form.newPassword.value !== form.confirm.value){
+                return toast("Konfirmasi password baru tidak sama.", "error");
+            }
+
+            await busy($("#profileSave"), "Menyimpan...", async () => {
+
+                try{
+                    await api("/api/me/password", {
+                        method: "POST",
+                        body: {
+                            currentPassword: form.currentPassword.value,
+                            newPassword: form.newPassword.value
+                        }
+                    });
+                    dlg.close();
+                    toast("Password berhasil diganti");
+                }catch(error){
+                    toast(error.message, "error");
+                    form.currentPassword.select();
+                }
+
+            });
+
+        });
+
+    }
+
+
+    /* =================================================
        MULAI
        ================================================= */
 
@@ -579,6 +633,7 @@
 
         bindMenu();
         bindAccounts();
+        bindProfile();
 
         App.on("menus", () => {
             if($("#view-menu").classList.contains("active")){
