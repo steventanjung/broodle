@@ -1,0 +1,820 @@
+/*
+ * Server statis + proxy Apps Script + autentikasi + menu.
+ *
+ * Browser hanya melihat /api/... , URL Apps Script
+ * tidak pernah keluar dari server ini.
+ *
+ * Hak akses dipaksakan DI SINI, bukan di browser:
+ * menyembunyikan tombol saja tidak mengamankan apa pun.
+ */
+
+const http = require("node:http");
+const fs   = require("node:fs");
+const path = require("node:path");
+
+/*
+ * Lokal: baca .env kalau ada. Di hosting (Railway, VPS
+ * dengan systemd, dll) variabel diisi dari dashboard /
+ * service, jadi file .env tidak wajib ada.
+ * Harus sebelum require auth.js (membaca DATA_DIR).
+ */
+if(fs.existsSync(path.join(__dirname, ".env"))){
+    process.loadEnvFile(path.join(__dirname, ".env"));
+}
+
+const auth = require("./auth.js");
+const menu = require("./menu.js");
+
+
+/* =====================================================
+   KONFIGURASI
+   ===================================================== */
+
+const PORT          = process.env.PORT || 8080;
+const SUBMIT_URL    = process.env.APPS_SCRIPT_SUBMIT_URL;
+const REPORT_URL    = process.env.APPS_SCRIPT_REPORT_URL;
+const SESSION_SECRET = process.env.SESSION_SECRET;
+const SESSION_HOURS = Number(process.env.SESSION_HOURS) || 12;
+
+/* true kalau dilayani lewat HTTPS (mis. di belakang Nginx / Caddy). */
+const SECURE_COOKIE = process.env.SECURE_COOKIE === "true";
+
+/*
+ * true HANYA kalau di belakang reverse proxy yang mengisi
+ * X-Forwarded-For. Tanpa proxy, header itu bisa dipalsukan
+ * siapa saja untuk lolos dari rate limit login.
+ */
+const TRUST_PROXY = process.env.TRUST_PROXY === "true";
+
+/* Data laporan di-cache sebentar: Apps Script lambat (2-5 detik). */
+const REPORT_CACHE_MS = 60 * 1000;
+
+
+if(!SUBMIT_URL || !REPORT_URL){
+    console.error("ENV belum lengkap. Isi APPS_SCRIPT_SUBMIT_URL dan APPS_SCRIPT_REPORT_URL di .env");
+    process.exit(1);
+}
+
+if(!SESSION_SECRET || SESSION_SECRET.length < 32){
+    console.error(
+        "SESSION_SECRET di .env harus ada dan minimal 32 karakter.\n" +
+        "Buat dengan: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+    );
+    process.exit(1);
+}
+
+/*
+ * Hosting tanpa terminal interaktif (Railway, dll):
+ * superadmin pertama dibuat dari env, HANYA kalau belum
+ * ada akun sama sekali. Hapus kedua variabel ini setelah
+ * berhasil login.
+ */
+if(
+    auth.loadUsers().length === 0 &&
+    process.env.INITIAL_ADMIN_USERNAME &&
+    process.env.INITIAL_ADMIN_PASSWORD
+){
+    const result = auth.createUser(
+        process.env.INITIAL_ADMIN_USERNAME,
+        process.env.INITIAL_ADMIN_PASSWORD,
+        "superadmin"
+    );
+
+    console.log(
+        result.ok
+            ? `[akun] superadmin "${process.env.INITIAL_ADMIN_USERNAME}" dibuat dari env. ` +
+              "Hapus INITIAL_ADMIN_USERNAME & INITIAL_ADMIN_PASSWORD sekarang."
+            : "[akun] gagal membuat superadmin dari env: " + result.error
+    );
+}
+
+if(auth.loadUsers().length === 0){
+    console.warn(
+        "\n[!] Belum ada akun. Buat superadmin dulu:\n" +
+        "    node scripts/user.js add admin superadmin\n"
+    );
+}
+
+
+/*
+ * Hanya folder public/ dan uploads/ yang pernah dilayani
+ * sebagai file. Kode server, .env, dan data/ ada di luar
+ * keduanya, jadi tidak perlu daftar blokir.
+ */
+
+const PUBLIC_DIR  = path.join(__dirname, "public");
+const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, "uploads");
+const PRODUCT_DIR = path.join(UPLOADS_DIR, "products");
+
+fs.mkdirSync(PRODUCT_DIR, { recursive: true });
+
+const MIME = {
+    ".html": "text/html; charset=utf-8",
+    ".js":   "text/javascript; charset=utf-8",
+    ".css":  "text/css; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+    ".svg":  "image/svg+xml",
+    ".jpg":  "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png":  "image/png",
+    ".webp": "image/webp",
+    ".ico":  "image/x-icon"
+};
+
+const BASE_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "same-origin"
+};
+
+
+/* =====================================================
+   HELPER
+   ===================================================== */
+
+function json(res, status, body, headers){
+
+    res.writeHead(status, {
+        ...BASE_HEADERS,
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        ...headers
+    });
+
+    res.end(JSON.stringify(body));
+
+}
+
+
+function readBody(req, limit = 1_000_000){
+
+    return new Promise((resolve, reject) => {
+
+        const chunks = [];
+        let size = 0;
+
+        req.on("data", c => {
+
+            size += c.length;
+
+            if(size > limit){
+                reject(Object.assign(new Error("Body terlalu besar"), { status: 413 }));
+                req.destroy();
+                return;
+            }
+
+            chunks.push(c);
+
+        });
+
+        req.on("end", () => resolve(Buffer.concat(chunks)));
+        req.on("error", reject);
+
+    });
+
+}
+
+
+async function readJson(req){
+
+    try{
+        return JSON.parse((await readBody(req)).toString("utf8")) || {};
+    }catch(error){
+        throw Object.assign(new Error("Permintaan tidak valid."), { status: error.status || 400 });
+    }
+
+}
+
+
+function sessionCookie(value, maxAgeSeconds){
+
+    return [
+        auth.COOKIE_NAME + "=" + encodeURIComponent(value),
+        "Path=/",
+        "HttpOnly",
+        "SameSite=Lax",
+        "Max-Age=" + maxAgeSeconds,
+        SECURE_COOKIE ? "Secure" : null
+    ].filter(Boolean).join("; ");
+
+}
+
+
+function currentUser(req){
+
+    const cookies = auth.parseCookies(req.headers.cookie);
+
+    return auth.readSession(cookies[auth.COOKIE_NAME], SESSION_SECRET);
+
+}
+
+
+function clientIp(req){
+
+    if(TRUST_PROXY){
+
+        const forwarded =
+            String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+
+        if(forwarded){
+            return forwarded;
+        }
+
+    }
+
+    return req.socket.remoteAddress || "unknown";
+
+}
+
+
+/* =====================================================
+   RATE LIMIT LOGIN
+   Cegah percobaan password beruntun: hitungan per IP.
+   ===================================================== */
+
+const loginAttempts = new Map();
+
+const MAX_ATTEMPTS = 8;
+const WINDOW_MS    = 10 * 60 * 1000;
+
+
+function loginBlocked(ip){
+
+    const entry = loginAttempts.get(ip);
+
+    return !!entry &&
+        Date.now() - entry.first <= WINDOW_MS &&
+        entry.count >= MAX_ATTEMPTS;
+
+}
+
+
+function recordFailure(ip){
+
+    const entry = loginAttempts.get(ip);
+
+    if(!entry || Date.now() - entry.first > WINDOW_MS){
+        loginAttempts.set(ip, { count: 1, first: Date.now() });
+        return;
+    }
+
+    entry.count++;
+
+}
+
+
+/* Buang entri kadaluarsa supaya Map tidak tumbuh terus. */
+setInterval(() => {
+
+    const now = Date.now();
+
+    loginAttempts.forEach((entry, ip) => {
+        if(now - entry.first > WINDOW_MS){
+            loginAttempts.delete(ip);
+        }
+    });
+
+}, WINDOW_MS).unref();
+
+
+/* =====================================================
+   AUTENTIKASI
+   ===================================================== */
+
+async function handleLogin(req, res){
+
+    const ip = clientIp(req);
+
+    if(loginBlocked(ip)){
+        return json(res, 429, { error: "Terlalu banyak percobaan. Coba lagi 10 menit." });
+    }
+
+    const payload = await readJson(req);
+
+    const user = await auth.authenticate(payload.username, payload.password);
+
+    if(!user){
+        recordFailure(ip);
+        /* Jangan bocorkan username mana yang ada. */
+        return json(res, 401, { error: "Username atau password salah." });
+    }
+
+    loginAttempts.delete(ip);
+
+    const maxAge = SESSION_HOURS * 3600;
+    const token  = auth.createSession(user, SESSION_SECRET, maxAge);
+
+    console.log(`[login] ${user.username} (${user.role}) dari ${ip}`);
+
+    json(res, 200, user, { "Set-Cookie": sessionCookie(token, maxAge) });
+
+}
+
+
+function handleLogout(req, res){
+
+    json(res, 200, { ok: true }, { "Set-Cookie": sessionCookie("", 0) });
+
+}
+
+
+function handleMe(req, res, user){
+
+    json(res, 200, user);
+
+}
+
+
+/* =====================================================
+   KELOLA AKUN (superadmin)
+   -----------------------------------------------------
+   Akun superadmin HANYA bisa dibuat lewat CLI
+   (node scripts/user.js add <user> superadmin) —
+   sengaja tidak diekspos lewat endpoint ini, supaya
+   satu sesi web yang bocor tidak bisa mencetak
+   superadmin baru. Panel ini cuma bisa bikin akun kasir.
+   ===================================================== */
+
+function handleUsersList(req, res){
+
+    const users = auth.loadUsers().map(u => ({
+        username: u.username,
+        role: u.role,
+        createdAt: u.createdAt || null
+    }));
+
+    json(res, 200, { users });
+
+}
+
+
+async function handleUsersCreate(req, res, user){
+
+    const payload = await readJson(req);
+
+    const result = auth.createUser(payload.username, payload.password, "kasir");
+
+    if(!result.ok){
+        return json(res, 400, { error: result.error });
+    }
+
+    console.log(`[akun] kasir baru oleh ${user.username}: ${payload.username}`);
+
+    json(res, 201, { ok: true });
+
+}
+
+
+function handleUsersDelete(req, res, user, target){
+
+    if(target.toLowerCase() === user.username.toLowerCase()){
+        return json(res, 400, {
+            error: "Tidak bisa menghapus akun sendiri yang sedang login."
+        });
+    }
+
+    const result = auth.removeUser(target);
+
+    if(!result.ok){
+        return json(res, 400, { error: result.error });
+    }
+
+    console.log(`[akun] dihapus oleh ${user.username}: ${target}`);
+
+    json(res, 200, { ok: true });
+
+}
+
+
+async function handleUsersResetPassword(req, res, user, target){
+
+    const payload = await readJson(req);
+
+    const result = auth.resetPassword(target, payload.password);
+
+    if(!result.ok){
+        return json(res, 400, { error: result.error });
+    }
+
+    console.log(`[akun] password direset oleh ${user.username}: ${target}`);
+
+    json(res, 200, { ok: true });
+
+}
+
+
+/* =====================================================
+   MENU
+   Semua user boleh membaca; hanya superadmin mengubah.
+   ===================================================== */
+
+function handleMenuList(req, res){
+
+    json(res, 200, menu.list());
+
+}
+
+
+async function handleMenuCreate(req, res, user){
+
+    const result = menu.create(await readJson(req));
+
+    if(!result.ok){
+        return json(res, 400, { error: result.error });
+    }
+
+    console.log(`[menu] ditambah oleh ${user.username}: ${result.menu.nama}`);
+
+    json(res, 201, result.menu);
+
+}
+
+
+async function handleMenuUpdate(req, res, user, id){
+
+    const result = menu.update(id, await readJson(req));
+
+    if(!result.ok){
+        return json(res, 400, { error: result.error });
+    }
+
+    json(res, 200, result.menu);
+
+}
+
+
+function handleMenuDelete(req, res, user, id){
+
+    const result = menu.remove(id);
+
+    if(!result.ok){
+        return json(res, 404, { error: result.error });
+    }
+
+    /* Foto ikut dibuang; abaikan kalau memang tidak ada. */
+    fs.promises.unlink(path.join(PRODUCT_DIR, id + ".jpg")).catch(() => {});
+
+    console.log(`[menu] dihapus oleh ${user.username}: ${id}`);
+
+    json(res, 200, { ok: true });
+
+}
+
+
+/*
+ * Upload foto produk. Browser sudah mengompres jadi JPEG
+ * kecil; server cuma validasi ulang lalu simpan.
+ *
+ * Nama file SELALU "<id>.jpg" dengan id produk yang
+ * sudah ada di menus.json — tidak pernah nama dari klien —
+ * jadi tidak ada celah path traversal.
+ */
+
+const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
+
+
+async function handleMenuImage(req, res, user, id){
+
+    if(!menu.find(id)){
+        return json(res, 404, { error: "Produk tidak ditemukan." });
+    }
+
+    if(!String(req.headers["content-type"] || "").startsWith("image/jpeg")){
+        return json(res, 400, { error: "Format harus JPEG." });
+    }
+
+    const body = await readBody(req, MAX_IMAGE_BYTES);
+
+    /* Cek magic bytes JPEG (FF D8 FF), jangan percaya header saja. */
+    if(body.length < 3 || body[0] !== 0xFF || body[1] !== 0xD8 || body[2] !== 0xFF){
+        return json(res, 400, { error: "Isi file bukan JPEG yang valid." });
+    }
+
+    await fs.promises.writeFile(path.join(PRODUCT_DIR, id + ".jpg"), body);
+
+    /* ?v= supaya browser tidak menampilkan foto lama dari cache. */
+    const result = menu.update(id, {
+        gambar: `/uploads/products/${id}.jpg?v=${Date.now()}`
+    });
+
+    json(res, 200, result.menu);
+
+}
+
+
+/* =====================================================
+   PROXY APPS SCRIPT
+   ===================================================== */
+
+let reportCache = null;
+
+
+async function handleSubmit(req, res){
+
+    const body = await readBody(req);
+
+    /* Apps Script membalas 302 ke googleusercontent, fetch mengikutinya. */
+    const upstream = await fetch(SUBMIT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body,
+        redirect: "follow"
+    });
+
+    if(upstream.ok){
+        /* Ada transaksi baru: laporan berikutnya harus ambil ulang. */
+        reportCache = null;
+    }else{
+        console.error("[submit] gagal:", upstream.status);
+    }
+
+    json(res, upstream.ok ? 200 : 502, { ok: upstream.ok });
+
+}
+
+
+async function handleReport(req, res){
+
+    const fresh =
+        reportCache &&
+        Date.now() - reportCache.at < REPORT_CACHE_MS &&
+        req.query.get("refresh") !== "1";
+
+    if(!fresh){
+
+        const upstream = await fetch(REPORT_URL, { redirect: "follow" });
+
+        if(!upstream.ok){
+            return json(res, 502, { error: "Gagal mengambil data dari Google Sheets." });
+        }
+
+        reportCache = { at: Date.now(), text: await upstream.text() };
+
+    }
+
+    res.writeHead(200, {
+        ...BASE_HEADERS,
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store"
+    });
+
+    res.end(reportCache.text);
+
+}
+
+
+/* =====================================================
+   FILE STATIS
+   ===================================================== */
+
+async function serveStatic(req, res, pathname){
+
+    const isUpload = pathname.startsWith("/uploads/");
+    const root     = isUpload ? UPLOADS_DIR : PUBLIC_DIR;
+    const rel      = isUpload ? pathname.slice("/uploads".length) : pathname;
+    const file     = path.join(root, rel === "/" ? "/index.html" : rel);
+
+    const notFound = () => {
+        res.writeHead(404, { ...BASE_HEADERS, "Content-Type": "text/plain; charset=utf-8" });
+        res.end("Not found");
+    };
+
+    /* Cegah keluar dari folder yang dilayani. */
+    if(!file.startsWith(root + path.sep) || path.basename(file).startsWith(".")){
+        return notFound();
+    }
+
+    let stat;
+
+    try{
+        stat = await fs.promises.stat(file);
+    }catch(error){
+        return notFound();
+    }
+
+    if(!stat.isFile()){
+        return notFound();
+    }
+
+    const ext  = path.extname(file).toLowerCase();
+    const etag = `"${stat.size.toString(36)}-${stat.mtimeMs.toString(36)}"`;
+
+    /*
+     * HTML/CSS/JS: selalu cek ulang (ETag -> 304 murah),
+     * supaya deploy baru langsung terpakai.
+     * Gambar jarang berubah; upload sudah diberi ?v=.
+     */
+    const cacheControl =
+        ext === ".jpg" || ext === ".jpeg" || ext === ".png" || ext === ".webp"
+            ? "public, max-age=86400"
+            : "no-cache";
+
+    const headers = {
+        ...BASE_HEADERS,
+        "Content-Type": MIME[ext] || "application/octet-stream",
+        "Cache-Control": cacheControl,
+        "ETag": etag
+    };
+
+    if(req.headers["if-none-match"] === etag){
+        res.writeHead(304, headers);
+        return res.end();
+    }
+
+    res.writeHead(200, { ...headers, "Content-Length": stat.size });
+
+    if(req.method === "HEAD"){
+        return res.end();
+    }
+
+    fs.createReadStream(file).on("error", () => res.destroy()).pipe(res);
+
+}
+
+
+/* =====================================================
+   ROUTER
+   -----------------------------------------------------
+   [method, pola, handler, akses]
+   akses: "public" | "user" | "superadmin"
+   Grup dari pola (mis. :id) dioper sebagai argumen
+   setelah (req, res, user).
+   ===================================================== */
+
+const ROUTES = [
+    ["POST",   /^\/api\/login$/,                         handleLogin,              "public"],
+    ["POST",   /^\/api\/logout$/,                        handleLogout,             "public"],
+    ["GET",    /^\/api\/me$/,                            handleMe,                 "user"],
+    ["POST",   /^\/api\/submit$/,                        handleSubmit,             "user"],
+    ["GET",    /^\/api\/menu$/,                          handleMenuList,           "user"],
+    ["POST",   /^\/api\/menu$/,                          handleMenuCreate,         "superadmin"],
+    ["PUT",    /^\/api\/menu\/([\w-]{6,80})$/,           handleMenuUpdate,         "superadmin"],
+    ["DELETE", /^\/api\/menu\/([\w-]{6,80})$/,           handleMenuDelete,         "superadmin"],
+    ["POST",   /^\/api\/menu\/([\w-]{6,80})\/image$/,    handleMenuImage,          "superadmin"],
+    ["GET",    /^\/api\/report$/,                        handleReport,             "superadmin"],
+    ["GET",    /^\/api\/users$/,                         handleUsersList,          "superadmin"],
+    ["POST",   /^\/api\/users$/,                         handleUsersCreate,        "superadmin"],
+    ["DELETE", /^\/api\/users\/([^/]+)$/,                handleUsersDelete,        "superadmin"],
+    ["POST",   /^\/api\/users\/([^/]+)\/reset-password$/, handleUsersResetPassword, "superadmin"]
+];
+
+
+function isPublicFile(pathname){
+
+    /*
+     * Halaman login butuh CSS/ikon sebelum masuk. Foto
+     * produk & aset tidak sensitif; halaman yang
+     * menampilkannya tetap wajib login.
+     */
+    return (
+        pathname === "/login.html" ||
+        pathname.startsWith("/assets/") ||
+        pathname.startsWith("/images/") ||
+        pathname.startsWith("/uploads/")
+    );
+
+}
+
+
+async function route(req, res){
+
+    const url = new URL(req.url, "http://localhost");
+
+    let pathname;
+
+    try{
+        pathname = decodeURIComponent(url.pathname);
+    }catch(error){
+        return json(res, 400, { error: "URL tidak valid." });
+    }
+
+
+    /* --- API --- */
+
+    if(pathname.startsWith("/api/")){
+
+        const candidates = ROUTES.filter(r => r[1].test(pathname));
+
+        if(candidates.length === 0){
+            return json(res, 404, { error: "Not found" });
+        }
+
+        const match = candidates.find(r => r[0] === req.method);
+
+        if(!match){
+            return json(res, 405, { error: "Method not allowed" });
+        }
+
+        const [, pattern, handler, access] = match;
+        const params = pathname.match(pattern).slice(1);
+
+        let user = null;
+
+        if(access !== "public"){
+
+            user = currentUser(req);
+
+            if(!user){
+                return json(res, 401, { error: "Sesi habis. Masuk ulang.", login: "/login.html" });
+            }
+
+            if(access === "superadmin" && user.role !== "superadmin"){
+                return json(res, 403, { error: "Akses ditolak." });
+            }
+
+        }
+
+        req.query = url.searchParams;
+
+        return handler(req, res, user, ...params);
+
+    }
+
+
+    /* --- file --- */
+
+    if(req.method !== "GET" && req.method !== "HEAD"){
+        res.writeHead(405, BASE_HEADERS);
+        return res.end();
+    }
+
+    if(isPublicFile(pathname)){
+        return serveStatic(req, res, pathname);
+    }
+
+    const user = currentUser(req);
+
+    if(!user){
+
+        res.writeHead(302, {
+            ...BASE_HEADERS,
+            "Location": "/login.html?next=" + encodeURIComponent(pathname + url.search),
+            "Cache-Control": "no-store"
+        });
+
+        return res.end();
+
+    }
+
+    /* Laporan sekarang satu halaman dengan kasir. */
+    if(pathname === "/report.html"){
+        res.writeHead(302, { ...BASE_HEADERS, "Location": "/#laporan" });
+        return res.end();
+    }
+
+    serveStatic(req, res, pathname);
+
+}
+
+
+const server = http.createServer(async (req, res) => {
+
+    try{
+
+        await route(req, res);
+
+    }catch(error){
+
+        const status = error.status || 500;
+
+        if(status === 500){
+            console.error("Error:", error);
+        }
+
+        if(!res.headersSent){
+            json(res, status, { error: status === 500 ? "Server error" : error.message });
+        }else{
+            res.end();
+        }
+
+    }
+
+});
+
+
+server.on("error", error => {
+
+    if(error.code === "EADDRINUSE"){
+        console.error(
+            `\nPort ${PORT} sudah dipakai — kemungkinan server ini masih jalan di terminal lain.\n` +
+            `  Hentikan yang lama (Ctrl+C), atau: kill $(lsof -t -i :${PORT})\n` +
+            `  Atau ganti PORT di .env.\n`
+        );
+        process.exit(1);
+    }
+
+    throw error;
+
+});
+
+
+server.listen(PORT, () => {
+
+    console.log(
+        `Broodle jalan di http://localhost:${PORT}\n` +
+        `  sesi: ${SESSION_HOURS} jam` +
+        (SECURE_COOKIE ? " | cookie Secure aktif" : "") +
+        (TRUST_PROXY ? " | trust proxy" : "")
+    );
+
+});

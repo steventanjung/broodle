@@ -1,0 +1,591 @@
+/* =====================================================
+   ADMIN: KELOLA MENU & KELOLA AKUN (superadmin)
+   Tombol & tab disembunyikan untuk kasir hanya demi
+   kerapian — penjaga aksesnya tetap server.js.
+   ===================================================== */
+
+(() => {
+
+    const { $, $$, icon, escapeHtml, rupiah, parseNumber, numberFmt, api, toast, busy } = App;
+
+
+    /* =================================================
+       KELOLA MENU
+       ================================================= */
+
+    let menuQuery = "";
+    let menuCategory = "";
+
+
+    function renderMenuAdmin(){
+
+        const menus = App.menus;
+        const cats = App.categories();
+
+        $("#menuSummary").textContent =
+            `${menus.length} produk · ${cats.length} kategori · tampil di semua perangkat kasir`;
+
+        /* Filter kategori: pertahankan pilihan kalau masih ada. */
+        if(menuCategory && !cats.includes(menuCategory)){
+            menuCategory = "";
+        }
+
+        $("#menuCategoryFilter").innerHTML =
+            `<option value="">Semua kategori</option>` +
+            cats.map(c => `<option ${c === menuCategory ? "selected" : ""}>${escapeHtml(c)}</option>`).join("");
+
+        $("#categoryOptions").innerHTML =
+            cats.map(c => `<option value="${escapeHtml(c)}">`).join("");
+
+        const q = menuQuery.trim().toLowerCase();
+
+        const list = menus.filter(m =>
+            (!menuCategory || m.kategori === menuCategory) &&
+            (!q || m.nama.toLowerCase().includes(q)));
+
+        if(list.length === 0){
+
+            $("#menuRows").innerHTML = `<div class="empty">${icon(menus.length ? "search" : "package")}
+                ${menus.length ? "Tidak ada produk yang cocok." : "Belum ada produk. Tambah produk pertama."}</div>`;
+
+            return;
+
+        }
+
+        /* Kelompokkan per kategori, urutan sesuai menu. */
+        const groups = new Map();
+
+        list.forEach(m => {
+            const key = m.kategori || "Lainnya";
+            if(!groups.has(key)){
+                groups.set(key, []);
+            }
+            groups.get(key).push(m);
+        });
+
+        let html = "";
+
+        groups.forEach((items, cat) => {
+
+            html += `<div class="group-label">${escapeHtml(cat)} <span class="muted">· ${items.length}</span></div>`;
+
+            html += items.map(m => `
+                <div class="row" data-id="${escapeHtml(m.id)}">
+                    <div class="thumb">${m.gambar
+                        ? `<img src="${escapeHtml(m.gambar)}" alt="" loading="lazy" data-fallback="cookie">`
+                        : icon("cookie")}</div>
+                    <div class="row-main">
+                        <span class="row-title">${escapeHtml(m.nama)}</span>
+                        ${m.hargaKustom ? `<span class="row-sub">${icon("tag", "i-sm")} Harga custom, diisi kasir tiap jual</span>` : ""}
+                    </div>
+                    <span class="row-price num">${m.hargaKustom
+                        ? (m.harga ? `<span class="muted small">saran</span> ${rupiah(m.harga)}` : `<span class="muted">—</span>`)
+                        : rupiah(m.harga)}</span>
+                    <div class="row-end">
+                        <button type="button" class="btn btn-ghost btn-icon star-toggle" data-action="star"
+                            aria-pressed="${m.unggulan}" title="${m.unggulan ? "Hapus dari Best Seller" : "Jadikan Best Seller"}">
+                            ${icon("star")}
+                        </button>
+                        <button type="button" class="btn btn-ghost btn-icon" data-action="edit" title="Ubah">${icon("pencil")}</button>
+                    </div>
+                </div>
+            `).join("");
+
+        });
+
+        $("#menuRows").innerHTML = html;
+
+    }
+
+
+    function replaceMenu(updated){
+
+        const list = App.menus.slice();
+        const index = list.findIndex(m => m.id === updated.id);
+
+        if(index < 0){
+            list.push(updated);
+        }else{
+            list[index] = updated;
+        }
+
+        App.setMenus(list);
+
+    }
+
+
+    async function toggleStar(id, button){
+
+        const menu = App.menus.find(m => m.id === id);
+
+        button.disabled = true;
+
+        try{
+            const updated = await api("/api/menu/" + id, { method: "PUT", body: { unggulan: !menu.unggulan } });
+            replaceMenu(updated);
+            toast(updated.unggulan ? `${updated.nama} jadi Best Seller` : `${updated.nama} bukan Best Seller lagi`);
+        }catch(error){
+            toast(error.message, "error");
+            button.disabled = false;
+        }
+
+    }
+
+
+    /* --- dialog produk --- */
+
+    let editingId = null;
+    let pickedPhoto = null;
+    let removePhoto = false;
+
+    function setPhotoPreview(src){
+
+        $("#photoPreview").innerHTML = src ? `<img src="${escapeHtml(src)}" alt="">` : icon("image", "i-lg");
+        $("#photoRemove").hidden = !src;
+
+    }
+
+
+    function openProductDialog(id){
+
+        const menu = id ? App.menus.find(m => m.id === id) : null;
+
+        editingId = menu ? menu.id : null;
+        pickedPhoto = null;
+        removePhoto = false;
+
+        const form = $("#productForm");
+        form.reset();
+
+        $("#productDialog h2").textContent = menu ? "Ubah produk" : "Tambah produk";
+        $("#productDelete").hidden = !menu;
+
+        form.nama.value = menu?.nama || "";
+        form.harga.value = menu?.harga ? numberFmt.format(menu.harga) : "";
+        form.kategori.value = menu?.kategori || menuCategory || "";
+        form.unggulan.checked = !!menu?.unggulan;
+        form.hargaKustom.checked = !!menu?.hargaKustom;
+
+        setPhotoPreview(menu?.gambar || null);
+        syncPriceHint();
+
+        $("#productDialog").showModal();
+        form.nama.focus();
+
+    }
+
+
+    function syncPriceHint(){
+
+        const custom = $("#productForm").hargaKustom.checked;
+
+        $("#priceLabel").textContent = custom ? "Harga saran (opsional)" : "Harga";
+        $("#priceHint").hidden = !custom;
+
+    }
+
+
+    async function saveProduct(event){
+
+        event.preventDefault();
+
+        const form = event.target;
+
+        const body = {
+            nama: form.nama.value.trim(),
+            harga: parseNumber(form.harga.value),
+            kategori: form.kategori.value.trim(),
+            unggulan: form.unggulan.checked,
+            hargaKustom: form.hargaKustom.checked
+        };
+
+        if(removePhoto){
+            body.gambar = null;
+        }
+
+        await busy($("#productSave"), "Menyimpan...", async () => {
+
+            try{
+
+                let menu = editingId
+                    ? await api("/api/menu/" + editingId, { method: "PUT", body })
+                    : await api("/api/menu", { method: "POST", body });
+
+                replaceMenu(menu);
+
+                if(pickedPhoto){
+
+                    try{
+                        const blob = await compressImage(pickedPhoto, 800, 0.72);
+                        menu = await api(`/api/menu/${menu.id}/image`, {
+                            method: "POST", body: blob, headers: { "Content-Type": "image/jpeg" }
+                        });
+                        replaceMenu(menu);
+                    }catch(error){
+                        toast("Produk tersimpan, tapi foto gagal diupload: " + error.message, "error");
+                        $("#productDialog").close();
+                        return;
+                    }
+
+                }
+
+                $("#productDialog").close();
+                toast(editingId ? "Perubahan disimpan" : `${menu.nama} ditambahkan`);
+
+            }catch(error){
+
+                toast(error.message, "error");
+
+            }
+
+        });
+
+    }
+
+
+    async function deleteProduct(){
+
+        const menu = App.menus.find(m => m.id === editingId);
+
+        if(!menu){
+            return;
+        }
+
+        $("#productDialog").close();
+
+        const ok = await App.confirmDialog({
+            title: `Hapus ${menu.nama}?`,
+            message: "Produk hilang dari semua perangkat kasir. Riwayat penjualan di laporan tidak terpengaruh.",
+            confirmText: "Hapus produk",
+            danger: true
+        });
+
+        if(!ok){
+            return;
+        }
+
+        try{
+            await api("/api/menu/" + menu.id, { method: "DELETE" });
+            App.setMenus(App.menus.filter(m => m.id !== menu.id));
+            toast(`${menu.nama} dihapus`);
+        }catch(error){
+            toast(error.message, "error");
+        }
+
+    }
+
+
+    /*
+     * Kompres foto di browser sebelum upload: foto HP
+     * 4-8 MB jadi JPEG maks 800px, biasanya < 200 KB.
+     */
+    function compressImage(file, maxDimension, quality){
+
+        return new Promise((resolve, reject) => {
+
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+
+            img.onload = () => {
+
+                URL.revokeObjectURL(url);
+
+                const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
+                const canvas = document.createElement("canvas");
+
+                canvas.width = Math.round(img.width * scale);
+                canvas.height = Math.round(img.height * scale);
+                canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                canvas.toBlob(
+                    blob => blob ? resolve(blob) : reject(new Error("Gagal mengompres gambar.")),
+                    "image/jpeg",
+                    quality
+                );
+
+            };
+
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                reject(new Error("File bukan gambar yang valid."));
+            };
+
+            img.src = url;
+
+        });
+
+    }
+
+
+    function bindMenu(){
+
+        $("#addProduct").addEventListener("click", () => openProductDialog(null));
+
+        $("#menuSearch").addEventListener("input", e => {
+            menuQuery = e.target.value;
+            renderMenuAdmin();
+        });
+
+        $("#menuCategoryFilter").addEventListener("change", e => {
+            menuCategory = e.target.value;
+            renderMenuAdmin();
+        });
+
+        $("#menuRows").addEventListener("click", e => {
+
+            const row = e.target.closest(".row");
+
+            if(!row){
+                return;
+            }
+
+            const star = e.target.closest("[data-action=star]");
+
+            if(star){
+                return toggleStar(row.dataset.id, star);
+            }
+
+            openProductDialog(row.dataset.id);
+
+        });
+
+        const form = $("#productForm");
+
+        form.addEventListener("submit", saveProduct);
+        form.hargaKustom.addEventListener("change", syncPriceHint);
+
+        form.harga.addEventListener("input", e => {
+            const n = parseNumber(e.target.value);
+            e.target.value = n ? numberFmt.format(n) : "";
+        });
+
+        $("#photoPick").addEventListener("click", () => $("#photoInput").click());
+
+        $("#photoInput").addEventListener("change", e => {
+
+            const file = e.target.files[0];
+
+            if(file){
+                pickedPhoto = file;
+                removePhoto = false;
+                setPhotoPreview(URL.createObjectURL(file));
+            }
+
+            e.target.value = "";
+
+        });
+
+        $("#photoRemove").addEventListener("click", () => {
+            pickedPhoto = null;
+            removePhoto = true;
+            setPhotoPreview(null);
+        });
+
+        $("#productDelete").addEventListener("click", deleteProduct);
+
+    }
+
+
+    /* =================================================
+       KELOLA AKUN
+       Akun superadmin baru hanya lewat CLI di server,
+       supaya satu sesi browser yang disalahgunakan
+       tidak bisa mencetak superadmin sendiri.
+       ================================================= */
+
+    const dateFmt = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" });
+
+
+    async function loadAccounts(){
+
+        $("#accountRows").innerHTML = `<div class="panel-body"><div class="skeleton"></div></div>`;
+
+        try{
+
+            const { users } = await api("/api/users");
+
+            renderAccounts(users);
+
+        }catch(error){
+
+            $("#accountRows").innerHTML = `<div class="empty">${icon("alert")}${escapeHtml(error.message)}</div>`;
+
+        }
+
+    }
+
+
+    function renderAccounts(users){
+
+        const me = App.session.username.toLowerCase();
+
+        /* Superadmin dulu, lalu kasir; masing-masing urut nama. */
+        users.sort((a, b) =>
+            (a.role === b.role ? 0 : a.role === "superadmin" ? -1 : 1) ||
+            a.username.localeCompare(b.username));
+
+        $("#accountSummary").textContent =
+            `${users.filter(u => u.role === "kasir").length} kasir · ${users.filter(u => u.role === "superadmin").length} superadmin`;
+
+        $("#accountRows").innerHTML = users.map(u => {
+
+            const self = u.username.toLowerCase() === me;
+            const name = escapeHtml(u.username);
+
+            return `
+                <div class="row" data-username="${name}">
+                    <div class="avatar">${escapeHtml(u.username[0])}</div>
+                    <div class="row-main">
+                        <span class="row-title">${name}${self ? ` <span class="badge">Anda</span>` : ""}</span>
+                        <span class="row-sub">
+                            ${u.role === "superadmin" ? `${icon("shield", "i-sm")} Superadmin` : "Kasir"}
+                            ${u.createdAt ? ` · dibuat ${dateFmt.format(new Date(u.createdAt))}` : ""}
+                        </span>
+                    </div>
+                    <div class="row-end">
+                        <button type="button" class="btn btn-sm" data-action="password">${icon("key", "i-sm")}<span class="hide-sm">Ganti password</span></button>
+                        ${self ? "" : `<button type="button" class="btn btn-sm btn-danger btn-icon" data-action="delete" title="Hapus akun">${icon("trash", "i-sm")}</button>`}
+                    </div>
+                </div>
+            `;
+
+        }).join("");
+
+    }
+
+
+    async function createAccount(event){
+
+        event.preventDefault();
+
+        const form = event.target;
+        const username = form.username.value.trim();
+
+        await busy($("#accountSave"), "Membuat...", async () => {
+
+            try{
+                await api("/api/users", { method: "POST", body: { username, password: form.password.value } });
+                $("#accountDialog").close();
+                toast(`Akun kasir ${username} dibuat`);
+                loadAccounts();
+            }catch(error){
+                toast(error.message, "error");
+            }
+
+        });
+
+    }
+
+
+    let passwordTarget = null;
+
+    async function resetPassword(event){
+
+        event.preventDefault();
+
+        const form = event.target;
+
+        if(form.password.value !== form.confirm.value){
+            return toast("Konfirmasi password tidak sama.", "error");
+        }
+
+        await busy($("#passwordSave"), "Menyimpan...", async () => {
+
+            try{
+                await api(`/api/users/${encodeURIComponent(passwordTarget)}/reset-password`, {
+                    method: "POST", body: { password: form.password.value }
+                });
+                $("#passwordDialog").close();
+                toast(`Password ${passwordTarget} diganti`);
+            }catch(error){
+                toast(error.message, "error");
+            }
+
+        });
+
+    }
+
+
+    async function deleteAccount(username){
+
+        const ok = await App.confirmDialog({
+            title: `Hapus akun ${username}?`,
+            message: "Akun ini tidak bisa login lagi. Tindakan ini tidak bisa dibatalkan.",
+            confirmText: "Hapus akun",
+            danger: true
+        });
+
+        if(!ok){
+            return;
+        }
+
+        try{
+            await api("/api/users/" + encodeURIComponent(username), { method: "DELETE" });
+            toast(`Akun ${username} dihapus`);
+            loadAccounts();
+        }catch(error){
+            toast(error.message, "error");
+        }
+
+    }
+
+
+    function bindAccounts(){
+
+        $("#addAccount").addEventListener("click", () => {
+            $("#accountForm").reset();
+            $("#accountDialog").showModal();
+        });
+
+        $("#accountForm").addEventListener("submit", createAccount);
+        $("#passwordForm").addEventListener("submit", resetPassword);
+
+        $("#accountRows").addEventListener("click", e => {
+
+            const btn = e.target.closest("[data-action]");
+
+            if(!btn){
+                return;
+            }
+
+            const username = btn.closest(".row").dataset.username;
+
+            if(btn.dataset.action === "delete"){
+                return deleteAccount(username);
+            }
+
+            passwordTarget = username;
+            $("#passwordForm").reset();
+            $("#passwordDialog h2").textContent = "Ganti password " + username;
+            $("#passwordDialog").showModal();
+
+        });
+
+    }
+
+
+    /* =================================================
+       MULAI
+       ================================================= */
+
+    App.registerView("menu", { adminOnly: true, onShow: renderMenuAdmin });
+    App.registerView("akun", { adminOnly: true, onShow: loadAccounts });
+
+    App.on("ready", () => {
+
+        if(!App.isSuperadmin()){
+            return;
+        }
+
+        bindMenu();
+        bindAccounts();
+
+        App.on("menus", () => {
+            if($("#view-menu").classList.contains("active")){
+                renderMenuAdmin();
+            }
+        });
+
+    });
+
+})();

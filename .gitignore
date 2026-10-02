@@ -1,0 +1,15 @@
+# Rahasia — jangan pernah di-commit
+.env
+.env.local
+
+# Data runtime: hash password akun & menu.
+# Backup terpisah dari git.
+data/
+
+# Foto produk yang diupload lewat Kelola Menu —
+# data runtime di VPS, backup terpisah dari git.
+uploads/
+
+node_modules/
+*.log
+.DS_Store

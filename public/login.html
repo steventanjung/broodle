@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Masuk — Kukikoe</title>
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+
+<body>
+
+<main class="login">
+
+    <form id="loginForm" class="panel login-card">
+
+        <div>
+            <h1>Kukikoe</h1>
+            <p class="muted">Masuk untuk mulai berjualan</p>
+        </div>
+
+        <div id="errorBox" class="error" role="alert" hidden></div>
+
+        <div class="field">
+            <label class="label" for="username">Username</label>
+            <div class="input-group">
+                <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#user"/></svg>
+                <input id="username" class="input" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
+            </div>
+        </div>
+
+        <div class="field">
+            <label class="label" for="password">Password</label>
+            <div class="input-group">
+                <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#lock"/></svg>
+                <input id="password" class="input" type="password" autocomplete="current-password" required>
+            </div>
+        </div>
+
+        <button id="submitButton" class="btn btn-primary btn-lg btn-block" type="submit">Masuk</button>
+
+    </form>
+
+</main>
+
+<script>
+
+const form = document.getElementById("loginForm");
+const errorBox = document.getElementById("errorBox");
+const button = document.getElementById("submitButton");
+
+form.addEventListener("submit", async event => {
+
+    event.preventDefault();
+
+    errorBox.hidden = true;
+    button.disabled = true;
+    button.textContent = "Memeriksa...";
+
+    try{
+
+        const response = await fetch("/api/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                username: form.username.value,
+                password: form.password.value
+            })
+        });
+
+        const result = await response.json().catch(() => ({}));
+
+        if(!response.ok){
+            throw new Error(result.error || "Gagal masuk.");
+        }
+
+        localStorage.setItem("session", JSON.stringify(result));
+
+        /* Hanya path lokal, supaya ?next= tidak bisa dipakai redirect ke situs lain. */
+        const next = new URLSearchParams(location.search).get("next");
+
+        location.replace(next && next.startsWith("/") && !next.startsWith("//") ? next : "/");
+
+    }catch(error){
+
+        errorBox.textContent = error.message === "Failed to fetch" ? "Tidak bisa menghubungi server." : error.message;
+        errorBox.hidden = false;
+        form.password.value = "";
+        form.password.focus();
+
+    }finally{
+
+        button.disabled = false;
+        button.textContent = "Masuk";
+
+    }
+
+});
+
+</script>
+
+</body>
+</html>

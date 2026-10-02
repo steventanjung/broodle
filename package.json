@@ -1,0 +1,13 @@
+{
+  "name": "broodle",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kasir Broodle — static app + proxy Apps Script",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20.12"
+  }
+}
