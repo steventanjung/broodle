@@ -59,11 +59,25 @@ const App = (() => {
 
         const isJson = body !== undefined && !(body instanceof Blob);
 
-        const response = await fetch(path, {
-            method,
-            headers: isJson ? { "Content-Type": "application/json", ...headers } : headers,
-            body: isJson ? JSON.stringify(body) : body
-        });
+        let response;
+
+        try{
+
+            response = await fetch(path, {
+                method,
+                headers: isJson ? { "Content-Type": "application/json", ...headers } : headers,
+                body: isJson ? JSON.stringify(body) : body
+            });
+
+        }catch(error){
+
+            /* Browser melempar "Failed to fetch" (Inggris, teknis) saat offline / server mati. */
+            throw Object.assign(
+                new Error("Tidak bisa terhubung ke server. Periksa koneksi internet lalu coba lagi."),
+                { network: true }
+            );
+
+        }
 
         if(response.status === 401 && !keepOn401){
             goToLogin();
@@ -144,6 +158,10 @@ const App = (() => {
 
     try{ menus = JSON.parse(localStorage.getItem("menuCache")) || []; }catch(e){}
 
+    /* "loading" hanya kalau belum ada salinan lokal sama sekali. */
+    let menuStatus = menus.length ? "ready" : "loading";
+    let lastMenuFetch = 0;
+
     function setMenus(list){
         menus = list;
         localStorage.setItem("menuCache", JSON.stringify(list));
@@ -152,15 +170,66 @@ const App = (() => {
 
     async function refreshMenus(){
 
-        try{
-            const data = await api("/api/menu");
-            setMenus(data.menus);
-        }catch(error){
-            /* Offline: tetap pakai salinan terakhir. */
-            if(menus.length === 0){
-                toast("Menu belum bisa dimuat. Periksa koneksi.", "error");
-            }
+        lastMenuFetch = Date.now();
+
+        const hadNothing = menuStatus !== "ready";
+
+        if(hadNothing){
+            menuStatus = "loading";
+            emit("menus", menus);
         }
+
+        try{
+
+            const data = await api("/api/menu");
+
+            menuStatus = "ready";
+
+            /* Tidak ada yang berubah: jangan render ulang (kartu tidak berkedip). */
+            if(hadNothing || JSON.stringify(data.menus) !== JSON.stringify(menus)){
+                setMenus(data.menus);
+            }
+
+        }catch(error){
+
+            /* Offline: tetap pakai salinan terakhir. Tanpa salinan: tampilkan galat + tombol coba lagi. */
+            if(menus.length === 0){
+                menuStatus = "error";
+                emit("menus", menus);
+            }
+
+        }
+
+    }
+
+    /*
+     * Kasir membuka aplikasi seharian: harga yang diubah admin
+     * harus sampai tanpa reload manual. Muat ulang menu saat tab
+     * kembali aktif, saat internet kembali, dan berkala.
+     */
+    function keepMenusFresh(){
+
+        const stale = ms => Date.now() - lastMenuFetch > ms;
+
+        document.addEventListener("visibilitychange", () => {
+            if(document.visibilityState === "visible" && stale(20000)){
+                refreshMenus();
+            }
+        });
+
+        window.addEventListener("online", () => refreshMenus());
+
+        setInterval(() => {
+            if(document.visibilityState === "visible" && navigator.onLine && stale(110000)){
+                refreshMenus();
+            }
+        }, 120000);
+
+        document.addEventListener("click", e => {
+            if(e.target.closest("[data-retry-menu]")){
+                refreshMenus();
+            }
+        });
 
     }
 
@@ -193,6 +262,12 @@ const App = (() => {
         const first = currentView !== name;
         currentView = name;
 
+        if(first){
+            const label = $(`.tab[data-view="${name}"]`)?.textContent.trim();
+            document.title = (label ? label + " — " : "") + STORE.name;
+            window.scrollTo(0, 0);
+        }
+
         views[name].onShow?.(first);
 
     }
@@ -202,7 +277,7 @@ const App = (() => {
 
     /* --- toast --- */
 
-    function toast(message, type = "ok"){
+    function toast(message, type = "ok", ms){
 
         let host = $(".toasts");
 
@@ -220,7 +295,7 @@ const App = (() => {
 
         host.appendChild(el);
 
-        setTimeout(() => el.remove(), type === "error" ? 5000 : 2600);
+        setTimeout(() => el.remove(), ms || (type === "error" ? 5000 : 2600));
 
     }
 
@@ -274,7 +349,8 @@ const App = (() => {
 
     /* Klik backdrop menutup dialog. */
     document.addEventListener("pointerdown", e => {
-        if(e.target.tagName === "DIALOG"){
+        /* Dialog berisi isian (data-lock): tidak tertutup karena tersentuh di luar, supaya ketikan tidak hilang. */
+        if(e.target.tagName === "DIALOG" && !e.target.hasAttribute("data-lock")){
             e.target.close();
         }
     });
@@ -325,6 +401,8 @@ const App = (() => {
 
         showView(location.hash.slice(1) || "kasir");
 
+        keepMenusFresh();
+
         refreshMenus();
 
     }
@@ -335,7 +413,8 @@ const App = (() => {
         $, $$, isTouchDevice, icon, escapeHtml, rupiah, parseNumber, numberFmt,
         api, isSuperadmin, logout, get session(){ return session; },
         on, emit,
-        get menus(){ return menus; }, setMenus, refreshMenus, categories,
+        get menus(){ return menus; }, get menuStatus(){ return menuStatus; },
+        setMenus, refreshMenus, categories,
         registerView, showView,
         toast, confirmDialog, busy,
         start

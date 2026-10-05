@@ -675,6 +675,20 @@ th[aria-sort="ascending"], th[aria-sort="descending"]{ color:var(--text); }
     .pager{ justify-content:center; }
 }
 
+/* --- indikator memuat --- */
+
+.spinner{
+    display:inline-block; width:18px; height:18px; flex:none;
+    border:2.5px solid var(--border-strong); border-top-color:var(--accent);
+    border-radius:50%; animation:spin .7s linear infinite;
+}
+.loading-row{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    padding:6px 0 16px; color:var(--text-2); font-size:14px; font-weight:600;
+}
+.btn.is-loading .i{ animation:spin .8s linear infinite; }
+@keyframes spin{ to{ transform:rotate(360deg); } }
+
 .skeleton{ height:120px; border-radius:var(--radius); background:linear-gradient(90deg, var(--surface-2), #f7f6f3, var(--surface-2)); background-size:200% 100%; animation:shimmer 1.2s linear infinite; }
 @keyframes shimmer{ to{ background-position:-200% 0; } }
 
@@ -693,6 +707,24 @@ th[aria-sort="ascending"], th[aria-sort="descending"]{ color:var(--text); }
     background:var(--danger-soft); color:var(--danger); font-size:14px;
 }
 
+
+/* --- varian --- */
+
+.variant-rows{ padding:4px 18px 8px; max-height:60vh; overflow-y:auto; }
+.variant-row{
+    display:flex; align-items:center; gap:12px; padding:12px 0;
+    border-bottom:1px solid var(--border);
+}
+.variant-row:last-child{ border-bottom:0; }
+.variant-row.picked .variant-name{ color:var(--accent); }
+.variant-info{ flex:1; min-width:0; display:flex; flex-direction:column; }
+.variant-name{ font-weight:600; font-size:15px; }
+.variant-price{ font-size:13.5px; color:var(--text-2); }
+.variant-qty{ min-width:40px; text-align:center; font-weight:700; }
+
+.variant-edit{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+.variant-edit > .input{ flex:1 1 150px; min-width:0; }
+.variant-edit > .input-group{ flex:0 0 140px; }
 
 /* =====================================================
    SENTUH (tablet / HP)
@@ -773,4 +805,25 @@ img{ -webkit-user-drag:none; user-select:none; }
 
     /* Ikon info: area ketuk besar tapi ikonnya tetap kecil. */
     .info-btn{ width:44px; height:44px; margin:-14px -14px -14px 0; }
+}
+
+
+/* --- tampilkan password --- */
+
+.pw-wrap{ position:relative; }
+.input[data-pw]{ padding-right:48px; }
+.pw-toggle{
+    position:absolute; top:0; right:0; bottom:0; width:44px; padding:0;
+    display:flex; align-items:center; justify-content:center;
+    border:0; border-radius:0 var(--radius-sm) var(--radius-sm) 0; background:none; color:var(--muted);
+}
+.pw-toggle:hover{ color:var(--text); }
+.pw-toggle:focus-visible{ outline:2px solid var(--accent); outline-offset:-2px; }
+
+/* Pengguna yang mematikan animasi di sistem: tanpa transisi (spinner tetap berputar sebagai penanda). */
+@media (prefers-reduced-motion:reduce){
+    *, *::before, *::after{ transition-duration:.01ms !important; }
+    .toast{ animation:none; }
+    .order{ transition:none; }
+    html{ scroll-behavior:auto; }
 }

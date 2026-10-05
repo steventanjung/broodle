@@ -119,6 +119,17 @@
 
     }
 
+    /*
+     * Pesanan hanya ada di memori halaman. Reload / tutup tab yang
+     * tidak sengaja akan menghapusnya, jadi minta konfirmasi.
+     */
+    window.addEventListener("beforeunload", e => {
+        if(cart.size > 0 || awaitingReprint){
+            e.preventDefault();
+            e.returnValue = "";
+        }
+    });
+
     window.addEventListener("online", syncPending);
     window.addEventListener("offline", renderStatus);
 
@@ -207,6 +218,20 @@
 
         const active = renderCategories();
 
+        /* Belum ada salinan menu sama sekali (login pertama di perangkat ini). */
+        if(App.menus.length === 0 && App.menuStatus !== "ready"){
+
+            $("#productGrid").innerHTML = App.menuStatus === "error"
+                ? `<div class="empty" style="grid-column:1/-1">${icon("wifi-off")}
+                        Menu belum bisa dimuat. Periksa koneksi internet.
+                        <button type="button" class="btn btn-sm" data-retry-menu>${icon("refresh", "i-sm")}Coba lagi</button></div>`
+                : `<div class="loading-row" style="grid-column:1/-1"><span class="spinner" aria-hidden="true"></span>Memuat menu…</div>` +
+                  Array.from({ length: 8 }, () => `<div class="skeleton" style="height:210px"></div>`).join("");
+
+            return;
+
+        }
+
         const list = visibleMenus(active);
 
         if(list.length === 0){
@@ -228,7 +253,9 @@
                 <div class="product-info">
                     <span class="product-name">${escapeHtml(m.nama)}</span>
                     <span class="product-price num">
-                        ${m.hargaKustom ? icon("tag", "i-sm") + "Harga custom" : rupiah(m.harga)}
+                        ${usesVariants(m)
+                            ? icon("layers", "i-sm") + "Mulai " + rupiah(cheapest(m))
+                            : m.hargaKustom ? icon("tag", "i-sm") + "Harga custom" : rupiah(m.harga)}
                     </span>
                 </div>
             </button>
@@ -259,7 +286,7 @@
             badge.textContent = qty;
 
             /* Kurangi langsung dari kartu hanya untuk harga tetap. */
-            $(".product-minus", card).hidden = qty === 0 || !!menu?.hargaKustom;
+            $(".product-minus", card).hidden = qty === 0 || !!menu?.hargaKustom || usesVariants(menu);
 
         });
 
@@ -267,6 +294,11 @@
 
 
     const findMenu = id => App.menus.find(m => m.id === id);
+
+    /* Produk bervarian: ketuk membuka pilihan varian, harga ada di tiap varian. */
+    const usesVariants = m => !!m && !!m.adaVarian && Array.isArray(m.varian) && m.varian.length > 0;
+
+    const cheapest = m => Math.min(...m.varian.map(v => v.harga));
 
 
     /* =================================================
@@ -294,15 +326,27 @@
     }
 
 
-    function addLine(menu, harga, qty, custom){
+    function addLine(menu, harga, qty, custom, variant){
 
-        const key = custom ? `${menu.id}:${harga}` : menu.id;
+        /*
+         * Varian disalin ke baris (nama & harga saat dipilih),
+         * jadi pesanan berjalan tidak berubah kalau admin
+         * mengedit atau menghapus varian di tengah transaksi.
+         */
+        const key =
+            variant ? `${menu.id}:v:${variant.id}`
+            : custom ? `${menu.id}:${harga}`
+            : menu.id;
+
         const line = cart.get(key);
 
         if(line){
             line.qty += qty;
         }else{
-            cart.set(key, { key, menuId: menu.id, nama: menu.nama, harga, qty, custom });
+            cart.set(key, {
+                key, menuId: menu.id, nama: menu.nama, harga, qty, custom,
+                varian: variant ? variant.nama : null
+            });
         }
 
         cartChanged();
@@ -345,6 +389,10 @@
             return;
         }
 
+        if(usesVariants(menu)){
+            return openVariants(menu);
+        }
+
         if(menu.hargaKustom){
             return openCustomPrice(menu);
         }
@@ -369,6 +417,7 @@
 
     function cartChanged(){
 
+        renderVariantRows();
         renderLines();
         renderCardBadges();
         renderPayment();
@@ -393,7 +442,7 @@
 
         $("#orderLines").innerHTML = [...cart.values()].map(line => `
             <div class="line" data-key="${escapeHtml(line.key)}">
-                <span class="line-name">${escapeHtml(line.nama)}</span>
+                <span class="line-name">${escapeHtml(line.nama)}${line.varian ? ` <span class="badge">${escapeHtml(line.varian)}</span>` : ""}</span>
                 <span class="line-sub num">${rupiah(line.harga * line.qty)}</span>
                 <span class="line-meta num">
                     ${rupiah(line.harga)}
@@ -406,6 +455,92 @@
                 </div>
             </div>
         `).join("");
+
+    }
+
+
+    /* =================================================
+       VARIAN
+       Satu dialog untuk memilih beberapa varian sekaligus:
+       tiap varian punya tombol +/- sendiri, dialog tetap
+       terbuka sampai kasir menekan Selesai.
+       ================================================= */
+
+    let variantMenu = null;
+
+    const variantKey = (menu, variant) => `${menu.id}:v:${variant.id}`;
+
+
+    function openVariants(menu){
+
+        variantMenu = menu;
+
+        $("#variantDialog h2").textContent = menu.nama;
+
+        $("#variantDialog").showModal();
+
+        renderVariantRows();
+
+    }
+
+
+    function renderVariantRows(){
+
+        const dlg = $("#variantDialog");
+
+        if(!variantMenu || !dlg.open){
+            return;
+        }
+
+        let picked = 0;
+
+        $("#variantRows").innerHTML = variantMenu.varian.map(v => {
+
+            const qty = cart.get(variantKey(variantMenu, v))?.qty || 0;
+
+            picked += qty;
+
+            return `
+                <div class="variant-row ${qty ? "picked" : ""}" data-vid="${escapeHtml(v.id)}">
+                    <div class="variant-info">
+                        <span class="variant-name">${escapeHtml(v.nama)}</span>
+                        <span class="variant-price num">${rupiah(v.harga)}</span>
+                    </div>
+                    <div class="stepper">
+                        <button type="button" data-vstep="-1" aria-label="Kurangi ${escapeHtml(v.nama)}" ${qty ? "" : "disabled"}>${icon(qty === 1 ? "trash" : "minus", "i-sm")}</button>
+                        <span class="variant-qty num">${qty}</span>
+                        <button type="button" data-vstep="1" aria-label="Tambah ${escapeHtml(v.nama)}">${icon("plus", "i-sm")}</button>
+                    </div>
+                </div>`;
+
+        }).join("");
+
+        $("#variantSummary").textContent = picked ? picked + " dipilih" : "";
+
+    }
+
+
+    function stepVariant(variantId, delta){
+
+        if(!variantMenu || cartLocked()){
+            return;
+        }
+
+        const variant = variantMenu.varian.find(v => v.id === variantId);
+
+        if(!variant){
+            return;
+        }
+
+        if(delta > 0){
+            return addLine(variantMenu, variant.harga, 1, false, variant);
+        }
+
+        const line = cart.get(variantKey(variantMenu, variant));
+
+        if(line){
+            setQty(line.key, line.qty - 1);
+        }
 
     }
 
@@ -520,6 +655,8 @@
         }
 
         $("#reprintNotice").hidden = !awaitingReprint;
+
+        $("#clearCart").disabled = empty || processing;
         $("#skipPrint").hidden = !awaitingReprint;
 
     }
@@ -547,7 +684,7 @@
             change: payment === "cash" ? cash - total : 0,
             total,
             items: [...cart.values()].map(l => ({
-                nama: l.nama,
+                nama: l.varian ? `${l.nama} (${l.varian})` : l.nama,
                 qty: l.qty,
                 harga: l.harga,
                 subtotal: l.harga * l.qty
@@ -637,7 +774,12 @@
         cartChanged();
         closeOrderSheet();
 
-        toast(`Transaksi nota ${transaction.nota} selesai`);
+        /* Kembalian ditampilkan lebih lama: kasir butuh angkanya setelah nota keluar. */
+        if(transaction.pembayaran === "Cash" && transaction.change > 0){
+            toast(`Nota ${transaction.nota} selesai. Kembalian ${rupiah(transaction.change)}`, "ok", 7000);
+        }else{
+            toast(`Nota ${transaction.nota} selesai`);
+        }
 
     }
 
@@ -887,6 +1029,18 @@
 
         $("#cartBar").addEventListener("click", openOrderSheet);
         $("#closeOrder").addEventListener("click", closeOrderSheet);
+
+        $("#variantRows").addEventListener("click", e => {
+
+            const btn = e.target.closest("[data-vstep]");
+
+            if(btn && !btn.disabled){
+                stepVariant(btn.closest(".variant-row").dataset.vid, Number(btn.dataset.vstep));
+            }
+
+        });
+
+        $("#variantDialog").addEventListener("close", () => { variantMenu = null; });
 
         $("#customForm").addEventListener("submit", submitCustomPrice);
 

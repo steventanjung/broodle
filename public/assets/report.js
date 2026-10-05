@@ -728,13 +728,28 @@
 
     async function load(refresh){
 
+        const btn = $("#reportRefresh");
+        const label = $("span", btn);
+
         setState("loading");
+
+        /* Tombol menunjukkan sedang bekerja & tidak bisa ditekan dua kali. */
+        btn.disabled = true;
+        btn.classList.add("is-loading");
+        btn.setAttribute("aria-busy", "true");
+        label.textContent = "Memuat…";
 
         try{
             rows = await fetchRows(refresh);
+            $("#reportUpdated").textContent = "Diperbarui " + (d => `${pad(d.getHours())}:${pad(d.getMinutes())}`)(new Date());
             render();
         }catch(error){
             setState("error", error.message);
+        }finally{
+            btn.disabled = false;
+            btn.classList.remove("is-loading");
+            btn.removeAttribute("aria-busy");
+            label.textContent = "Muat ulang";
         }
 
     }

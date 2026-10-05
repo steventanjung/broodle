@@ -22,6 +22,20 @@
         const menus = App.menus;
         const cats = App.categories();
 
+        /* Daftar belum sampai: jangan tampilkan "belum ada produk" yang menyesatkan. */
+        if(menus.length === 0 && App.menuStatus !== "ready"){
+
+            $("#menuSummary").textContent = App.menuStatus === "error" ? "Menu belum bisa dimuat" : "Memuat menu…";
+
+            $("#menuRows").innerHTML = App.menuStatus === "error"
+                ? `<div class="empty">${icon("wifi-off")}Menu belum bisa dimuat. Periksa koneksi internet.
+                        <button type="button" class="btn btn-sm" data-retry-menu>${icon("refresh", "i-sm")}Coba lagi</button></div>`
+                : `<div class="panel-body"><div class="skeleton"></div></div>`;
+
+            return;
+
+        }
+
         $("#menuSummary").textContent =
             `${menus.length} produk · ${cats.length} kategori · tampil di semua perangkat kasir`;
 
@@ -77,8 +91,11 @@
                     <div class="row-main">
                         <span class="row-title">${escapeHtml(m.nama)}</span>
                         ${m.hargaKustom ? `<span class="row-sub">${icon("tag", "i-sm")} Harga custom, diisi kasir tiap jual</span>` : ""}
+                        ${hasVariants(m) ? `<span class="row-sub">${icon("layers", "i-sm")} ${m.varian.length} varian: ${escapeHtml(m.varian.slice(0, 3).map(v => v.nama).join(", "))}${m.varian.length > 3 ? ", …" : ""}</span>` : ""}
                     </div>
-                    <span class="row-price num">${m.hargaKustom
+                    <span class="row-price num">${hasVariants(m)
+                        ? `<span class="muted small">mulai</span> ${rupiah(m.harga)}`
+                        : m.hargaKustom
                         ? (m.harga ? `<span class="muted small">saran</span> ${rupiah(m.harga)}` : `<span class="muted">—</span>`)
                         : rupiah(m.harga)}</span>
                     <div class="row-end">
@@ -138,6 +155,31 @@
     let pickedPhoto = null;
     let removePhoto = false;
 
+    /* Salinan kerja daftar varian di dialog; baru dikirim ke server saat Simpan. */
+    let variantDraft = [];
+
+    const hasVariants = m => m.adaVarian && Array.isArray(m.varian) && m.varian.length > 0;
+
+    function renderVariantEditor(focusLast){
+
+        $("#variantList").innerHTML = variantDraft.map((v, i) => `
+            <div class="variant-edit" data-i="${i}">
+                <input class="input" data-f="nama" maxlength="40" placeholder="Nama varian, mis. Blueberry" value="${escapeHtml(v.nama)}" aria-label="Nama varian">
+                <div class="input-group">
+                    <span class="prefix">Rp</span>
+                    <input class="input num" data-f="harga" inputmode="numeric" placeholder="0" value="${v.harga ? numberFmt.format(v.harga) : ""}" aria-label="Harga varian">
+                </div>
+                <button type="button" class="btn btn-ghost btn-icon btn-danger" data-vdel aria-label="Hapus varian">${icon("trash")}</button>
+            </div>
+        `).join("");
+
+        if(focusLast && !isTouchDevice()){
+            const inputs = $$("#variantList [data-f=nama]");
+            inputs[inputs.length - 1]?.focus();
+        }
+
+    }
+
     function setPhotoPreview(src){
 
         $("#photoPreview").innerHTML = src ? `<img src="${escapeHtml(src)}" alt="">` : icon("image", "i-lg");
@@ -165,6 +207,10 @@
         form.kategori.value = menu?.kategori || menuCategory || "";
         form.unggulan.checked = !!menu?.unggulan;
         form.hargaKustom.checked = !!menu?.hargaKustom;
+        form.adaVarian.checked = !!menu?.adaVarian;
+
+        variantDraft = (menu?.varian || []).map(v => ({ id: v.id, nama: v.nama, harga: v.harga }));
+        renderVariantEditor(false);
 
         setPhotoPreview(menu?.gambar || null);
         syncPriceHint();
@@ -180,10 +226,16 @@
 
     function syncPriceHint(){
 
-        const custom = $("#productForm").hargaKustom.checked;
+        const form = $("#productForm");
+        const custom = form.hargaKustom.checked;
+        const variants = form.adaVarian.checked;
 
         $("#priceLabel").textContent = custom ? "Harga saran (opsional)" : "Harga";
         $("#priceHint").hidden = !custom;
+
+        /* Produk bervarian: harga ada di tiap varian, kolom harga biasa disembunyikan. */
+        $("#priceField").hidden = variants;
+        $("#variantEditor").hidden = !variants;
 
     }
 
@@ -194,12 +246,22 @@
 
         const form = event.target;
 
+        /* Harga wajib kecuali produk bervarian / harga custom: arahkan kursor ke kolomnya. */
+        if(!form.adaVarian.checked && !form.hargaKustom.checked && parseNumber(form.harga.value) <= 0){
+            form.harga.focus();
+            return toast("Isi harga produk, atau aktifkan varian / harga custom.", "error");
+        }
+
         const body = {
             nama: form.nama.value.trim(),
             harga: parseNumber(form.harga.value),
             kategori: form.kategori.value.trim(),
             unggulan: form.unggulan.checked,
-            hargaKustom: form.hargaKustom.checked
+            hargaKustom: form.hargaKustom.checked,
+            adaVarian: form.adaVarian.checked,
+            varian: variantDraft
+                .filter(v => v.nama.trim() || v.harga)
+                .map(v => ({ id: v.id, nama: v.nama.trim(), harga: v.harga }))
         };
 
         if(removePhoto){
@@ -215,6 +277,16 @@
                     : await api("/api/menu", { method: "POST", body });
 
                 replaceMenu(menu);
+
+                /*
+                 * Server lama (belum di-restart setelah update) menerima
+                 * simpanan tapi membuang field varian tanpa kabar.
+                 */
+                if(body.adaVarian && !menu.adaVarian){
+                    $("#productDialog").close();
+                    toast("Varian tidak tersimpan: server masih versi lama. Hentikan server (Ctrl+C) lalu jalankan npm start lagi.", "error");
+                    return;
+                }
 
                 if(pickedPhoto){
 
@@ -355,7 +427,67 @@
         const form = $("#productForm");
 
         form.addEventListener("submit", saveProduct);
-        form.hargaKustom.addEventListener("change", syncPriceHint);
+        /* Varian dan harga custom saling meniadakan. */
+        form.hargaKustom.addEventListener("change", () => {
+            if(form.hargaKustom.checked){
+                form.adaVarian.checked = false;
+            }
+            syncPriceHint();
+        });
+
+        form.adaVarian.addEventListener("change", () => {
+
+            if(form.adaVarian.checked){
+
+                form.hargaKustom.checked = false;
+
+                /* Daftar kosong: langsung sediakan satu baris. */
+                if(variantDraft.length === 0){
+                    variantDraft.push({ nama: "", harga: 0 });
+                    renderVariantEditor(true);
+                }
+
+            }
+
+            syncPriceHint();
+
+        });
+
+        $("#addVariant").addEventListener("click", () => {
+            variantDraft.push({ nama: "", harga: 0 });
+            renderVariantEditor(true);
+        });
+
+        $("#variantList").addEventListener("input", e => {
+
+            const field = e.target.dataset.f;
+            const row = e.target.closest(".variant-edit");
+
+            if(!field || !row){
+                return;
+            }
+
+            const v = variantDraft[Number(row.dataset.i)];
+
+            if(field === "harga"){
+                v.harga = parseNumber(e.target.value);
+                e.target.value = v.harga ? numberFmt.format(v.harga) : "";
+            }else{
+                v.nama = e.target.value;
+            }
+
+        });
+
+        $("#variantList").addEventListener("click", e => {
+
+            const del = e.target.closest("[data-vdel]");
+
+            if(del){
+                variantDraft.splice(Number(del.closest(".variant-edit").dataset.i), 1);
+                renderVariantEditor(false);
+            }
+
+        });
 
         form.harga.addEventListener("input", e => {
             const n = parseNumber(e.target.value);

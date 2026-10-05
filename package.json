@@ -5,7 +5,8 @@
   "description": "Kasir Broodle — static app + proxy Apps Script",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "seed": "node scripts/seed.js"
   },
   "engines": {
     "node": ">=20.12"

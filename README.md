@@ -3,7 +3,7 @@
 A web-based point of sale (kasir) for Kukikoe. Transactions go to Google Sheets through an Apps Script, receipts print to a Bluetooth thermal printer through Cleanter, and the kasir keeps working offline (unsent transactions are queued on the device and uploaded when the connection returns).
 
 - **Kasir** — product grid, cart, Cash/QRIS payment, receipt printing
-- **Menu** (superadmin) — products, prices, categories, Best Seller, photos
+- **Menu** (superadmin) — products, prices, categories, Best Seller, photos, and optional variants (e.g. flavors) each with their own price
 - **Laporan** (superadmin) — sales report from Google Sheets
 - **Akun** (superadmin) — kasir accounts
 
@@ -238,6 +238,37 @@ Sessions survive restarts as long as `SESSION_SECRET` stays the same. Browsers p
 
 ---
 
+## Seeding the menu
+
+The whole menu is defined in `scripts/seeds/` so a new server can be filled in one command:
+
+| Seeder | Products |
+|---|---|
+| `01-cheesecake.js` | Cheesecake, 10 variants |
+| `02-scoopable.js` | Scoopable, 4 variants |
+| `03-produk-lain.js` | Dubai Chewy Cookie, Strawberry Dubai Choco, London Choco Cake, Mooncake Pudding, Milk Cheese Bread, Bakwan Goreng, Risol, Bagia Ori / Mocha, Bagia Kacang, Lain-lain, Snack Box |
+
+```bash
+npm run seed -- --remove-old      # everything; recommended on a new deploy
+npm run seed                      # everything, keep the old single products
+npm run seed -- cheesecake        # one seeder (file name without the number)
+```
+
+`--remove-old` deletes Cheesecake A/B and Scoopable Kunafa/Nutella, which the two variant products replace. A brand-new server first creates the old 14 default products, so use `--remove-old` there to end up with exactly the 13 products above.
+
+**Where to run it**
+- **Railway:** open the service shell and run `npm run seed -- --remove-old`. The variables (`DATA_DIR=/data`) are already set there.
+- **VPS:** `cd /opt/broodle/app && sudo -u broodle npm run seed -- --remove-old` (it reads `DATA_DIR` from `.env`).
+- **Local:** `npm run seed -- --remove-old`.
+
+**Safe to repeat.** Products are matched by name, so running it again updates prices and variants instead of adding duplicates, and a photo uploaded in the Menu tab is kept. Products that are not in any seeder are left alone, and seeded products are placed first in the menu in file order. It can run while the server is up.
+
+**Photos.** Photos in `public/images` ship with the repo, so they come with the seed. Photos uploaded from the admin page live in `uploads/` on the server and cannot be seeded. Bagia, Lain-lain and Snack Box have none by default; add them in the Menu tab once.
+
+**Changing the menu for good.** Edit the seed file and run the seeder again, or edit in the Menu tab. If you edit in the Menu tab, running the seeder later will put the seed values back for those products.
+
+---
+
 ## Backups
 
 Everything that matters at runtime lives in two folders, both outside git:
@@ -293,6 +324,8 @@ If printing fails, the transaction is **already recorded**. The order panel show
   ]
 }
 ```
+
+For a product with variants, `nama` is written as `Product (Variant)`, e.g. `Cheesecake A (Blueberry)`, with that variant's own `harga`. Each variant therefore appears as its own product in the sales report. Renaming a variant later does not change past rows.
 
 Any 2xx response counts as success; anything else keeps the transaction in the queue for retry.
 

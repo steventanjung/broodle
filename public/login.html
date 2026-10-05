@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Masuk — Kukikoe</title>
 <link rel="stylesheet" href="/assets/app.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%239c3d17'/%3E%3Ctext x='16' y='23' font-family='Arial' font-size='20' font-weight='700' text-anchor='middle' fill='white'%3EK%3C/text%3E%3C/svg%3E">
+<script src="/assets/pw.js" defer></script>
 </head>
 
 <body>
@@ -44,6 +46,18 @@
 
 <script>
 
+/* Hanya path lokal, supaya ?next= tidak bisa dipakai redirect ke situs lain. */
+function nextUrl(){
+
+    const next = new URLSearchParams(location.search).get("next");
+
+    return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+
+}
+
+/* Sudah masuk? Tidak perlu mengisi form lagi. */
+fetch("/api/me").then(r => { if(r.ok){ location.replace(nextUrl()); } }).catch(() => {});
+
 const form = document.getElementById("loginForm");
 const errorBox = document.getElementById("errorBox");
 const button = document.getElementById("submitButton");
@@ -75,10 +89,7 @@ form.addEventListener("submit", async event => {
 
         localStorage.setItem("session", JSON.stringify(result));
 
-        /* Hanya path lokal, supaya ?next= tidak bisa dipakai redirect ke situs lain. */
-        const next = new URLSearchParams(location.search).get("next");
-
-        location.replace(next && next.startsWith("/") && !next.startsWith("//") ? next : "/");
+        location.replace(nextUrl());
 
     }catch(error){
 
