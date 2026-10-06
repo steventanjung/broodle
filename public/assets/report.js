@@ -45,9 +45,35 @@
         const str = String(value ?? "").trim();
         const parts = str.split("/");
 
-        return parts.length === 3
-            ? `${parts[2]}-${pad(parts[1])}-${pad(parts[0])}`
-            : str;
+        if(parts.length === 3){
+            return `${parts[2]}-${pad(parts[1])}-${pad(parts[0])}`;
+        }
+
+        /*
+         * Sel tanggal di Google Sheets dikirim sebagai waktu UTC dari tengah
+         * malam di zona waktu sheet (mis. "2026-06-09T16:00:00.000Z" untuk
+         * GMT+8). +12 jam lalu ambil tanggal UTC = tanggal sel itu, apa pun
+         * zona waktunya (GMT-12 s/d +12).
+         */
+        if(/^\d{4}-\d{2}-\d{2}T/.test(str)){
+            return new Date(Date.parse(str) + 12 * 3600 * 1000).toISOString().slice(0, 10);
+        }
+
+        return str;
+
+    }
+
+
+    /*
+     * transactionId = "<waktu Date.now() saat Bayar>-<acak>". Itu waktu
+     * jual yang pasti benar, tidak terpengaruh pengaturan lokal / zona
+     * waktu Google Sheets (yang bisa membaca 6/10 sebagai 10 Juni).
+     */
+    function saleMoment(row){
+
+        const ms = Number(String(row.transactionId || "").split("-")[0]);
+
+        return ms > 1.5e12 && ms < 4e12 ? new Date(ms) : null;
 
     }
 
@@ -121,7 +147,8 @@
 
         data.forEach(row => {
 
-            const date = normalizeDate(row.tanggal);
+            const moment = saleMoment(row);
+            const date = moment ? toISO(moment) : normalizeDate(row.tanggal);
 
             if(date < from || date > to){
                 return;
@@ -134,7 +161,7 @@
             if(!t){
                 t = {
                     date,
-                    time: formatTime(row.jam),
+                    time: moment ? `${pad(moment.getHours())}:${pad(moment.getMinutes())}` : formatTime(row.jam),
                     payment: String(row.pembayaran || "").trim().toUpperCase(),
                     nota: row.nota,
                     total: 0,
@@ -643,7 +670,7 @@
                     <td><b>${escapeHtml(sh.kasir)}</b></td>
                     <td class="num">${time(sh.openedAt)} – ${sh.closedAt ? time(sh.closedAt).split(" ")[1] : `<span class="badge badge-warn">Belum ditutup</span>`}</td>
                     <td class="r num hide-sm">${rupiah(sh.modal)}</td>
-                    <td class="r num"><b>${rupiah(sh.modal + t.cash + t.cashPay)}</b></td>
+                    <td class="r num"><b>${rupiah(t.cash + t.cashPay)}</b></td>
                     <td class="r num">${rupiah(t.qris + t.qrisPay)}</td>
                     <td class="r num">${rupiah(t.transfer + t.transferPay)}</td>
                     <td class="r num">${rupiah((t.debit || 0) + (t.debitPay || 0))}</td>

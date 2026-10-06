@@ -162,18 +162,30 @@
 
     let closeMode = "logout";
 
+    /*
+     * Angka utama = total diterima semua metode. Tunai ikut di daftar
+     * seperti metode lain; modal & "uang di laci" (tunai + modal, yang
+     * dicocokkan dengan laci) di bagian bawah, lebih kecil.
+     */
     function summaryHtml(s){
+
+        const cash = s.totals.cash + s.totals.cashPay;
+        const received = cash + qris(s) + transfer(s) + debit(s);
 
         return `
             <div class="shift-sum">
                 <div class="shift-main">
-                    <span>${icon("cash", "i-sm")}Tunai di laci</span>
-                    <strong class="num">${rupiah(drawer(s))}</strong>
-                    <small class="muted num">termasuk modal ${rupiah(s.modal)}</small>
+                    <span>Total diterima</span>
+                    <strong class="num">${rupiah(received)}</strong>
                 </div>
+                <div class="shift-row"><span>${icon("cash", "i-sm")}Tunai</span><strong class="num">${rupiah(cash)}</strong></div>
                 <div class="shift-row"><span>${icon("qr", "i-sm")}QRIS</span><strong class="num">${rupiah(qris(s))}</strong></div>
                 <div class="shift-row"><span>${icon("bank", "i-sm")}Transfer BCA</span><strong class="num">${rupiah(transfer(s))}</strong></div>
                 <div class="shift-row"><span>${icon("card", "i-sm")}Debit</span><strong class="num">${rupiah(debit(s))}</strong></div>
+                <div class="shift-foot">
+                    <div><span>Modal awal</span><span class="num">${rupiah(s.modal)}</span></div>
+                    <div><span>Uang di laci seharusnya <span class="muted">(tunai + modal)</span></span><b class="num">${rupiah(drawer(s))}</b></div>
+                </div>
             </div>`;
 
     }
