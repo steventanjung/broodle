@@ -31,6 +31,16 @@
     let query = "";
     let payment = "cash";
 
+    /*
+     * Bagi 2 metode: satu nota dibayar penuh dengan dua metode
+     * (mis. Rp30.000 QRIS + Rp20.000 Cash). Bukan utang, bukan Grab.
+     * Kasir mengisi salah satu jumlah; yang lain = sisa dari total.
+     */
+    let split = false;
+    let splitPair = ["qris", "cash"];
+    let splitAnchor = 0;
+    let splitValue = 0;
+
     let processing = false;
 
     /*
@@ -632,6 +642,108 @@
 
     const cashReceived = () => parseNumber($("#cashInput").value);
 
+    const METHOD_NAME = { cash: "Cash", qris: "QRIS", transfer: "Transfer BCA", debit: "Debit", grab: "Grab", utang: "Utang" };
+    const METHOD_ICON = { cash: "cash", qris: "qr", transfer: "bank", debit: "card" };
+    const SPLIT_METHODS = ["cash", "qris", "transfer", "debit"];
+
+    /* Jumlah per metode saat dibagi: [metode pertama, metode kedua]. */
+    function splitAmounts(){
+        const other = getTotal() - splitValue;
+        return splitAnchor === 0 ? [splitValue, other] : [other, splitValue];
+    }
+
+    const splitValid = () => {
+        const [a, b] = splitAmounts();
+        return a > 0 && b > 0;
+    };
+
+    const usesMethod = m => split ? splitPair.includes(m) : payment === m;
+
+    /* Yang harus dibayar tunai: seluruh total, atau bagian Cash saat dibagi. */
+    const cashDue = () => split ? splitAmounts()[splitPair.indexOf("cash")] : getTotal();
+
+    function clearSplitAmounts(){
+        splitAnchor = 0;
+        splitValue = 0;
+        $("#split0").value = "";
+        $("#split1").value = "";
+    }
+
+    function setSplit(on){
+
+        split = on;
+        clearSplitAmounts();
+
+        if(on){
+            /* Metode yang sedang dipilih jadi yang pertama; yang kedua Cash (atau QRIS). */
+            const first = SPLIT_METHODS.includes(payment) ? payment : "cash";
+            splitPair = [first, first === "cash" ? "qris" : "cash"];
+        }else{
+            payment = splitPair[0];
+        }
+
+        $("#cashInput").value = "";
+
+        renderPayment();
+
+        if(on && !isTouchDevice()){
+            $("#split0").focus();
+        }
+
+    }
+
+    /* Metode yang sama dipilih di dua baris: baris lainnya bertukar. */
+    function setSplitMethod(i, m){
+        const other = 1 - i;
+        if(splitPair[other] === m){
+            splitPair[other] = splitPair[i];
+        }
+        splitPair[i] = m;
+        if(!splitPair.includes("cash")){
+            $("#cashInput").value = "";
+        }
+        renderPayment();
+    }
+
+
+    function renderSplit(){
+
+        $("#splitSection").hidden = !split;
+
+        if(!split){
+            return;
+        }
+
+        const total = getTotal();
+        const amounts = splitAmounts();
+
+        splitPair.forEach((m, i) => {
+            const select = $("#splitMethod" + i);
+            if(!select.options.length){
+                select.innerHTML = SPLIT_METHODS.map(k => `<option value="${k}">${METHOD_NAME[k]}</option>`).join("");
+            }
+            select.value = m;
+            /* Kolom yang sedang diketik tidak ditimpa; kolom lainnya ikut sisa. */
+            if(i !== splitAnchor){
+                $("#split" + i).value = amounts[i] > 0 ? numberFmt.format(amounts[i]) : "";
+            }
+        });
+
+        const status = $("#splitStatus");
+
+        status.className = "split-status";
+
+        if(splitValue > total){
+            status.classList.add("bad");
+            status.textContent = `Melebihi total ${rupiah(total)}`;
+        }else if(!splitValid()){
+            status.textContent = "";
+        }else{
+            status.textContent = "";
+        }
+
+    }
+
 
     /* Uang pas + pecahan yang paling mungkin diterima. */
     function quickAmounts(total){
@@ -661,13 +773,27 @@
         $("#cartBarTotal").textContent = rupiah(total);
         $("#cartBarCount").textContent = getCount() + " item";
 
-        $$("#paymentToggle button").forEach(b =>
-            b.setAttribute("aria-pressed", b.dataset.payment === payment));
+        /* Pesanan dikosongkan: tidak ada lagi yang dibagi. */
+        if(split && empty){
+            split = false;
+            payment = splitPair[0];
+            clearSplitAmounts();
+        }
 
-        $("#cashSection").hidden = payment !== "cash";
-        $("#qrisSection").hidden = payment !== "qris";
-        $("#transferSection").hidden = payment !== "transfer";
-        $("#debitSection").hidden = payment !== "debit";
+        $$("#paymentToggle button").forEach(b =>
+            b.setAttribute("aria-pressed", usesMethod(b.dataset.payment)));
+
+        /* Saat dibagi, kartu bagi menggantikan pilihan metode. Grab & Utang tidak bisa dibagi. */
+        $("#paymentToggle").hidden = split;
+        $("#splitOpen").hidden = split || !!awaitingReprint || !SPLIT_METHODS.includes(payment);
+        $("#splitOpen").disabled = empty || processing;
+        renderSplit();
+
+        $("#cashSection").hidden = !usesMethod("cash");
+        $("#cashLabel").textContent = split ? "Uang tunai diterima" : "Uang diterima";
+        $("#qrisSection").hidden = !usesMethod("qris");
+        $("#transferSection").hidden = !usesMethod("transfer");
+        $("#debitSection").hidden = !usesMethod("debit");
         $("#grabSection").hidden = !isGrab();
 
         if(isGrab()){
@@ -689,12 +815,14 @@
         }
         $("#utangSection").hidden = payment !== "utang";
 
-        $("#quickCash").innerHTML = quickAmounts(total).map((amount, i) =>
+        const due = usesMethod("cash") ? cashDue() : total;
+
+        $("#quickCash").innerHTML = quickAmounts(due).map((amount, i) =>
             `<button type="button" class="num" data-amount="${amount}">${i === 0 ? "Uang pas" : numberFmt.format(amount / 1000) + "rb"}</button>`
         ).join("");
 
         const received = cashReceived();
-        const change = received - total;
+        const change = received - due;
         const row = $("#changeRow");
 
         row.classList.toggle("short", received > 0 && change < 0);
@@ -702,7 +830,6 @@
 
         $("#changeLabel").textContent = received > 0 && change < 0 ? "Kurang" : "Kembalian";
         $("#changeValue").textContent = rupiah(received > 0 ? Math.abs(change) : 0);
-
         const button = $("#payButton");
 
         if(awaitingReprint){
@@ -712,7 +839,10 @@
             button.innerHTML = payment === "utang"
                 ? icon("book") + (empty ? "Catat utang" : `Catat utang ${rupiah(total)}`)
                 : icon("receipt") + (empty ? "Bayar" : `Bayar ${rupiah(total)}`);
-            button.disabled = processing || empty || (payment === "cash" && received < total) || (isGrab() && missingGrab().length > 0);
+            button.disabled = processing || empty
+                || (split && !splitValid())
+                || (usesMethod("cash") && received < due)
+                || (isGrab() && missingGrab().length > 0);
         }
 
         $("#reprintNotice").hidden = !awaitingReprint;
@@ -733,17 +863,23 @@
     function buildTransaction(utang){
 
         const total = getTotal();
-        const cash = payment === "cash" ? cashReceived() : 0;
+        const cash = usesMethod("cash") ? cashReceived() : 0;
         const now = new Date();
+
+        const parts = split
+            ? splitPair.map((m, i) => ({ metode: METHOD_NAME[m], jumlah: splitAmounts()[i] }))
+            : null;
 
         return {
             transactionId: Date.now() + "-" + Math.random().toString(36).slice(2, 8),
             tanggal: now.toLocaleDateString("id-ID"),
             jam: now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false }),
             nota: String(nota).padStart(3, "0"),
-            pembayaran: { cash: "Cash", qris: "QRIS", transfer: "Transfer BCA", debit: "Debit", grab: "Grab", utang: "Utang" }[payment],
+            /* Dibagi: "Cash 25000 + QRIS 25000" — terbaca di sheet dan dipecah lagi oleh laporan. */
+            pembayaran: parts ? parts.map(p => `${p.metode} ${p.jumlah}`).join(" + ") : METHOD_NAME[payment],
+            ...(parts ? { pembayaranBagi: parts } : {}),
             cashReceived: cash,
-            change: payment === "cash" ? cash - total : 0,
+            change: usesMethod("cash") ? cash - cashDue() : 0,
             /* Grab: total yang tercatat = jumlah harga bersih (harga Grab − potongan). */
             total: isGrab() ? [...cart.values()].reduce((sum, l) => sum + grabNet(l.hargaGrab) * l.qty, 0) : total,
             /* Grab: yang tercatat = harga Grab − potongan, per item. */
@@ -792,9 +928,13 @@
             return toast("Belum ada produk dipilih.", "error");
         }
 
-        if(payment === "cash" && cashReceived() < total){
+        if(split && !splitValid()){
+            return toast("Jumlah kedua metode harus pas dengan total.", "error");
+        }
+
+        if(usesMethod("cash") && cashReceived() < cashDue()){
             $("#cashInput").focus();
-            return toast("Uang diterima kurang dari total.", "error");
+            return toast(split ? "Uang tunai diterima kurang dari bagian Cash." : "Uang diterima kurang dari total.", "error");
         }
 
         if(isGrab() && missingGrab().length){
@@ -863,6 +1003,8 @@
         awaitingReprint = null;
         cart.clear();
         payment = "cash";
+        split = false;
+        clearSplitAmounts();
         $("#cashInput").value = "";
 
         cartChanged();
@@ -871,7 +1013,7 @@
         /* Kembalian ditampilkan lebih lama: kasir butuh angkanya setelah nota keluar. */
         if(transaction.pembayaran === "Utang"){
             toast(`Utang nota ${transaction.nota} atas nama ${transaction.pelanggan} dicatat`, "ok", 5000);
-        }else if(transaction.pembayaran === "Cash" && transaction.change > 0){
+        }else if(transaction.change > 0){
             toast(`Nota ${transaction.nota} selesai. Kembalian ${rupiah(transaction.change)}`, "ok", 7000);
         }else{
             toast(`Nota ${transaction.nota} selesai`);
@@ -990,7 +1132,9 @@
         $("#receiptNote").textContent =
             missing.length
                 ? `Harga Grab belum diisi untuk: ${missing.map(l => l.nama + (l.varian ? " (" + l.varian + ")" : "")).join(", ")}. Nota belum bisa dicetak.`
-            : payment === "cash" && t.cashReceived < t.total
+            : split && !splitValid()
+                ? "Jumlah kedua metode belum pas dengan total."
+            : usesMethod("cash") && t.change < 0
                 ? "Uang diterima belum diisi. Nomor nota dan jam mengikuti saat Bayar."
                 : "Nomor nota dan jam mengikuti saat Bayar ditekan.";
 
@@ -1107,6 +1251,38 @@
                     $("#cashInput").focus();
                 }
             }
+
+        });
+
+        $("#splitOpen").addEventListener("click", () => {
+            if(!cartLocked()){
+                setSplit(true);
+            }
+        });
+
+        $("#splitCancel").addEventListener("click", () => {
+            if(!cartLocked()){
+                setSplit(false);
+            }
+        });
+
+        [0, 1].forEach(i => {
+
+            $("#splitMethod" + i).addEventListener("change", e => {
+                if(cartLocked()){
+                    e.target.value = splitPair[i];
+                    return;
+                }
+                setSplitMethod(i, e.target.value);
+            });
+
+            $("#split" + i).addEventListener("input", e => {
+                const n = parseNumber(e.target.value);
+                e.target.value = n ? numberFmt.format(n) : "";
+                splitAnchor = i;
+                splitValue = n;
+                renderPayment();
+            });
 
         });
 

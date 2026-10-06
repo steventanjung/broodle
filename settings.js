@@ -1,6 +1,8 @@
 /*
  * Pengaturan toko (data/settings.json), diubah superadmin di tab
- * Pengaturan. Sekarang: potongan Grab (%).
+ * Pengaturan. Setiap pengaturan didefinisikan sekali di SCHEMA —
+ * menambah pengaturan baru cukup menambah satu entri di sini dan
+ * satu di SETTINGS (public/assets/admin.js).
  */
 
 const fs   = require("node:fs");
@@ -11,34 +13,59 @@ const { DATA_DIR } = require("./auth.js");
 
 const SETTINGS_FILE = path.join(DATA_DIR, "settings.json");
 
-const DEFAULTS = {
+const SCHEMA = {
     /* Grab mengambil sekian persen dari harga Grab; sisanya yang tercatat sebagai penjualan. */
-    grabCommission: 20
+    grabCommission: { type: "number", default: 20, min: 0, max: 99, decimals: 1, label: "Potongan Grab" }
 };
+
+const DEFAULTS = Object.fromEntries(Object.entries(SCHEMA).map(([key, def]) => [key, def.default]));
 
 
 function get(){
 
     try{
-        return { ...DEFAULTS, ...JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf8")) };
+
+        const saved = JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf8"));
+
+        /* Hanya kunci yang dikenal; sisanya diabaikan. */
+        return Object.fromEntries(Object.keys(SCHEMA).map(key => [key, key in saved ? saved[key] : DEFAULTS[key]]));
+
     }catch(error){
+
         return { ...DEFAULTS };
+
     }
 
 }
 
 
+/* Simpan sebagian atau semua pengaturan; kunci yang tidak dikirim tetap. */
 function update(input){
 
-    const current = get();
-    const pct = Number(input?.grabCommission);
+    const next = get();
 
-    if(!Number.isFinite(pct) || pct < 0 || pct >= 100){
-        return { ok: false, error: "Potongan Grab harus angka 0 sampai 99." };
+    for(const [key, value] of Object.entries(input || {})){
+
+        const def = SCHEMA[key];
+
+        if(!def){
+            return { ok: false, error: `Pengaturan "${key}" tidak dikenal.` };
+        }
+
+        if(def.type === "number"){
+
+            const n = Number(value);
+
+            if(!Number.isFinite(n) || n < def.min || n > def.max){
+                return { ok: false, error: `${def.label} harus angka ${def.min} sampai ${def.max}.` };
+            }
+
+            const factor = 10 ** (def.decimals || 0);
+            next[key] = Math.round(n * factor) / factor;
+
+        }
+
     }
-
-    /* Satu angka di belakang koma cukup (mis. 20 atau 22,5). */
-    const next = { ...current, grabCommission: Math.round(pct * 10) / 10 };
 
     const tmp = SETTINGS_FILE + ".tmp";
     fs.writeFileSync(tmp, JSON.stringify(next, null, 2) + "\n");

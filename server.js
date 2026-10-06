@@ -27,6 +27,7 @@ const menu = require("./menu.js");
 const debts = require("./debts.js");
 const shifts = require("./shifts.js");
 const settings = require("./settings.js");
+const backup   = require("./backup.js");
 
 
 /* =====================================================
@@ -511,9 +512,46 @@ async function handleSettingsSave(req, res, user){
         return json(res, 400, { error: result.error });
     }
 
-    console.log(`[pengaturan] diubah oleh ${user.username}: potongan Grab ${result.settings.grabCommission}%`);
+    console.log(`[pengaturan] diubah oleh ${user.username}: ${JSON.stringify(result.settings)}`);
 
     json(res, 200, result.settings);
+
+}
+
+
+/* Cadangan: semua data + foto produk dalam satu file JSON. */
+function handleBackupDownload(req, res, user){
+
+    const day = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+
+    console.log(`[cadangan] diunduh oleh ${user.username}`);
+
+    json(res, 200, backup.create(PRODUCT_DIR), {
+        "Content-Disposition": `attachment; filename="broodle-cadangan-${day}.json"`
+    });
+
+}
+
+
+async function handleBackupRestore(req, res, user){
+
+    let input;
+
+    try{
+        input = JSON.parse((await readBody(req, MAX_BACKUP_BYTES)).toString("utf8"));
+    }catch(error){
+        return json(res, error.status || 400, { error: error.status === 413 ? "File cadangan terlalu besar." : "File ini bukan cadangan Broodle." });
+    }
+
+    const result = backup.restore(input, PRODUCT_DIR);
+
+    if(!result.ok){
+        return json(res, 400, { error: result.error });
+    }
+
+    console.log(`[cadangan] dipulihkan oleh ${user.username} dari cadangan ${input.createdAt}: ${JSON.stringify(result.summary)} (data lama disimpan di ${result.safety})`);
+
+    json(res, 200, result.summary);
 
 }
 
@@ -590,6 +628,7 @@ function handleMenuDelete(req, res, user, id){
  */
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
+const MAX_BACKUP_BYTES = 200 * 1024 * 1024;
 
 
 async function handleMenuImage(req, res, user, id){
@@ -905,6 +944,8 @@ const ROUTES = [
     ["POST",   /^\/api\/submit$/,                        handleSubmit,             "user"],
     ["GET",    /^\/api\/menu$/,                          handleMenuList,           "user"],
     ["PUT",    /^\/api\/settings$/,                     handleSettingsSave,       "superadmin"],
+    ["GET",    /^\/api\/backup$/,                       handleBackupDownload,     "superadmin"],
+    ["POST",   /^\/api\/backup\/restore$/,              handleBackupRestore,      "superadmin"],
     ["PUT",    /^\/api\/categories$/,                   handleCategoriesSave,     "superadmin"],
     ["POST",   /^\/api\/menu$/,                          handleMenuCreate,         "superadmin"],
     ["PUT",    /^\/api\/menu\/([\w-]{6,80})$/,           handleMenuUpdate,         "superadmin"],

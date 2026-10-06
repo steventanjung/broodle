@@ -252,11 +252,18 @@
 
     App.on("sale-recorded", tx => {
 
-        if(!isKasir() || !isOpen() || !SALE_KEY[tx.pembayaran]){
+        /* Dibagi 2 metode: tiap bagian masuk ke metodenya sendiri. */
+        const parts = Array.isArray(tx.pembayaranBagi)
+            ? tx.pembayaranBagi
+            : [{ metode: tx.pembayaran, jumlah: tx.total }];
+
+        if(!isKasir() || !isOpen() || !parts.every(p => SALE_KEY[p.metode])){
             return;
         }
 
-        shift.totals[SALE_KEY[tx.pembayaran]] = (shift.totals[SALE_KEY[tx.pembayaran]] || 0) + tx.total;
+        parts.forEach(p => {
+            shift.totals[SALE_KEY[p.metode]] = (shift.totals[SALE_KEY[p.metode]] || 0) + p.jumlah;
+        });
         shift.totals.count += 1;
 
         save();

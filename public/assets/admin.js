@@ -841,25 +841,78 @@
 
     /* =================================================
        PENGATURAN
+       Daftar pengaturan per kelompok. Pengaturan baru = satu
+       entri di SETTINGS (dan di SCHEMA settings.js server).
        ================================================= */
+
+    const SETTINGS = [
+        {
+            group: "Grab",
+            icon: "bike",
+            items: [
+                {
+                    key: "grabCommission",
+                    label: "Potongan Grab",
+                    type: "percent",
+                    help: v => `Penjualan Grab tercatat sebesar harga Grab dikurangi potongan ini. Contoh: harga Grab Rp50.000 → tercatat ${rupiah(Math.round(50000 * (1 - v / 100)))}.`
+                }
+            ]
+        }
+    ];
+
+    const fmtSetting = v => String(v).replace(".", ",");
+    const readSetting = input => Number(String(input.value).replace(",", "."));
+
 
     function renderSettings(){
 
-        const form = $("#settingsForm");
+        $("#settingsGroups").innerHTML = SETTINGS.map(group => `
+            <section class="set-group">
+                <h2 class="set-group-title">${icon(group.icon, "i-sm")}${escapeHtml(group.group)}</h2>
+                <div class="panel">
+                    ${group.items.map(item => `
+                        <div class="set-row">
+                            <div class="set-text">
+                                <label class="set-label" for="set-${item.key}">${escapeHtml(item.label)}</label>
+                                <p class="set-help" data-help="${item.key}"></p>
+                            </div>
+                            <div class="set-control">
+                                <div class="input-group input-suffix">
+                                    <input id="set-${item.key}" class="input num" data-key="${item.key}" inputmode="decimal"
+                                        value="${fmtSetting(App.settings[item.key])}">
+                                    ${item.type === "percent" ? `<span class="suffix">%</span>` : ""}
+                                </div>
+                            </div>
+                        </div>`).join("")}
+                </div>
+            </section>`).join("");
 
-        form.grabCommission.value = String(App.settings.grabCommission).replace(".", ",");
-        updateSettingsExample();
+        refreshSettings();
 
     }
 
 
-    function updateSettingsExample(){
+    /* Teks bantu ikut angka yang diketik; bar Simpan muncul hanya kalau ada yang berubah. */
+    function refreshSettings(){
 
-        const pct = Number(String($("#settingsForm").grabCommission.value).replace(",", "."));
+        let dirty = false;
 
-        $("#sGrabExample").textContent = Number.isFinite(pct) && pct >= 0 && pct < 100
-            ? `Penjualan Grab tercatat sebesar harga Grab dikurangi ${String(pct).replace(".", ",")}%. Contoh: harga Grab Rp50.000 → tercatat ${rupiah(Math.round(50000 * (1 - pct / 100)))}.`
-            : "Isi angka 0 sampai 99.";
+        SETTINGS.flatMap(g => g.items).forEach(item => {
+
+            const input = $(`#set-${item.key}`);
+            const value = readSetting(input);
+            const valid = Number.isFinite(value) && value >= 0 && value < 100;
+
+            input.classList.toggle("is-invalid", !valid);
+            $(`[data-help="${item.key}"]`).textContent = valid ? item.help(value) : "Isi angka 0 sampai 99.";
+
+            if(!valid || value !== Number(App.settings[item.key])){
+                dirty = true;
+            }
+
+        });
+
+        $("#settingsBar").hidden = !dirty;
 
     }
 
@@ -868,15 +921,141 @@
 
         event.preventDefault();
 
-        const pct = Number(String(event.target.grabCommission.value).replace(",", "."));
+        const body = {};
+
+        for(const item of SETTINGS.flatMap(g => g.items)){
+
+            const value = readSetting($(`#set-${item.key}`));
+
+            if(!Number.isFinite(value) || value < 0 || value >= 100){
+                $(`#set-${item.key}`).focus();
+                return toast(`${item.label}: isi angka 0 sampai 99.`, "error");
+            }
+
+            body[item.key] = value;
+
+        }
 
         await busy($("#settingsSave"), "Menyimpan…", async () => {
 
             try{
-                const saved = await api("/api/settings", { method: "PUT", body: { grabCommission: pct } });
+                const saved = await api("/api/settings", { method: "PUT", body });
                 App.setSettings(saved);
                 renderSettings();
-                toast(`Potongan Grab ${String(saved.grabCommission).replace(".", ",")}% disimpan`);
+                toast("Pengaturan disimpan");
+            }catch(error){
+                toast(error.message, "error");
+            }
+
+        });
+
+    }
+
+
+    /* =================================================
+       CADANGAN DATA
+       ================================================= */
+
+    const BACKUP_LAST_KEY = "backupLast";
+
+    function renderBackupLast(){
+
+        let last = null;
+        try{ last = localStorage.getItem(BACKUP_LAST_KEY); }catch(e){}
+
+        $("#backupLast").hidden = !last;
+
+        if(last){
+            const d = new Date(last);
+            $("#backupLast").textContent = `Terakhir diunduh di perangkat ini: ${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+        }
+
+    }
+
+
+    async function downloadBackup(){
+
+        await busy($("#backupDownload"), "Menyiapkan…", async () => {
+
+            try{
+
+                const response = await fetch("/api/backup");
+
+                if(!response.ok){
+                    const data = await response.json().catch(() => ({}));
+                    throw new Error(data.error || "Cadangan gagal dibuat.");
+                }
+
+                const name = /filename="([^"]+)"/.exec(response.headers.get("Content-Disposition") || "")?.[1] || "broodle-cadangan.json";
+                const url = URL.createObjectURL(await response.blob());
+
+                const a = Object.assign(document.createElement("a"), { href: url, download: name });
+                document.body.append(a);
+                a.click();
+                a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+                try{ localStorage.setItem(BACKUP_LAST_KEY, new Date().toISOString()); }catch(e){}
+                renderBackupLast();
+
+                toast("Cadangan diunduh");
+
+            }catch(error){
+                /* fetch melempar TypeError saat offline / server mati. */
+                toast(error instanceof TypeError ? "Tidak bisa terhubung ke server. Periksa koneksi internet lalu coba lagi." : error.message, "error");
+            }
+
+        });
+
+    }
+
+
+    async function restoreBackup(event){
+
+        const file = event.target.files[0];
+        event.target.value = "";
+
+        if(!file){
+            return;
+        }
+
+        const text = await file.text();
+
+        let parsed;
+
+        try{
+            parsed = JSON.parse(text);
+        }catch(error){
+            return toast("File ini bukan cadangan Broodle.", "error");
+        }
+
+        if(parsed?.format !== "broodle-backup" || !parsed.data){
+            return toast("File ini bukan cadangan Broodle.", "error");
+        }
+
+        const d = new Date(parsed.createdAt);
+        const count = (name, key) => parsed.data[name]?.[key]?.length ?? 0;
+
+        const ok = await App.confirmDialog({
+            title: "Pulihkan cadangan?",
+            message: `Cadangan ${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}: ` +
+                `${count("menus.json", "menus")} produk, ${count("users.json", "users")} akun, ` +
+                `${count("debts.json", "debts")} utang, ${count("shifts.json", "shifts")} setoran. ` +
+                `Semua data sekarang akan diganti isi cadangan ini.`,
+            confirmText: "Pulihkan",
+            danger: true
+        });
+
+        if(!ok){
+            return;
+        }
+
+        await busy($("#backupRestore"), "Memulihkan…", async () => {
+
+            try{
+                await api("/api/backup/restore", { method: "POST", body: new Blob([text], { type: "application/json" }) });
+                toast("Data dipulihkan. Memuat ulang…");
+                setTimeout(() => location.reload(), 1200);
             }catch(error){
                 toast(error.message, "error");
             }
@@ -1121,7 +1300,14 @@
 
     App.registerView("menu", { adminOnly: true, onShow: renderMenuAdmin });
     App.registerView("akun", { adminOnly: true, onShow: loadAccounts });
-    App.registerView("pengaturan", { adminOnly: true, onShow: renderSettings });
+    App.registerView("pengaturan", { adminOnly: true, onShow: () => { renderSettings(); renderBackupLast(); } });
+
+    /* Nilai terbaru dari server (setelah memuat / diubah perangkat lain): tampilkan, kecuali sedang diedit. */
+    App.on("settings", () => {
+        if(location.hash === "#pengaturan" && $("#settingsBar").hidden){
+            renderSettings();
+        }
+    });
 
     App.on("ready", () => {
 
@@ -1133,7 +1319,11 @@
         bindCategories();
 
         $("#settingsForm").addEventListener("submit", saveSettings);
-        $("#settingsForm").grabCommission.addEventListener("input", updateSettingsExample);
+        $("#settingsForm").addEventListener("input", refreshSettings);
+        $("#settingsReset").addEventListener("click", renderSettings);
+        $("#backupDownload").addEventListener("click", downloadBackup);
+        $("#backupRestore").addEventListener("click", () => $("#backupFile").click());
+        $("#backupFile").addEventListener("change", restoreBackup);
         bindAccounts();
         bindProfile();
 

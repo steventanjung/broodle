@@ -106,12 +106,20 @@ const Printer = (() => {
 
         }
 
-        content.push(text("Pembayaran : " + t.pembayaran));
+        /* Dibagi 2 metode: satu baris per metode. */
+        const parts = Array.isArray(t.pembayaranBagi) ? t.pembayaranBagi : null;
+        const cashDue = parts ? (parts.find(p => p.metode === "Cash")?.jumlah ?? 0) : (t.pembayaran === "Cash" ? t.total : 0);
+
+        if(parts){
+            content.push(text("Pembayaran :"), ...parts.map(p => row("  " + p.metode, rupiah(p.jumlah))));
+        }else{
+            content.push(text("Pembayaran : " + t.pembayaran));
+        }
 
         /* Di pratinjau, uang diterima bisa belum diisi: baris ini dilewati. */
-        if(t.pembayaran === "Cash" && t.cashReceived >= t.total){
+        if(cashDue > 0 && t.cashReceived >= cashDue){
             content.push(
-                text("Diterima : " + rupiah(t.cashReceived)),
+                text((parts ? "Tunai diterima : " : "Diterima : ") + rupiah(t.cashReceived)),
                 text("Kembalian : " + rupiah(t.change))
             );
         }

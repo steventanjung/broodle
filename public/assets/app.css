@@ -904,6 +904,11 @@ a.badge{ text-decoration:none; }
     .tab{ padding:0 10px; gap:6px; }
     .status span.hide-sm{ display:none; }
 }
+/* Lebih sempit lagi: tab yang tidak aktif cukup ikon, tab aktif tetap berlabel. */
+@media (max-width:900px) and (min-width:761px){
+    .tab:not([aria-current="page"]){ font-size:0; gap:0; padding:0 14px; }
+    .tab:not([aria-current="page"]) .tab-badge{ font-size:11px; }
+}
 @media (pointer:coarse){ .debt-info a.badge{ min-height:44px; padding:0 14px; } }
 
 /* Empat metode bayar di panel pesanan yang sempit: ikon di atas teks, tombol boleh menyusut. */
@@ -1059,13 +1064,101 @@ select.input{ appearance:auto; }
 .input-suffix > .suffix{ position:absolute; right:14px; color:var(--muted); font-weight:600; pointer-events:none; }
 
 /*
- * Metode bayar: enam ubin seragam (3 × 2) — ikon di atas, label satu baris
- * di bawah, tinggi sama. Menggantikan aturan-aturan sebelumnya.
+ * Metode bayar: enam ubin ringkas (3 × 2) — ikon & label sebaris, rata kiri
+ * supaya ikon membentuk kolom yang rapi. Menggantikan aturan-aturan sebelumnya.
  */
-#paymentToggle{ grid-template-columns:repeat(3, minmax(0, 1fr)); gap:4px; }
+#paymentToggle{ grid-template-columns:repeat(3, minmax(0, 1fr)); gap:4px; padding:4px; }
 #paymentToggle button{
-    flex-direction:column; justify-content:center; align-items:center; gap:5px;
-    min-height:60px; padding:6px 2px;
-    font-size:12.5px; line-height:1.1; text-align:center; white-space:nowrap;
+    flex-direction:row; justify-content:flex-start; align-items:center; gap:8px;
+    min-height:40px; padding:0 12px;
+    font-size:13.5px; line-height:1.1; text-align:left; white-space:nowrap; overflow:hidden;
 }
-#paymentToggle button .i{ width:20px; height:20px; }
+#paymentToggle button .i{ width:18px; height:18px; flex:none; }
+@media (pointer:coarse){ #paymentToggle button{ min-height:44px; } }
+@media (max-width:380px){ #paymentToggle button{ padding:0 8px; gap:6px; } }
+
+
+/* --- Pengaturan: daftar berkelompok, satu bar simpan --- */
+.set-groups{ max-width:760px; display:flex; flex-direction:column; gap:22px; padding-bottom:80px; }
+.set-group{ display:flex; flex-direction:column; gap:8px; }
+.set-group-title{
+    display:flex; align-items:center; gap:6px; padding:0 4px;
+    font-size:12.5px; font-weight:700; color:var(--text-2); text-transform:uppercase; letter-spacing:.04em;
+}
+.set-row{ display:flex; align-items:center; gap:20px; padding:14px 16px; border-bottom:1px solid var(--border); }
+.set-row:last-child{ border-bottom:0; }
+.set-text{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.set-label{ font-size:14.5px; font-weight:600; }
+.set-help{ font-size:13px; color:var(--muted); line-height:1.45; }
+.set-control{ flex:none; }
+#settingsGroups{ display:contents; }
+.set-control .btn{ white-space:nowrap; }
+.set-control .input-suffix{ width:112px; }
+.set-control .input{ text-align:right; }
+.input.is-invalid{ border-color:var(--danger); box-shadow:0 0 0 3px var(--danger-soft); }
+
+.set-bar{
+    position:sticky; bottom:16px; z-index:5;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:10px 10px 10px 16px; border-radius:var(--radius);
+    background:var(--text); color:#fff; box-shadow:var(--shadow-lg); font-size:14px; font-weight:500;
+}
+.set-bar .btn-ghost{ color:#fff; }
+@media (hover:hover){ .set-bar .btn-ghost:hover{ background:rgba(255,255,255,.12); } }
+body.has-tabs .set-bar{ bottom:76px; }
+@media (min-width:761px){ body.has-tabs .set-bar{ bottom:16px; } }
+.set-bar .toolbar{ flex-wrap:nowrap; }
+.set-bar .short{ display:none; }
+@media (max-width:600px){
+    .set-row{ gap:12px; padding:14px; }
+    .set-control .input-suffix{ width:92px; }
+    .set-bar{ padding-left:14px; font-size:13.5px; }
+    .set-bar .long{ display:none; }
+    .set-bar .short{ display:inline; }
+}
+
+
+/* --- Bagi 2 metode (layar kasir) --- */
+
+/* Tombol "Bagi 2" di samping Bayar — tidak memakan baris sendiri. */
+/* "Split pembayaran": bagian dari pilihan metode, tepat di bawah ubin metode. */
+.split-open{
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    min-height:36px; margin-top:-4px;
+    border:1px solid var(--border-strong); border-radius:var(--radius-sm);
+    background:var(--surface); color:var(--text);
+    font-size:13.5px; font-weight:600; cursor:pointer;
+}
+.split-open .i{ color:var(--accent); }
+.split-open:disabled{ opacity:.55; cursor:not-allowed; }
+@media (hover:hover){ .split-open:not(:disabled):hover{ background:var(--surface-2); } }
+@media (pointer:coarse){ .split-open{ min-height:44px; } }
+
+/* Kartu bagi: dua baris "metode + jumlah", menggantikan ubin metode selama aktif. */
+.split-card{
+    display:flex; flex-direction:column; gap:6px;
+    padding:6px; border-radius:var(--radius); background:var(--surface-2);
+}
+.split-line{ display:grid; grid-template-columns:minmax(0, 2fr) minmax(0, 3fr); gap:6px; }
+.split-line .input{ background:var(--surface); }
+.split-method{ font-weight:600; }
+.split-foot{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 0 0 4px; }
+.split-cancel{ margin-left:auto; min-height:34px; padding:0 12px; background:var(--surface); }
+.split-status{ font-size:13px; color:var(--muted); }
+.split-status.good{ color:var(--ok); font-weight:600; }
+.split-status.bad{ color:var(--danger); font-weight:600; }
+@media (pointer:coarse){ .split-cancel{ min-height:44px; } }
+
+.notice-sm{ padding:8px 10px; font-size:13px; align-items:center; }
+.notice-sm .i{ margin-top:0; }
+
+.badge-split .i + .i{ margin-left:-2px; }
+
+/*
+ * Panel pembayaran bisa lebih tinggi dari layar (mis. Bagi 2 metode + tunai):
+ * isinya tidak boleh dipadatkan sampai bertumpuk; panel yang di-scroll,
+ * dan daftar pesanan tetap kebagian tempat minimal.
+ */
+.order-foot{ min-height:0; overflow-y:auto; }
+.order-foot > *{ flex:none; }
+.order-lines{ min-height:96px; }

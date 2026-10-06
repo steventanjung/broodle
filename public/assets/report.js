@@ -190,6 +190,15 @@
     }
 
 
+    /* "CASH 25000 + QRIS 25000" -> [{payment:"CASH", amount:25000}, ...]; bukan bagi -> null. */
+    const SPLIT_PATTERN = /^(.+?) (\d+) \+ (.+?) (\d+)$/;
+
+    function splitParts(payment){
+        const m = SPLIT_PATTERN.exec(payment);
+        return m ? [{ payment: m[1], amount: Number(m[2]) }, { payment: m[3], amount: Number(m[4]) }] : null;
+    }
+
+
     function aggregate(transactions, from, to){
 
         let total = 0, cash = 0, qris = 0, transfer = 0, debit = 0, grab = 0, utang = 0, items = 0;
@@ -202,12 +211,15 @@
 
             total += t.total;
 
-            if(t.payment === "CASH") cash += t.total;
-            if(t.payment === "QRIS") qris += t.total;
-            if(t.payment === "TRANSFER" || t.payment === "TRANSFER BCA") transfer += t.total;
-            if(t.payment === "DEBIT") debit += t.total;
-            if(t.payment === "GRAB") grab += t.total;
-            if(t.payment === "UTANG") utang += t.total;
+            /* Dibagi 2 metode: tiap bagian dihitung ke metodenya. */
+            (splitParts(t.payment) || [{ payment: t.payment, amount: t.total }]).forEach(({ payment, amount }) => {
+                if(payment === "CASH") cash += amount;
+                if(payment === "QRIS") qris += amount;
+                if(payment === "TRANSFER" || payment === "TRANSFER BCA") transfer += amount;
+                if(payment === "DEBIT") debit += amount;
+                if(payment === "GRAB") grab += amount;
+                if(payment === "UTANG") utang += amount;
+            });
 
             byDay.set(t.date, (byDay.get(t.date) || 0) + t.total);
 
@@ -633,7 +645,17 @@
     }
 
 
+    const PAY_LABEL = { CASH: "Cash", QRIS: "QRIS", TRANSFER: "Transfer BCA", "TRANSFER BCA": "Transfer BCA", DEBIT: "Debit" };
+    const PAY_ICON = { CASH: "cash", QRIS: "qr", TRANSFER: "bank", "TRANSFER BCA": "bank", DEBIT: "card" };
+
     function paymentBadge(payment){
+
+        const parts = splitParts(payment);
+
+        if(parts){
+            const label = parts.map(p => `${PAY_LABEL[p.payment] || p.payment} ${rupiah(p.amount)}`).join(" + ");
+            return `<span class="badge badge-split" title="${App.escapeHtml(label)}">${parts.map(p => icon(PAY_ICON[p.payment] || "cash", "i-sm")).join("")}<span class="pay-text">${parts.map(p => PAY_LABEL[p.payment] || p.payment).join(" + ")}</span></span>`;
+        }
 
         if(payment === "QRIS"){
             return `<span class="badge badge-accent">${icon("qr", "i-sm")}<span class="pay-text">QRIS</span></span>`;
@@ -788,12 +810,16 @@
         }
 
         const t = sortedTx[tr.dataset.i];
+        const parts = splitParts(t.payment);
 
         tr.insertAdjacentHTML("afterend", `
             <tr class="tx-items"><td colspan="6"><ul>
                 ${t.items.map(item => `
                     <li><span>${escapeHtml(item.product)} <span class="muted num">${item.qty} × ${rupiah(item.price)}</span></span>
                         <span class="num">${rupiah(item.subtotal)}</span></li>`).join("")}
+                ${parts ? parts.map(p => `
+                    <li class="muted"><span>Dibayar ${escapeHtml(PAY_LABEL[p.payment] || p.payment)}</span>
+                        <span class="num">${rupiah(p.amount)}</span></li>`).join("") : ""}
             </ul></td></tr>`);
 
     }

@@ -252,8 +252,9 @@ function addPayment(id, input, username){
         return { ok: false, error: "Jumlah pembayaran harus angka lebih dari 0." };
     }
 
-    if(jumlah > sisa){
-        return { ok: false, error: `Jumlah melebihi sisa utang (sisa Rp${sisa.toLocaleString("id-ID")}).` };
+    /* Utang tidak bisa dicicil: dibayar sekaligus sebesar sisanya. */
+    if(jumlah !== sisa){
+        return { ok: false, error: `Utang harus dibayar lunas sekaligus: Rp${sisa.toLocaleString("id-ID")}.` };
     }
 
     /* "Transfer" dari halaman versi lama = Transfer BCA. */

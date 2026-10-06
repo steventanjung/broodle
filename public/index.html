@@ -126,6 +126,28 @@
                     <strong id="grandTotal" class="num">Rp0</strong>
                 </div>
 
+                <!-- Bagi 2 metode: menggantikan pilihan metode selama aktif. -->
+                <div id="splitSection" class="split-card" hidden>
+                    <div class="split-line">
+                        <select id="splitMethod0" class="input split-method" aria-label="Metode pertama"></select>
+                        <div class="input-group">
+                            <span class="prefix">Rp</span>
+                            <input id="split0" class="input num" type="text" inputmode="numeric" placeholder="0" autocomplete="off" aria-label="Jumlah metode pertama">
+                        </div>
+                    </div>
+                    <div class="split-line">
+                        <select id="splitMethod1" class="input split-method" aria-label="Metode kedua"></select>
+                        <div class="input-group">
+                            <span class="prefix">Rp</span>
+                            <input id="split1" class="input num" type="text" inputmode="numeric" placeholder="0" autocomplete="off" aria-label="Jumlah metode kedua">
+                        </div>
+                    </div>
+                    <div class="split-foot">
+                        <span id="splitStatus" class="split-status"></span>
+                        <button id="splitCancel" type="button" class="btn btn-sm split-cancel"><svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#x"/></svg>Batal</button>
+                    </div>
+                </div>
+
                 <div id="paymentToggle" class="segmented" role="group" aria-label="Metode pembayaran">
                     <button type="button" data-payment="cash" aria-pressed="true">
                         <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#cash"/></svg>Cash
@@ -134,7 +156,7 @@
                         <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#qr"/></svg>QRIS
                     </button>
                     <button type="button" data-payment="transfer" aria-pressed="false">
-                        <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#bank"/></svg>Transfer BCA
+                        <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#bank"/></svg>Transfer
                     </button>
                     <button type="button" data-payment="debit" aria-pressed="false">
                         <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#card"/></svg>Debit
@@ -147,8 +169,12 @@
                     </button>
                 </div>
 
+                <button id="splitOpen" type="button" class="split-open" disabled>
+                    <svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#layers"/></svg>Split pembayaran
+                </button>
+
                 <div id="cashSection" class="field">
-                    <label class="label" for="cashInput">Uang diterima</label>
+                    <label id="cashLabel" class="label" for="cashInput">Uang diterima</label>
                     <div class="input-group">
                         <span class="prefix">Rp</span>
                         <input id="cashInput" class="input input-lg num" type="text" inputmode="numeric" placeholder="0" autocomplete="off">
@@ -160,19 +186,19 @@
                     </div>
                 </div>
 
-                <div id="qrisSection" class="notice notice-info" hidden>
-                    <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#qr"/></svg>
-                    <span>Pastikan pembayaran QRIS sudah masuk sebelum menekan Bayar.</span>
+                <div id="qrisSection" class="notice notice-info notice-sm" hidden>
+                    <svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#qr"/></svg>
+                    <span>Pastikan QRIS sudah masuk sebelum Bayar.</span>
                 </div>
 
-                <div id="transferSection" class="notice notice-info" hidden>
-                    <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#bank"/></svg>
-                    <span>Cek mutasi rekening BCA dan pastikan transfer sudah masuk sebelum menekan Bayar.</span>
+                <div id="transferSection" class="notice notice-info notice-sm" hidden>
+                    <svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#bank"/></svg>
+                    <span>Cek mutasi BCA dulu sebelum Bayar.</span>
                 </div>
 
-                <div id="debitSection" class="notice notice-info" hidden>
-                    <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#card"/></svg>
-                    <span>Pastikan transaksi di mesin EDC berhasil dan struknya keluar sebelum menekan Bayar.</span>
+                <div id="debitSection" class="notice notice-info notice-sm" hidden>
+                    <svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#card"/></svg>
+                    <span>Pastikan struk EDC sudah keluar sebelum Bayar.</span>
                 </div>
 
                 <div id="grabSection" class="notice notice-info" hidden>
@@ -290,7 +316,7 @@
      ===================================================== -->
 
 <main id="view-pengaturan" class="view">
-    <div class="page page-narrow">
+    <div class="page">
 
         <div class="page-head">
             <div>
@@ -299,20 +325,46 @@
             </div>
         </div>
 
-        <form id="settingsForm" class="panel panel-body settings-form" autocomplete="off">
-            <div class="settings-title">
-                <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#bike"/></svg>
-                <h2>Grab</h2>
-            </div>
-            <div class="field">
-                <label class="label" for="sGrab">Potongan Grab</label>
-                <div class="input-group input-suffix">
-                    <input id="sGrab" name="grabCommission" class="input input-lg num" inputmode="decimal" required>
-                    <span class="suffix">%</span>
+        <form id="settingsForm" class="set-groups" autocomplete="off" novalidate>
+            <div id="settingsGroups"></div>
+
+            <section class="set-group">
+                <h2 class="set-group-title"><svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#database"/></svg>Data</h2>
+                <div class="panel">
+                    <div class="set-row">
+                        <div class="set-text">
+                            <span class="set-label">Unduh cadangan</span>
+                            <p class="set-help">Satu file berisi akun, menu, utang, setoran, pengaturan, dan foto produk. Simpan di tempat aman dan jangan dibagikan.</p>
+                            <p id="backupLast" class="set-help" hidden></p>
+                        </div>
+                        <div class="set-control">
+                            <button id="backupDownload" type="button" class="btn">
+                                <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#download"/></svg>Unduh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="set-row">
+                        <div class="set-text">
+                            <span class="set-label">Pulihkan dari cadangan</span>
+                            <p class="set-help">Ganti semua data dengan isi file cadangan. Data yang sekarang disimpan dulu di server, jadi masih bisa dikembalikan.</p>
+                        </div>
+                        <div class="set-control">
+                            <button id="backupRestore" type="button" class="btn">
+                                <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#history"/></svg>Pulihkan
+                            </button>
+                            <input id="backupFile" type="file" accept=".json,application/json" hidden>
+                        </div>
+                    </div>
                 </div>
-                <span id="sGrabExample" class="hint"></span>
+            </section>
+
+            <div id="settingsBar" class="set-bar" hidden>
+                <span class="long">Ada perubahan yang belum disimpan</span><span class="short">Belum disimpan</span>
+                <div class="toolbar">
+                    <button id="settingsReset" type="button" class="btn btn-ghost">Batal</button>
+                    <button id="settingsSave" type="submit" class="btn btn-primary">Simpan</button>
+                </div>
             </div>
-            <button id="settingsSave" type="submit" class="btn btn-primary" style="align-self:flex-start">Simpan</button>
         </form>
 
     </div>
@@ -897,13 +949,7 @@
     </div>
     <div id="debtBody" class="dialog-body"></div>
     <form id="debtPayForm" class="debt-pay" autocomplete="off">
-        <div class="field">
-            <label class="label" for="dJumlah">Jumlah dibayar</label>
-            <div class="input-group">
-                <span class="prefix">Rp</span>
-                <input id="dJumlah" name="jumlah" class="input input-lg num" inputmode="numeric" required>
-            </div>
-        </div>
+        <span class="label">Dibayar lunas dengan</span>
         <div id="debtMethod" class="segmented" role="group" aria-label="Metode pembayaran">
             <button type="button" data-metode="Cash" aria-pressed="true">Cash</button>
             <button type="button" data-metode="QRIS" aria-pressed="false">QRIS</button>

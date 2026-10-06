@@ -1,6 +1,6 @@
 /* =====================================================
    UTANG
-   Daftar utang pelanggan, pembayaran (lunas / cicilan),
+   Daftar utang pelanggan, pelunasan (sekaligus, tidak dicicil),
    cetak ulang nota & bukti bayar. Kasir dan superadmin
    sama-sama bisa mencatat pembayaran; hanya superadmin
    yang bisa membatalkan utang (dijaga juga di server).
@@ -8,7 +8,7 @@
 
 (() => {
 
-    const { $, $$, icon, escapeHtml, rupiah, parseNumber, numberFmt, api, toast, busy } = App;
+    const { $, $$, icon, escapeHtml, rupiah, numberFmt, api, toast, busy } = App;
 
     let data = null;
     let status = "belum";
@@ -229,14 +229,14 @@
         payMethod = "Cash";
         paymentId = newPaymentId();
 
-        renderDebt(true);
+        renderDebt();
 
         $("#debtDialog").showModal();
 
     }
 
 
-    function renderDebt(resetAmount){
+    function renderDebt(){
 
         const d = current;
         const overdue = isOverdue(d);
@@ -297,13 +297,7 @@
         $("#debtVoid").hidden = !App.isSuperadmin();
 
         if(canPay){
-
-            if(resetAmount){
-                $("#dJumlah").value = numberFmt.format(d.sisa);
-            }
-
             renderPayButton();
-
         }
 
     }
@@ -311,17 +305,10 @@
 
     function renderPayButton(){
 
-        const amount = parseNumber($("#dJumlah").value);
-        const btn = $("#debtPaySubmit");
-
         $$("#debtMethod button").forEach(b => b.setAttribute("aria-pressed", b.dataset.metode === payMethod));
 
-        btn.disabled = amount <= 0 || amount > current.sisa;
-        btn.innerHTML = icon("check") + (
-            amount > current.sisa ? `Melebihi sisa ${rupiah(current.sisa)}`
-            : amount >= current.sisa ? `Lunasi ${rupiah(amount)}`
-            : `Terima ${rupiah(amount || 0)}`
-        );
+        /* Tidak bisa dicicil: selalu sebesar sisa utang. */
+        $("#debtPaySubmit").innerHTML = icon("check") + `Lunasi ${rupiah(current.sisa)}`;
 
     }
 
@@ -330,11 +317,7 @@
 
         event.preventDefault();
 
-        const jumlah = parseNumber($("#dJumlah").value);
-
-        if(jumlah <= 0 || jumlah > current.sisa){
-            return toast("Jumlah harus lebih dari 0 dan tidak melebihi sisa.", "error");
-        }
+        const jumlah = current.sisa;
 
         await busy($("#debtPaySubmit"), "Menyimpan…", async () => {
 
@@ -355,11 +338,9 @@
 
                 replaceDebt(debt);
                 render();
-                renderDebt(true);
+                renderDebt();
 
-                toast(debt.status === "lunas"
-                    ? `${debt.pelanggan} lunas. Pembayaran ${rupiah(jumlah)} dicatat`
-                    : `Pembayaran ${rupiah(jumlah)} dicatat. Sisa ${rupiah(debt.sisa)}`, "ok", 5000);
+                toast(`${debt.pelanggan} lunas. Pembayaran ${rupiah(jumlah)} (${payment.metode}) dicatat`, "ok", 5000);
 
                 /* Pembayaran sudah tersimpan; cetak bukti sesudahnya. */
                 const printed = await Printer.send(Printer.paymentReceipt(debt, payment));
@@ -460,12 +441,6 @@
                 status = chip.dataset.status;
                 if(data){ render(); }
             }
-        });
-
-        $("#dJumlah").addEventListener("input", e => {
-            const n = parseNumber(e.target.value);
-            e.target.value = n ? numberFmt.format(n) : "";
-            renderPayButton();
         });
 
         $("#debtMethod").addEventListener("click", e => {

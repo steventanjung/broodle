@@ -4,7 +4,7 @@ A web-based point of sale (kasir) for Kukikoe. Transactions go to Google Sheets 
 
 - **Kasir** — product grid, cart, payment by Cash, QRIS, Transfer BCA, Debit, Grab (Grab prices) or Utang (credit), receipt printing, receipt preview
 - **Menu** (superadmin) — products, prices, Best Seller, photos, optional variants (e.g. flavors) each with their own price, and categories (create — even before any product uses them — rename, merge, delete empty ones, and set the order of the category buttons on the kasir; the product form picks from this list)
-- **Utang** (kasir & superadmin) — sales on credit: list of unpaid invoices, partial or full payments, reprints
+- **Utang** (kasir & superadmin) — sales on credit: list of unpaid invoices, paid off in full in one payment (no installments), reprints
 - **Laporan** (superadmin) — sales report from Google Sheets
 - **Akun** (superadmin) — kasir accounts
 
@@ -249,6 +249,15 @@ Sessions survive restarts as long as `SESSION_SECRET` stays the same. Browsers p
 
 ---
 
+## Split payment (Bagi 2 metode)
+
+One sale paid in full with two methods, e.g. Rp50.000 = Rp25.000 Cash + Rp25.000 QRIS.
+
+- At the kasir, switch on **Bagi 2 metode** under the payment tiles. Two methods are selected (tap another tile to swap one out); Grab and Utang can't be part of a split.
+- Type the amount for either method; the other fills in with the rest of the total. Bayar is enabled only when both parts are above 0 and add up to the total. With Cash in the split, enter the cash handed over — change is counted against the cash part only.
+- The invoice lists both parts. Totalan/setoran and Laporan count each part under its own method.
+- Google Sheets receives `pembayaran` as `Cash 25000 + QRIS 25000` (plus a `pembayaranBagi` array your Apps Script may ignore). Laporan splits that text back into the two methods, so no Apps Script change is needed.
+
 ## Setoran (kasir shifts)
 
 Only **kasir** accounts open and close a setoran; superadmin is never asked.
@@ -265,7 +274,7 @@ Every sale is tagged with the kasir and setoran (extra fields `kasir`, `setoran`
 ## Utang (sales on credit)
 
 1. At the kasir, choose **Utang** as the payment method and press **Catat utang**. Enter the customer's name (required), and optionally a phone number, due date and note. The invoice prints immediately, marked **UTANG – BELUM LUNAS** with the balance.
-2. The debt appears in the **Utang** tab (the tab shows how many are open). Tap one to see the invoice, then **Terima pembayaran**: pay the full balance (**Lunasi**) or any smaller amount, by Cash, QRIS, Transfer BCA or Debit. A payment receipt prints each time; when the balance reaches 0 the debt becomes **Lunas**.
+2. The debt appears in the **Utang** tab (the tab shows how many are open). Tap one to see the invoice, then pick the method (Cash, QRIS, Transfer BCA or Debit) and press **Lunasi**. A debt is always paid off in full in one payment — no installments (the server rejects any other amount). A payment receipt prints and the debt becomes **Lunas**. Debts that were partly paid before this rule keep their history; the remaining balance is paid in one go.
 3. **Cetak ulang nota** reprints the invoice with the latest paid/remaining amounts. Each payment in the history has its own reprint button.
 4. Only a superadmin can **cancel** a debt (a reason is required). It is kept, marked *Dibatalkan*, and can no longer be paid.
 
@@ -318,6 +327,10 @@ Everything that matters at runtime lives in two folders, both outside git:
 | `uploads/` | product photos |
 
 Transactions themselves are in Google Sheets.
+
+**From the app (any host, any plan):** as superadmin, open **Pengaturan → Data → Unduh**. You get one file, `broodle-cadangan-YYYY-MM-DD.json`, with everything in `data/` plus the product photos. Keep it private: it contains password hashes and customer debts. **Pulihkan** uploads such a file and replaces all data with it. Before replacing, the server saves the current data to `data/backups/sebelum-pulihkan-*.json` (last 3 kept), so a wrong restore can be undone by restoring that file. A backup must contain at least one superadmin account.
+
+**From the server shell:**
 
 ```bash
 # example: daily backup via cron
@@ -394,6 +407,7 @@ menu.js             menu store (data/menus.json) + validation
 debts.js            customer debts & payments (data/debts.json)
 shifts.js           kasir setoran records (data/shifts.json)
 settings.js         store settings, e.g. Grab commission (data/settings.json)
+backup.js           backup download / restore (Pengaturan → Data)
 scripts/user.js     account CLI
 public/             the only folder served to browsers
   index.html        app shell: Kasir / Menu / Laporan / Akun
