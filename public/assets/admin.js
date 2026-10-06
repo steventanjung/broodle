@@ -48,9 +48,6 @@
             `<option value="">Semua kategori</option>` +
             cats.map(c => `<option ${c === menuCategory ? "selected" : ""}>${escapeHtml(c)}</option>`).join("");
 
-        $("#categoryOptions").innerHTML =
-            cats.map(c => `<option value="${escapeHtml(c)}">`).join("");
-
         const q = menuQuery.trim().toLowerCase();
 
         const list = menus.filter(m =>
@@ -66,8 +63,8 @@
 
         }
 
-        /* Kelompokkan per kategori, urutan sesuai menu. */
-        const groups = new Map();
+        /* Kelompokkan per kategori, urutan sesuai pengaturan Kategori. */
+        const groups = new Map(cats.map(c => [c, []]));
 
         list.forEach(m => {
             const key = m.kategori || "Lainnya";
@@ -80,6 +77,10 @@
         let html = "";
 
         groups.forEach((items, cat) => {
+
+            if(items.length === 0){
+                return;
+            }
 
             html += `<div class="group-label">${escapeHtml(cat)} <span class="muted">· ${items.length}</span></div>`;
 
@@ -204,7 +205,7 @@
 
         form.nama.value = menu?.nama || "";
         form.harga.value = menu?.harga ? numberFmt.format(menu.harga) : "";
-        form.kategori.value = menu?.kategori || menuCategory || "";
+        fillCategorySelect(menu?.kategori || menuCategory);
         form.unggulan.checked = !!menu?.unggulan;
         form.hargaKustom.checked = !!menu?.hargaKustom;
         form.adaVarian.checked = !!menu?.adaVarian;
@@ -219,6 +220,23 @@
         /* Ubah produk di tablet: jangan langsung memunculkan keyboard layar. */
         if(!menu || !isTouchDevice()){
             form.nama.focus();
+        }
+
+    }
+
+
+    /* Pilihan kategori di form produk: hanya kategori yang sudah dibuat di dialog Kategori. */
+    function fillCategorySelect(selected){
+
+        const select = $("#productForm").kategori;
+        const all = App.categories({ all: true });
+
+        select.innerHTML = all.length
+            ? all.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("")
+            : `<option value="" disabled selected>Belum ada kategori, buat dulu lewat "Atur kategori"</option>`;
+
+        if(selected && all.includes(selected)){
+            select.value = selected;
         }
 
     }
@@ -522,6 +540,269 @@
 
 
     /* =================================================
+       KELOLA KATEGORI
+       Ganti nama (semua produk ikut), gabung (nama sama
+       dengan kategori lain), dan atur urutan tombol kasir.
+       ================================================= */
+
+    let categoryDraft = [];
+
+    function openCategories(){
+
+        categoryDraft = App.categories({ all: true }).map(name => ({
+            from: name,
+            to: name,
+            count: App.menus.filter(m => (m.kategori || "Lainnya") === name).length
+        }));
+
+        renderCategories();
+
+        $("#categoryDialog").showModal();
+
+    }
+
+
+    function renderCategories(){
+
+        $("#categoryList").innerHTML = categoryDraft.map((c, i) => {
+
+            /* Nama sama dengan baris di atasnya = akan digabung ke sana. */
+            const target = categoryDraft.findIndex(o => o.to.trim().toLowerCase() === c.to.trim().toLowerCase());
+            const mergeNote = target !== i && c.to.trim()
+                ? `<span class="hint">Digabung ke "${escapeHtml(categoryDraft[target].to.trim())}"</span>` : "";
+
+            return `
+                <li class="cat-row" data-i="${i}">
+                    <button type="button" class="cat-grip" aria-label="Geser untuk mengurutkan ${escapeHtml(c.to || "kategori baru")} (atau tekan panah atas/bawah)" title="Geser untuk mengurutkan">${icon("grip")}</button>
+                    <div class="cat-main">
+                        <input class="input" data-f="to" maxlength="30" value="${escapeHtml(c.to)}" placeholder="Nama kategori baru" aria-label="Nama kategori ${escapeHtml(c.from || "baru")}">
+                        <span class="small muted">${c.from === null ? "Kategori baru" : `${c.count} produk`}${c.from !== null && c.to.trim() !== c.from ? ` · dulu "${escapeHtml(c.from)}"` : ""}</span>
+                        ${mergeNote}
+                    </div>
+                    <button type="button" class="btn btn-ghost btn-icon btn-sm btn-danger" data-delete aria-label="Hapus kategori"
+                        ${c.count > 0 ? `disabled title="Masih dipakai ${c.count} produk"` : `title="Hapus kategori"`}>${icon("trash", "i-sm")}</button>
+                </li>`;
+
+        }).join("");
+
+    }
+
+
+    async function saveCategories(event){
+
+        event.preventDefault();
+
+        /* Baris baru yang dibiarkan kosong: abaikan saja. */
+        categoryDraft = categoryDraft.filter(c => c.from !== null || c.to.trim());
+
+        if(categoryDraft.some(c => !c.to.trim())){
+            renderCategories();
+            return toast("Nama kategori tidak boleh kosong.", "error");
+        }
+
+        await busy($("#categorySave"), "Menyimpan…", async () => {
+
+            try{
+
+                const data = await api("/api/categories", {
+                    method: "PUT",
+                    body: { categories: categoryDraft.map(c => ({ from: c.from, to: c.to.trim() })) }
+                });
+
+                App.setMenus(data.menus, data.categories);
+
+                $("#categoryDialog").close();
+                toast("Kategori disimpan");
+
+                /* Dibuka dari form produk: perbarui pilihannya, pertahankan yang sudah dipilih. */
+                if($("#productDialog").open){
+                    const select = $("#productForm").kategori;
+                    const newest = categoryDraft.find(c => c.from === null)?.to.trim();
+                    fillCategorySelect(newest || select.value);
+                }
+
+            }catch(error){
+
+                toast(error.message, "error");
+
+            }
+
+        });
+
+    }
+
+
+    /*
+     * Urutkan dengan geser (sentuh & mouse) lewat pointer events —
+     * drag-and-drop bawaan browser tidak jalan di layar sentuh.
+     * Baris mengikuti jari; saat melewati titik tengah baris lain,
+     * posisinya ditukar di DOM. Saat dilepas, draf disusun ulang
+     * sesuai urutan baru. Keyboard: panah atas/bawah di pegangan.
+     */
+    function moveCategory(from, to){
+
+        if(to < 0 || to >= categoryDraft.length || to === from){
+            return;
+        }
+
+        const [item] = categoryDraft.splice(from, 1);
+        categoryDraft.splice(to, 0, item);
+
+        renderCategories();
+
+    }
+
+
+    function bindCategoryDrag(){
+
+        const list = $("#categoryList");
+        let drag = null;
+
+        /* offsetTop = posisi tata letak (tidak terpengaruh transform), sama acuannya untuk semua baris. */
+        const follow = () => {
+            drag.row.style.transform = `translateY(${drag.moved - (drag.row.offsetTop - drag.startTop)}px)`;
+        };
+
+        list.addEventListener("pointerdown", e => {
+
+            const grip = e.target.closest(".cat-grip");
+
+            if(!grip || (e.pointerType === "mouse" && e.button !== 0)){
+                return;
+            }
+
+            e.preventDefault();
+            grip.setPointerCapture(e.pointerId);
+
+            const row = grip.closest(".cat-row");
+
+            drag = { row, startY: e.clientY, startTop: row.offsetTop, moved: 0 };
+
+            row.classList.add("dragging");
+            list.classList.add("is-sorting");
+
+        });
+
+        list.addEventListener("pointermove", e => {
+
+            if(!drag){
+                return;
+            }
+
+            const { row } = drag;
+
+            drag.moved = e.clientY - drag.startY;
+
+            /* Titik tengah baris yang digeser (posisi tampil) dibanding titik tengah tetangga. */
+            const mid = drag.startTop + drag.moved + row.offsetHeight / 2;
+            const next = row.nextElementSibling;
+            const prev = row.previousElementSibling;
+
+            if(next && mid > next.offsetTop + next.offsetHeight / 2){
+                list.insertBefore(next, row);
+            }else if(prev && mid < prev.offsetTop + prev.offsetHeight / 2){
+                list.insertBefore(row, prev);
+            }
+
+            follow();
+
+            /* Dekat tepi dialog: gulir otomatis supaya daftar panjang tetap bisa diurutkan. */
+            const dialog = $("#categoryDialog");
+            const box = dialog.getBoundingClientRect();
+            const step = e.clientY < box.top + 60 ? -10 : e.clientY > box.bottom - 60 ? 10 : 0;
+
+            if(step){
+                dialog.scrollTop += step;
+                drag.startY -= step;
+            }
+
+        });
+
+        const drop = () => {
+
+            if(!drag){
+                return;
+            }
+
+            const order = [...list.children].map(li => Number(li.dataset.i));
+            const moved = Number(drag.row.dataset.i);
+
+            categoryDraft = order.map(i => categoryDraft[i]);
+            drag = null;
+            list.classList.remove("is-sorting");
+
+            renderCategories();
+
+            /* Fokus kembali ke pegangan baris yang tadi digeser. */
+            $(`#categoryList .cat-row[data-i="${order.indexOf(moved)}"] .cat-grip`)?.focus({ preventScroll: true });
+
+        };
+
+        list.addEventListener("pointerup", drop);
+        list.addEventListener("pointercancel", drop);
+
+        list.addEventListener("keydown", e => {
+
+            const grip = e.target.closest(".cat-grip");
+
+            if(!grip || (e.key !== "ArrowUp" && e.key !== "ArrowDown")){
+                return;
+            }
+
+            e.preventDefault();
+
+            const from = Number(grip.closest(".cat-row").dataset.i);
+            const to = from + (e.key === "ArrowUp" ? -1 : 1);
+
+            moveCategory(from, to);
+
+            $(`#categoryList .cat-row[data-i="${Math.max(0, Math.min(to, categoryDraft.length - 1))}"] .cat-grip`)?.focus();
+
+        });
+
+    }
+
+
+    function bindCategories(){
+
+        $("#manageCategories").addEventListener("click", openCategories);
+        $("#productManageCategories").addEventListener("click", openCategories);
+
+        $("#addCategory").addEventListener("click", () => {
+            categoryDraft.push({ from: null, to: "", count: 0 });
+            renderCategories();
+            const inputs = $$("#categoryList [data-f=to]");
+            inputs[inputs.length - 1].focus();
+        });
+        $("#categoryForm").addEventListener("submit", saveCategories);
+
+        /* Ketik: simpan ke draf tanpa render ulang (fokus & kursor tetap); catatan gabung diperbarui saat keluar kolom. */
+        $("#categoryList").addEventListener("input", e => {
+            const row = e.target.closest(".cat-row");
+            if(row){
+                categoryDraft[Number(row.dataset.i)].to = e.target.value;
+            }
+        });
+
+        $("#categoryList").addEventListener("change", renderCategories);
+
+        bindCategoryDrag();
+
+        $("#categoryList").addEventListener("click", e => {
+
+            const del = e.target.closest("[data-delete]");
+
+            if(del && !del.disabled){
+                categoryDraft.splice(Number(del.closest(".cat-row").dataset.i), 1);
+                return renderCategories();
+            }
+
+        });
+
+    }
+
+
+    /* =================================================
        KELOLA AKUN
        Akun superadmin baru hanya lewat CLI di server,
        supaya satu sesi browser yang disalahgunakan
@@ -764,6 +1045,7 @@
         }
 
         bindMenu();
+        bindCategories();
         bindAccounts();
         bindProfile();
 

@@ -9,9 +9,12 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%239c3d17'/%3E%3Ctext x='16' y='23' font-family='Arial' font-size='20' font-weight='700' text-anchor='middle' fill='white'%3EK%3C/text%3E%3C/svg%3E">
 <script src="/assets/pw.js" defer></script>
 <script src="/assets/app.js" defer></script>
+<script src="/assets/printer.js" defer></script>
 <script src="/assets/kasir.js" defer></script>
 <script src="/assets/admin.js" defer></script>
 <script src="/assets/report.js" defer></script>
+<script src="/assets/utang.js" defer></script>
+<script src="/assets/setoran.js" defer></script>
 </head>
 
 <body>
@@ -24,11 +27,19 @@
 
 <header class="topbar">
 
-    <span class="brand">Kukikoe</span>
+    <a class="brand" href="#kasir" aria-label="Kukikoe Bakehouse, ke kasir">
+        <img src="/assets/logo-kukikoe-480.png" alt="Kukikoe Bakehouse" width="94" height="30">
+    </a>
 
     <nav class="tabs" aria-label="Navigasi" hidden>
         <a class="tab" href="#kasir" data-view="kasir">
             <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#cart"/></svg>Kasir
+        </a>
+        <a class="tab" href="#utang" data-view="utang">
+            <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#book"/></svg>Utang<span id="utangBadge" class="tab-badge num" hidden></span>
+        </a>
+        <a class="tab" href="#totalan" data-view="totalan" hidden>
+            <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#cash"/></svg>Totalan
         </a>
         <a class="tab" href="#menu" data-view="menu" data-admin hidden>
             <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#package"/></svg>Menu
@@ -93,6 +104,9 @@
                     <span id="orderCount" class="small muted">0 item</span>
                 </div>
                 <div class="toolbar">
+                    <button id="previewReceipt" type="button" class="btn btn-ghost btn-sm" disabled>
+                        <svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#receipt"/></svg>Lihat nota
+                    </button>
                     <button id="clearCart" type="button" class="btn btn-ghost btn-sm">Kosongkan</button>
                     <button id="closeOrder" type="button" class="btn btn-ghost btn-icon mobile-only" aria-label="Tutup">
                         <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#x"/></svg>
@@ -116,6 +130,15 @@
                     <button type="button" data-payment="qris" aria-pressed="false">
                         <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#qr"/></svg>QRIS
                     </button>
+                    <button type="button" data-payment="transfer" aria-pressed="false">
+                        <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#bank"/></svg>Transfer BCA
+                    </button>
+                    <button type="button" data-payment="debit" aria-pressed="false">
+                        <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#card"/></svg>Debit
+                    </button>
+                    <button type="button" data-payment="utang" aria-pressed="false">
+                        <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#book"/></svg>Utang
+                    </button>
                 </div>
 
                 <div id="cashSection" class="field">
@@ -134,6 +157,21 @@
                 <div id="qrisSection" class="notice notice-info" hidden>
                     <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#qr"/></svg>
                     <span>Pastikan pembayaran QRIS sudah masuk sebelum menekan Bayar.</span>
+                </div>
+
+                <div id="transferSection" class="notice notice-info" hidden>
+                    <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#bank"/></svg>
+                    <span>Cek mutasi rekening BCA dan pastikan transfer sudah masuk sebelum menekan Bayar.</span>
+                </div>
+
+                <div id="debitSection" class="notice notice-info" hidden>
+                    <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#card"/></svg>
+                    <span>Pastikan transaksi di mesin EDC berhasil dan struknya keluar sebelum menekan Bayar.</span>
+                </div>
+
+                <div id="utangSection" class="notice notice-info" hidden>
+                    <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#book"/></svg>
+                    <span>Nota dicetak dengan tanggal hari ini. Pelunasan dicatat di tab Utang.</span>
                 </div>
 
                 <div id="reprintNotice" class="notice notice-warn" hidden>
@@ -167,6 +205,76 @@
 
 
 <!-- =====================================================
+     UTANG (kasir & superadmin)
+     ===================================================== -->
+
+<main id="view-utang" class="view">
+    <div class="page">
+
+        <div class="page-head">
+            <div>
+                <h1>Utang</h1>
+                <p>Pelanggan yang belum melunasi nota</p>
+            </div>
+            <div class="toolbar">
+                <span id="utangUpdated" class="small muted"></span>
+                <button id="utangRefresh" type="button" class="btn">
+                    <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#refresh"/></svg><span>Muat ulang</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="kpis kpis-3">
+            <div class="panel kpi"><span>Total piutang</span><strong id="utangTotalOpen" class="num">–</strong></div>
+            <div class="panel kpi"><span>Pelanggan berutang</span><strong id="utangCustomers" class="num">–</strong></div>
+            <div class="panel kpi"><span>Lewat jatuh tempo</span><strong id="utangOverdue" class="num">–</strong></div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-head" style="flex-wrap:wrap">
+                <div class="input-group" style="flex:1;min-width:200px">
+                    <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#search"/></svg>
+                    <input id="utangSearch" class="input" type="search" placeholder="Cari nama pelanggan atau nota" autocomplete="off">
+                </div>
+                <div id="utangFilter" class="chips" role="group" aria-label="Status">
+                    <button type="button" class="chip" data-status="belum" aria-pressed="true">Belum lunas</button>
+                    <button type="button" class="chip" data-status="lunas" aria-pressed="false">Lunas</button>
+                    <button type="button" class="chip" data-status="dibatalkan" aria-pressed="false">Dibatalkan</button>
+                    <button type="button" class="chip" data-status="semua" aria-pressed="false">Semua</button>
+                </div>
+            </div>
+            <div id="utangRows"></div>
+        </div>
+
+    </div>
+</main>
+
+
+<!-- =====================================================
+     TOTALAN (kasir): total setoran yang sedang berjalan
+     ===================================================== -->
+
+<main id="view-totalan" class="view">
+    <div class="page page-narrow">
+
+        <div class="page-head">
+            <div>
+                <h1>Totalan</h1>
+                <p id="totalanMeta"></p>
+            </div>
+        </div>
+
+        <div id="totalanBody" class="panel panel-body"></div>
+
+        <button id="totalanClose" type="button" class="btn btn-lg btn-block" style="margin-top:16px">
+            <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#logout"/></svg>Tutup kasir & keluar
+        </button>
+
+    </div>
+</main>
+
+
+<!-- =====================================================
      KELOLA MENU
      ===================================================== -->
 
@@ -178,9 +286,14 @@
                 <h1>Menu</h1>
                 <p id="menuSummary"></p>
             </div>
-            <button id="addProduct" type="button" class="btn btn-primary">
-                <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#plus"/></svg>Tambah produk
-            </button>
+            <div class="toolbar">
+                <button id="manageCategories" type="button" class="btn">
+                    <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#tag"/></svg>Kategori
+                </button>
+                <button id="addProduct" type="button" class="btn btn-primary">
+                    <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#plus"/></svg>Tambah produk
+                </button>
+            </div>
         </div>
 
         <div class="panel">
@@ -266,7 +379,7 @@
 
         <div id="reportContent" class="viz" hidden>
 
-            <div class="kpis">
+            <div class="kpis kpis-6">
                 <div class="panel kpi">
                     <div class="kpi-head"><span>Pendapatan</span>
                         <button type="button" class="info-btn" aria-label="Penjelasan Pendapatan" aria-expanded="false">
@@ -303,6 +416,24 @@
                     </div>
                     <strong id="kpiItems" class="num"></strong>
                 </div>
+                <div class="panel kpi">
+                    <div class="kpi-head"><span>Uang masuk</span>
+                        <button type="button" class="info-btn" aria-label="Penjelasan Uang masuk" aria-expanded="false">
+                            <svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#info"/></svg>
+                            <span class="info-tip" role="tooltip">Uang yang benar-benar diterima pada rentang ini: penjualan Cash, QRIS, Transfer BCA &amp; Debit ditambah pembayaran utang. Penjualan utang yang belum dibayar tidak dihitung.</span>
+                        </button>
+                    </div>
+                    <strong id="kpiInflow" class="num"></strong>
+                </div>
+                <div class="panel kpi">
+                    <div class="kpi-head"><span>Piutang berjalan</span>
+                        <button type="button" class="info-btn" aria-label="Penjelasan Piutang berjalan" aria-expanded="false">
+                            <svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#info"/></svg>
+                            <span class="info-tip" role="tooltip">Total utang pelanggan yang belum dibayar saat ini, tidak tergantung rentang tanggal.</span>
+                        </button>
+                    </div>
+                    <strong id="kpiReceivable" class="num"></strong>
+                </div>
             </div>
 
             <div class="panel" style="margin-bottom:16px">
@@ -316,7 +447,7 @@
                     <div class="panel-body"><div id="productChart"></div></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-head"><h2 style="font-size:15px">Cash vs QRIS</h2></div>
+                    <div class="panel-head"><h2 style="font-size:15px">Metode pembayaran</h2></div>
                     <div class="panel-body"><div id="paymentChart"></div></div>
                 </div>
             </div>
@@ -350,6 +481,23 @@
                     </table>
                 </div>
                 <div id="txPager" class="pager" hidden></div>
+            </div>
+
+            <div class="panel" style="margin-top:16px">
+                <div class="panel-head">
+                    <div>
+                        <h2 style="font-size:15px">Setoran kasir</h2>
+                        <span id="shiftCount" class="small muted"></span>
+                    </div>
+                </div>
+                <div style="overflow-x:auto">
+                    <table class="tx-table shift-table">
+                        <thead>
+                            <tr><th>Kasir</th><th>Waktu</th><th class="r hide-sm">Modal</th><th class="r">Tunai di laci</th><th class="r">QRIS</th><th class="r">Transfer BCA</th><th class="r">Debit</th></tr>
+                        </thead>
+                        <tbody id="shiftBody"></tbody>
+                    </table>
+                </div>
             </div>
 
         </div>
@@ -391,7 +539,7 @@
      DIALOG
      ===================================================== -->
 
-<dialog id="customDialog">
+<dialog id="customDialog" autofocus>
     <form id="customForm">
         <div class="dialog-head">
             <h2></h2>
@@ -420,7 +568,7 @@
 </dialog>
 
 
-<dialog id="productDialog" data-lock>
+<dialog id="productDialog" autofocus data-lock>
     <form id="productForm" autocomplete="off">
         <div class="dialog-head">
             <h2>Tambah produk</h2>
@@ -447,9 +595,11 @@
             </div>
 
             <div class="field">
-                <label class="label" for="pKategori">Kategori</label>
-                <input id="pKategori" name="kategori" class="input" maxlength="30" list="categoryOptions" required placeholder="Pilih atau ketik kategori baru">
-                <datalist id="categoryOptions"></datalist>
+                <div class="label-row">
+                    <label class="label" for="pKategori">Kategori</label>
+                    <button id="productManageCategories" type="button" class="link-btn">Atur kategori</button>
+                </div>
+                <select id="pKategori" name="kategori" class="input" required></select>
             </div>
 
             <div id="priceField" class="field">
@@ -501,7 +651,7 @@
 </dialog>
 
 
-<dialog id="variantDialog">
+<dialog id="variantDialog" autofocus>
     <div class="dialog-head">
         <h2></h2>
         <button type="button" class="btn btn-ghost btn-icon btn-sm" data-close aria-label="Tutup">
@@ -517,7 +667,30 @@
 </dialog>
 
 
-<dialog id="accountDialog" data-lock>
+<dialog id="categoryDialog" autofocus data-lock>
+    <form id="categoryForm" autocomplete="off">
+        <div class="dialog-head">
+            <h2>Kategori</h2>
+            <button type="button" class="btn btn-ghost btn-icon btn-sm" data-close aria-label="Tutup">
+                <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#x"/></svg>
+            </button>
+        </div>
+        <div class="dialog-body">
+            <p class="hint">Buat, ganti nama, atau hapus kategori di sini. Ganti nama berlaku untuk semua produknya. Urutan di sini = urutan tombol kategori di kasir (kategori tanpa produk tidak tampil di kasir).</p>
+            <ul id="categoryList" class="cat-list"></ul>
+            <button id="addCategory" type="button" class="btn btn-sm" style="align-self:flex-start">
+                <svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#plus"/></svg>Tambah kategori
+            </button>
+        </div>
+        <div class="dialog-foot">
+            <button type="button" class="btn" data-close>Batal</button>
+            <button id="categorySave" type="submit" class="btn btn-primary">Simpan</button>
+        </div>
+    </form>
+</dialog>
+
+
+<dialog id="accountDialog" autofocus data-lock>
     <form id="accountForm" autocomplete="off">
         <div class="dialog-head">
             <h2>Tambah akun kasir</h2>
@@ -546,7 +719,7 @@
 </dialog>
 
 
-<dialog id="passwordDialog" data-lock>
+<dialog id="passwordDialog" autofocus data-lock>
     <form id="passwordForm">
         <div class="dialog-head">
             <h2>Ganti password</h2>
@@ -572,7 +745,7 @@
 </dialog>
 
 
-<dialog id="profileDialog" data-lock>
+<dialog id="profileDialog" autofocus data-lock>
     <form id="profileForm">
         <div class="dialog-head">
             <h2>Profil</h2>
@@ -611,7 +784,149 @@
 </dialog>
 
 
-<dialog id="confirmDialog">
+<dialog id="utangDialog" autofocus data-lock>
+    <form id="utangForm" autocomplete="off">
+        <div class="dialog-head">
+            <h2>Catat utang</h2>
+            <button type="button" class="btn btn-ghost btn-icon btn-sm" data-close aria-label="Tutup">
+                <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#x"/></svg>
+            </button>
+        </div>
+        <div class="dialog-body">
+            <div class="total-row">
+                <span>Total utang</span>
+                <strong id="utangTotal" class="num">Rp0</strong>
+            </div>
+            <div class="field">
+                <label class="label" for="uNama">Nama pelanggan</label>
+                <input id="uNama" name="pelanggan" class="input" maxlength="60" required list="debtorNames" placeholder="Nama yang mudah dicari nanti">
+                <datalist id="debtorNames"></datalist>
+            </div>
+            <div class="field">
+                <label class="label" for="uHp">No. HP <span class="muted">(opsional)</span></label>
+                <input id="uHp" name="telepon" class="input" maxlength="20" inputmode="tel" placeholder="mis. 0812 3456 7890">
+            </div>
+            <div class="field">
+                <label class="label" for="uTempo">Jatuh tempo <span class="muted">(opsional)</span></label>
+                <input id="uTempo" name="jatuhTempo" class="input" type="date">
+            </div>
+            <div class="field">
+                <label class="label" for="uCatatan">Catatan <span class="muted">(opsional)</span></label>
+                <input id="uCatatan" name="catatan" class="input" maxlength="200" placeholder="mis. bayar saat ambil pesanan berikutnya">
+            </div>
+            <span class="hint">Nota dicetak sekarang dengan tanda BELUM LUNAS. Pembayaran dicatat nanti di tab Utang.</span>
+        </div>
+        <div class="dialog-foot">
+            <button type="button" class="btn" data-close>Batal</button>
+            <button type="submit" class="btn btn-primary">
+                <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#printer"/></svg>Catat & cetak nota
+            </button>
+        </div>
+    </form>
+</dialog>
+
+
+<dialog id="debtDialog" class="dialog-wide debt-dialog" autofocus>
+    <div class="dialog-head">
+        <div>
+            <h2 id="debtTitle"></h2>
+            <span id="debtMeta" class="small muted"></span>
+        </div>
+        <div class="toolbar" style="gap:2px">
+            <button id="debtReprint" type="button" class="btn btn-ghost btn-icon btn-sm" aria-label="Cetak ulang nota" title="Cetak ulang nota">
+                <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#printer"/></svg>
+            </button>
+            <button type="button" class="btn btn-ghost btn-icon btn-sm" data-close aria-label="Tutup">
+                <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#x"/></svg>
+            </button>
+        </div>
+    </div>
+    <div id="debtBody" class="dialog-body"></div>
+    <form id="debtPayForm" class="debt-pay" autocomplete="off">
+        <div class="field">
+            <label class="label" for="dJumlah">Jumlah dibayar</label>
+            <div class="input-group">
+                <span class="prefix">Rp</span>
+                <input id="dJumlah" name="jumlah" class="input input-lg num" inputmode="numeric" required>
+            </div>
+        </div>
+        <div id="debtMethod" class="segmented" role="group" aria-label="Metode pembayaran">
+            <button type="button" data-metode="Cash" aria-pressed="true">Cash</button>
+            <button type="button" data-metode="QRIS" aria-pressed="false">QRIS</button>
+            <button type="button" data-metode="Transfer BCA" aria-pressed="false">Transfer BCA</button>
+            <button type="button" data-metode="Debit" aria-pressed="false">Debit</button>
+        </div>
+        <button id="debtPaySubmit" type="submit" class="btn btn-primary btn-lg btn-block"></button>
+        <button id="debtVoid" type="button" class="debt-void" hidden>Batalkan utang ini</button>
+    </form>
+</dialog>
+
+
+<dialog id="voidDialog" autofocus data-lock>
+    <form id="voidForm">
+        <div class="dialog-head"><h2 id="voidTitle">Batalkan utang ini?</h2></div>
+        <div class="dialog-body">
+            <p class="dialog-msg">Gunakan kalau utang salah dicatat atau pesanannya batal. Utang pindah ke daftar <b>Dibatalkan</b> dan tidak bisa dibayar lagi.</p>
+            <div class="field">
+                <label class="label" for="vAlasan">Alasan pembatalan</label>
+                <input id="vAlasan" name="alasan" class="input" maxlength="200" required placeholder="mis. salah catat, pesanan batal">
+            </div>
+        </div>
+        <div class="dialog-foot">
+            <button type="button" class="btn" data-close>Tidak jadi</button>
+            <button id="voidSubmit" type="submit" class="btn btn-solid-danger">Ya, batalkan</button>
+        </div>
+    </form>
+</dialog>
+
+
+<dialog id="receiptDialog" autofocus>
+    <div class="dialog-head">
+        <h2>Pratinjau nota</h2>
+        <button type="button" class="btn btn-ghost btn-icon btn-sm" data-close aria-label="Tutup">
+            <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#x"/></svg>
+        </button>
+    </div>
+    <div class="dialog-body">
+        <div id="receiptSlip" class="slip"></div>
+        <p id="receiptNote" class="hint" style="text-align:center"></p>
+    </div>
+</dialog>
+
+
+<dialog id="shiftOpenDialog" autofocus data-lock>
+    <form id="shiftOpenForm" autocomplete="off">
+        <div class="dialog-head"><h2>Buka kasir</h2></div>
+        <div class="dialog-body">
+            <div class="field">
+                <label class="label" for="sModal">Uang modal di laci</label>
+                <div class="input-group">
+                    <span class="prefix">Rp</span>
+                    <input id="sModal" name="modal" class="input input-lg num" inputmode="numeric" required>
+                </div>
+                <span class="hint">Hitung uang di laci sebelum mulai berjualan.</span>
+            </div>
+        </div>
+        <div class="dialog-foot">
+            <button type="submit" class="btn btn-primary btn-lg btn-block">Mulai berjualan</button>
+        </div>
+    </form>
+</dialog>
+
+
+<dialog id="shiftCloseDialog" autofocus data-lock>
+    <form id="shiftCloseForm">
+        <div class="dialog-head"><h2 id="shiftCloseTitle">Tutup kasir</h2></div>
+        <div id="shiftCloseBody" class="dialog-body"></div>
+        <div class="dialog-foot">
+            <button id="shiftCloseCancel" type="button" class="btn" data-close>Batal</button>
+            <button id="shiftCloseSubmit" type="submit" class="btn btn-primary">Tutup kasir & keluar</button>
+        </div>
+    </form>
+</dialog>
+
+
+<dialog id="confirmDialog" autofocus>
     <div class="dialog-head"><h2></h2></div>
     <div class="dialog-body"><p class="dialog-msg"></p></div>
     <div class="dialog-foot">

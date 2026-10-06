@@ -15,8 +15,8 @@
 
     <form id="loginForm" class="panel login-card">
 
-        <div>
-            <h1>Kukikoe</h1>
+        <div class="login-head">
+            <h1><img class="login-logo" src="/assets/logo-kukikoe-480.png" alt="Kukikoe Bakehouse" width="150" height="48"></h1>
             <p class="muted">Masuk untuk mulai berjualan</p>
         </div>
 
@@ -62,11 +62,19 @@ const form = document.getElementById("loginForm");
 const errorBox = document.getElementById("errorBox");
 const button = document.getElementById("submitButton");
 
+/* Dikeluarkan otomatis karena tidak aktif (superadmin). */
+if(new URLSearchParams(location.search).get("expired")){
+    errorBox.textContent = "Sesi berakhir karena tidak aktif. Silakan masuk lagi.";
+    errorBox.className = "info";
+    errorBox.hidden = false;
+}
+
 form.addEventListener("submit", async event => {
 
     event.preventDefault();
 
     errorBox.hidden = true;
+    errorBox.className = "error";
     button.disabled = true;
     button.textContent = "Memeriksa...";
 
@@ -88,6 +96,9 @@ form.addEventListener("submit", async event => {
         }
 
         localStorage.setItem("session", JSON.stringify(result));
+
+        /* Tanda login baru: setoran yang tertinggal terbuka harus ditutup dulu. */
+        localStorage.setItem("freshLogin", "1");
 
         location.replace(nextUrl());
 

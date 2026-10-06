@@ -6,7 +6,6 @@
 
     const { $, $$, isTouchDevice, icon, escapeHtml, rupiah, parseNumber, numberFmt, api, toast } = App;
 
-    const PRINTER_URL = "http://localhost:9100/print";
 
 
     /* =================================================
@@ -100,9 +99,13 @@
                     throw new Error("Upload ke Google Sheets gagal (" + response.status + ")");
                 }
 
-                pending.shift();
+                const sent = pending.shift();
                 savePending();
                 renderStatus();
+
+                if(sent.pembayaran === "Utang"){
+                    App.emit("debts-changed");
+                }
 
             }
 
@@ -124,7 +127,7 @@
      * tidak sengaja akan menghapusnya, jadi minta konfirmasi.
      */
     window.addEventListener("beforeunload", e => {
-        if(cart.size > 0 || awaitingReprint){
+        if(!App.leaving && (cart.size > 0 || awaitingReprint)){
             e.preventDefault();
             e.returnValue = "";
         }
@@ -147,7 +150,7 @@
         btn.hidden = pending.length === 0;
         btn.innerHTML = icon("upload", "i-sm") +
             `<span>${pending.length}<span class="hide-sm"> belum terkirim</span></span>`;
-        btn.title = "Coba kirim ulang ke Google Sheets";
+        btn.title = "Coba kirim ulang sekarang";
 
     }
 
@@ -629,6 +632,9 @@
 
         $("#cashSection").hidden = payment !== "cash";
         $("#qrisSection").hidden = payment !== "qris";
+        $("#transferSection").hidden = payment !== "transfer";
+        $("#debitSection").hidden = payment !== "debit";
+        $("#utangSection").hidden = payment !== "utang";
 
         $("#quickCash").innerHTML = quickAmounts(total).map((amount, i) =>
             `<button type="button" class="num" data-amount="${amount}">${i === 0 ? "Uang pas" : numberFmt.format(amount / 1000) + "rb"}</button>`
@@ -650,13 +656,16 @@
             button.innerHTML = icon("printer") + `Cetak ulang nota ${awaitingReprint.nota}`;
             button.disabled = processing;
         }else{
-            button.innerHTML = icon("receipt") + (empty ? "Bayar" : `Bayar ${rupiah(total)}`);
+            button.innerHTML = payment === "utang"
+                ? icon("book") + (empty ? "Catat utang" : `Catat utang ${rupiah(total)}`)
+                : icon("receipt") + (empty ? "Bayar" : `Bayar ${rupiah(total)}`);
             button.disabled = processing || empty || (payment === "cash" && received < total);
         }
 
         $("#reprintNotice").hidden = !awaitingReprint;
 
         $("#clearCart").disabled = empty || processing;
+        $("#previewReceipt").disabled = empty;
         $("#skipPrint").hidden = !awaitingReprint;
 
     }
@@ -668,7 +677,7 @@
        Apps Script membaca field-field ini.
        ================================================= */
 
-    function buildTransaction(){
+    function buildTransaction(utang){
 
         const total = getTotal();
         const cash = payment === "cash" ? cashReceived() : 0;
@@ -679,7 +688,7 @@
             tanggal: now.toLocaleDateString("id-ID"),
             jam: now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false }),
             nota: String(nota).padStart(3, "0"),
-            pembayaran: payment === "cash" ? "Cash" : "QRIS",
+            pembayaran: { cash: "Cash", qris: "QRIS", transfer: "Transfer BCA", debit: "Debit", utang: "Utang" }[payment],
             cashReceived: cash,
             change: payment === "cash" ? cash - total : 0,
             total,
@@ -688,13 +697,17 @@
                 qty: l.qty,
                 harga: l.harga,
                 subtotal: l.harga * l.qty
-            }))
+            })),
+            kasir: App.session?.username,
+            setoran: App.shiftId || null,
+            /* Hanya untuk utang: dicatat server sebagai utang pelanggan. */
+            ...(utang || {})
         };
 
     }
 
 
-    async function pay(){
+    async function pay(utang){
 
         if(processing){
             return;
@@ -715,7 +728,12 @@
             return toast("Uang diterima kurang dari total.", "error");
         }
 
-        const transaction = buildTransaction();
+        /* Utang: minta data pelanggan dulu; dialog memanggil pay() lagi dengan datanya. */
+        if(payment === "utang" && !utang){
+            return openUtangDialog(total);
+        }
+
+        const transaction = buildTransaction(payment === "utang" ? utang : null);
 
         /* 1. Simpan ke antrean lokal DULU, baru kirim di belakang. */
         if(!pending.some(t => t.transactionId === transaction.transactionId)){
@@ -732,6 +750,9 @@
         nota++;
         localStorage.setItem("nota", nota);
 
+        /* Masuk ke total setoran kasir. */
+        App.emit("sale-recorded", transaction);
+
         /* 2. Cetak. */
         await printAndFinish(transaction);
 
@@ -746,7 +767,7 @@
         button.disabled = true;
         button.innerHTML = icon("printer") + "Mencetak nota...";
 
-        const result = await printReceipt(transaction);
+        const result = await Printer.send(Printer.saleReceipt(transaction));
 
         processing = false;
 
@@ -775,7 +796,9 @@
         closeOrderSheet();
 
         /* Kembalian ditampilkan lebih lama: kasir butuh angkanya setelah nota keluar. */
-        if(transaction.pembayaran === "Cash" && transaction.change > 0){
+        if(transaction.pembayaran === "Utang"){
+            toast(`Utang nota ${transaction.nota} atas nama ${transaction.pelanggan} dicatat`, "ok", 5000);
+        }else if(transaction.pembayaran === "Cash" && transaction.change > 0){
             toast(`Nota ${transaction.nota} selesai. Kembalian ${rupiah(transaction.change)}`, "ok", 7000);
         }else{
             toast(`Nota ${transaction.nota} selesai`);
@@ -804,86 +827,97 @@
 
 
     /* =================================================
-       CETAK (Cleanter -> printer Bluetooth RPP02N)
+       UTANG: DATA PELANGGAN
        ================================================= */
 
-    function receiptContent(t){
+    /* Nama & no. HP pelanggan yang pernah berutang, untuk saran isian. */
+    let knownDebtors = new Map();
 
-        const text = (value, extra) => ({ type: "text", text: value, ...extra });
-        const divider = { type: "divider" };
+    async function loadDebtorSuggestions(){
 
-        const content = [
-            text(App.STORE.name.toUpperCase(), { align: "center", bold: true, size: "large" }),
-            text(App.STORE.tagline, { align: "center" }),
-            divider,
-            text("No Nota : " + t.nota, { align: "center", bold: true }),
-            text(t.tanggal + " • " + t.jam, { align: "center" }),
-            divider
-        ];
+        try{
 
-        t.items.forEach(item => {
-            content.push(text(item.nama, { bold: true }));
-            content.push({ type: "row", left: item.qty + " x " + rupiah(item.harga), right: rupiah(item.subtotal) });
-        });
+            const { debts } = await api("/api/debts");
 
-        content.push(
-            divider,
-            { type: "row", left: "TOTAL", right: rupiah(t.total), bold: true },
-            divider,
-            text("Pembayaran : " + t.pembayaran)
-        );
+            knownDebtors = new Map();
 
-        if(t.pembayaran === "Cash"){
-            content.push(
-                text("Diterima : " + rupiah(t.cashReceived)),
-                text("Kembalian : " + rupiah(t.change))
-            );
+            debts.forEach(d => knownDebtors.set(d.pelanggan.toLowerCase(), { nama: d.pelanggan, telepon: d.telepon }));
+
+            $("#debtorNames").innerHTML = [...knownDebtors.values()]
+                .map(d => `<option value="${escapeHtml(d.nama)}">`).join("");
+
+        }catch(error){
+            /* Offline: tanpa saran, tetap bisa diketik manual. */
         }
-
-        content.push(
-            { type: "feed", lines: 1 },
-            text("Terima Kasih", { align: "center" }),
-            { type: "feed", lines: 3 }
-        );
-
-        return content;
 
     }
 
 
-    async function printReceipt(transaction){
+    function openUtangDialog(total){
 
-        try{
+        const form = $("#utangForm");
 
-            const response = await fetch(PRINTER_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ cut: true, content: receiptContent(transaction) }),
-                signal: AbortSignal.timeout(5000)
-            });
+        form.reset();
+        $("#utangTotal").textContent = rupiah(total);
 
-            if(!response.ok){
-                throw new Error("Cleanter error " + response.status);
-            }
+        /* Jatuh tempo tidak boleh di masa lalu. */
+        const now = new Date();
+        form.jatuhTempo.min = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
-            const result = await response.json();
+        $("#utangDialog").showModal();
+        form.pelanggan.focus();
 
-            if(result.status === "printed"){
-                return { ok: true };
-            }
+        loadDebtorSuggestions();
 
-            return { ok: false, message: "Printer menolak: " + (result.message || result.status || "tidak diketahui") + "." };
+    }
 
-        }catch(error){
 
-            console.error(error);
+    function submitUtang(event){
 
-            return {
-                ok: false,
-                message: "Printer tidak terhubung. Pastikan RPP02N sudah paired lewat Bluetooth, Cleanter berjalan, dan RPP02N dipilih di Cleanter."
-            };
+        event.preventDefault();
 
+        const form = event.target;
+        const pelanggan = form.pelanggan.value.trim();
+
+        if(!pelanggan){
+            form.pelanggan.focus();
+            return toast("Isi nama pelanggan.", "error");
         }
+
+        $("#utangDialog").close();
+
+        pay({
+            pelanggan,
+            telepon: form.telepon.value.trim(),
+            jatuhTempo: form.jatuhTempo.value || null,
+            catatan: form.catatan.value.trim()
+        });
+
+    }
+
+
+    /* =================================================
+       PRATINJAU NOTA
+       Nota dibangun dengan kode cetak yang sama, jadi yang
+       tampil = yang akan keluar dari printer.
+       ================================================= */
+
+    function previewReceipt(){
+
+        if(cart.size === 0){
+            return;
+        }
+
+        const t = buildTransaction(payment === "utang" ? { pelanggan: "(nama pelanggan)" } : null);
+
+        $("#receiptSlip").innerHTML = Printer.toHtml(Printer.saleReceipt(t));
+
+        $("#receiptNote").textContent =
+            payment === "cash" && t.cashReceived < t.total
+                ? "Uang diterima belum diisi. Nomor nota dan jam mengikuti saat Bayar."
+                : "Nomor nota dan jam mengikuti saat Bayar ditekan.";
+
+        $("#receiptDialog").showModal();
 
     }
 
@@ -1023,7 +1057,19 @@
 
         });
 
-        $("#payButton").addEventListener("click", pay);
+        $("#payButton").addEventListener("click", () => pay());
+        $("#previewReceipt").addEventListener("click", previewReceipt);
+
+        $("#utangForm").addEventListener("submit", submitUtang);
+
+        /* Pelanggan lama dipilih dari saran: isi no. HP-nya otomatis kalau masih kosong. */
+        $("#utangForm").pelanggan.addEventListener("change", e => {
+            const known = knownDebtors.get(e.target.value.trim().toLowerCase());
+            const phone = $("#utangForm").telepon;
+            if(known?.telepon && !phone.value){
+                phone.value = known.telepon;
+            }
+        });
         $("#skipPrint").addEventListener("click", skipPrint);
         $("#pendingStatus").addEventListener("click", syncPending);
 
@@ -1062,11 +1108,16 @@
 
     App.on("logout-request", async () => {
 
+        /* Akun kasir keluar lewat Tutup kasir (setoran.js). */
+        if(App.session?.role === "kasir"){
+            return;
+        }
+
         if(pending.length > 0){
 
             const ok = await App.confirmDialog({
                 title: "Masih ada transaksi tertunda",
-                message: `${pending.length} transaksi belum terkirim ke Google Sheets. Data tetap tersimpan di perangkat ini dan terkirim setelah login lagi.`,
+                message: `${pending.length} transaksi belum terkirim. Data tetap tersimpan di perangkat ini dan terkirim otomatis setelah login lagi.`,
                 confirmText: "Tetap keluar"
             });
 

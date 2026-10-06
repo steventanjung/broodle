@@ -24,6 +24,8 @@ if(fs.existsSync(path.join(__dirname, ".env"))){
 
 const auth = require("./auth.js");
 const menu = require("./menu.js");
+const debts = require("./debts.js");
+const shifts = require("./shifts.js");
 
 
 /* =====================================================
@@ -34,7 +36,17 @@ const PORT          = process.env.PORT || 8080;
 const SUBMIT_URL    = process.env.APPS_SCRIPT_SUBMIT_URL;
 const REPORT_URL    = process.env.APPS_SCRIPT_REPORT_URL;
 const SESSION_SECRET = process.env.SESSION_SECRET;
-const SESSION_HOURS = Number(process.env.SESSION_HOURS) || 12;
+/*
+ * Lama sesi per peran:
+ *   superadmin: berakhir setelah N menit TIDAK aktif (tiap permintaan memperpanjang).
+ *   kasir: tidak dibatasi — cookie 400 hari (batas maksimal browser) yang terus
+ *          diperpanjang; hanya berakhir kalau kasir keluar sendiri.
+ */
+const ADMIN_SESSION_MINUTES = Number(process.env.ADMIN_SESSION_MINUTES) || 15;
+const KASIR_SESSION_SECONDS = 400 * 24 * 3600;
+
+const sessionTtl = role =>
+    role === "superadmin" ? ADMIN_SESSION_MINUTES * 60 : KASIR_SESSION_SECONDS;
 
 /* true kalau dilayani lewat HTTPS (mis. di belakang Nginx / Caddy). */
 const SECURE_COOKIE = process.env.SECURE_COOKIE === "true";
@@ -50,14 +62,22 @@ const TRUST_PROXY = process.env.TRUST_PROXY === "true";
 const REPORT_CACHE_MS = 60 * 1000;
 
 
-if(!SUBMIT_URL || !REPORT_URL){
-    console.error("ENV belum lengkap. Isi APPS_SCRIPT_SUBMIT_URL dan APPS_SCRIPT_REPORT_URL di .env");
+const missing = [
+    !SUBMIT_URL && "APPS_SCRIPT_SUBMIT_URL",
+    !REPORT_URL && "APPS_SCRIPT_REPORT_URL"
+].filter(Boolean);
+
+if(missing.length){
+    console.error(
+        "ENV belum lengkap. Belum diisi: " + missing.join(", ") + ".\n" +
+        "  Lokal: isi di file .env.  Railway / hosting: isi di tab Variables, lalu deploy ulang."
+    );
     process.exit(1);
 }
 
 if(!SESSION_SECRET || SESSION_SECRET.length < 32){
     console.error(
-        "SESSION_SECRET di .env harus ada dan minimal 32 karakter.\n" +
+        "SESSION_SECRET (di .env, atau tab Variables di hosting) harus ada dan minimal 32 karakter.\n" +
         "Buat dengan: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
     );
     process.exit(1);
@@ -200,6 +220,19 @@ function sessionCookie(value, maxAgeSeconds){
 }
 
 
+/* Terbitkan / perpanjang cookie sesi di respons ini. */
+function issueSession(res, user){
+
+    const ttl = sessionTtl(user.role);
+    const token = auth.createSession(user, SESSION_SECRET, ttl);
+
+    res.setHeader("Set-Cookie", sessionCookie(token, ttl));
+
+    return ttl;
+
+}
+
+
 function currentUser(req){
 
     const cookies = auth.parseCookies(req.headers.cookie);
@@ -301,12 +334,11 @@ async function handleLogin(req, res){
 
     loginAttempts.delete(ip);
 
-    const maxAge = SESSION_HOURS * 3600;
-    const token  = auth.createSession(user, SESSION_SECRET, maxAge);
+    const ttl = issueSession(res, user);
 
     console.log(`[login] ${user.username} (${user.role}) dari ${ip}`);
 
-    json(res, 200, user, { "Set-Cookie": sessionCookie(token, maxAge) });
+    json(res, 200, { ...user, sessionMinutes: user.role === "superadmin" ? ttl / 60 : null });
 
 }
 
@@ -320,7 +352,14 @@ function handleLogout(req, res){
 
 function handleMe(req, res, user){
 
-    json(res, 200, user);
+    json(res, 200, {
+        username: user.username,
+        role: user.role,
+        /* Superadmin: dipakai halaman untuk logout otomatis saat tidak aktif. */
+        sessionMinutes: user.role === "superadmin" ? ADMIN_SESSION_MINUTES : null,
+        /* Untuk uji lokal: SETORAN_ASK_MODAL=false melewati form "Buka kasir". */
+        askModal: process.env.SETORAN_ASK_MODAL !== "false"
+    });
 
 }
 
@@ -455,6 +494,22 @@ function handleMenuList(req, res){
 }
 
 
+async function handleCategoriesSave(req, res, user){
+
+    const payload = await readJson(req);
+    const result = menu.saveCategories(payload.categories);
+
+    if(!result.ok){
+        return json(res, 400, { error: result.error });
+    }
+
+    console.log(`[menu] kategori diatur oleh ${user.username}: ${result.data.categories.join(", ")}`);
+
+    json(res, 200, result.data);
+
+}
+
+
 async function handleMenuCreate(req, res, user){
 
     const result = menu.create(await readJson(req));
@@ -549,9 +604,36 @@ async function handleMenuImage(req, res, user, id){
 let reportCache = null;
 
 
-async function handleSubmit(req, res){
+async function handleSubmit(req, res, user){
 
     const body = await readBody(req);
+
+    let tx;
+
+    try{
+        tx = JSON.parse(body.toString("utf8"));
+    }catch(error){
+        return json(res, 400, { error: "Transaksi tidak valid." });
+    }
+
+    /*
+     * Penjualan utang: catat utangnya DULU. Kalau gagal, browser
+     * menerima error dan transaksi tetap di antreannya untuk
+     * dikirim ulang; kiriman ulang tidak membuat utang dobel.
+     */
+    if(tx && tx.pembayaran === "Utang"){
+
+        const result = debts.createFromTransaction(tx, user.username);
+
+        if(!result.ok){
+            return json(res, 400, { error: result.error });
+        }
+
+        if(!result.duplicate){
+            console.log(`[utang] nota ${result.debt.nota} atas nama ${result.debt.pelanggan}: Rp${result.debt.total} oleh ${user.username}`);
+        }
+
+    }
 
     /* Apps Script membalas 302 ke googleusercontent, fetch mengikutinya. */
     const upstream = await fetch(SUBMIT_URL, {
@@ -569,6 +651,116 @@ async function handleSubmit(req, res){
     }
 
     json(res, upstream.ok ? 200 : 502, { ok: upstream.ok });
+
+}
+
+
+/* =====================================================
+   SETORAN KASIR
+   Tablet mengirim catatan setoran (buka / tutup); superadmin
+   melihat daftarnya di Laporan.
+   ===================================================== */
+
+async function handleShiftSave(req, res, user, id){
+
+    const payload = await readJson(req);
+    const result = shifts.upsert({ ...payload, id }, user.username);
+
+    if(!result.ok){
+        return json(res, 400, { error: result.error });
+    }
+
+    if(result.shift.closedAt && payload.closedAt){
+        console.log(`[setoran] ditutup: ${result.shift.kasir}, modal Rp${result.shift.modal}, ${result.shift.totals.count} transaksi`);
+    }
+
+    json(res, 200, result.shift);
+
+}
+
+
+function handleShiftList(req, res){
+
+    const DATE = /^\d{4}-\d{2}-\d{2}$/;
+    const from = req.query.get("from");
+    const to = req.query.get("to");
+
+    json(res, 200, {
+        shifts: shifts.list(DATE.test(from || "") ? from : null, DATE.test(to || "") ? to : null)
+    });
+
+}
+
+
+/* =====================================================
+   UTANG
+   Kasir & superadmin: lihat dan catat pembayaran.
+   Hanya superadmin: membatalkan utang.
+   ===================================================== */
+
+function handleDebtsList(req, res){
+
+    const all = debts.list();
+    /* Tanggal toko (WIB), bukan UTC server — server hosting biasanya UTC. */
+    const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+    const open = all.filter(d => d.status === "belum");
+
+    json(res, 200, {
+        debts: all,
+        summary: {
+            openCount: open.length,
+            openTotal: open.reduce((sum, d) => sum + d.sisa, 0),
+            customers: new Set(open.map(d => d.pelanggan.toLowerCase())).size,
+            overdue: open.filter(d => d.jatuhTempo && d.jatuhTempo < today).length
+        }
+    });
+
+}
+
+
+function handleDebtGet(req, res, user, id){
+
+    const debt = debts.find(id);
+
+    if(!debt){
+        return json(res, 404, { error: "Utang tidak ditemukan." });
+    }
+
+    json(res, 200, debt);
+
+}
+
+
+async function handleDebtPayment(req, res, user, id){
+
+    const result = debts.addPayment(id, await readJson(req), user.username);
+
+    if(!result.ok){
+        return json(res, 400, { error: result.error });
+    }
+
+    if(!result.duplicate){
+        const last = result.debt.payments[result.debt.payments.length - 1];
+        console.log(`[utang] bayar nota ${result.debt.nota} (${result.debt.pelanggan}): Rp${last.jumlah} ${last.metode} oleh ${user.username}, sisa Rp${result.debt.sisa}`);
+    }
+
+    json(res, 200, result.debt);
+
+}
+
+
+async function handleDebtVoid(req, res, user, id){
+
+    const payload = await readJson(req);
+    const result = debts.voidDebt(id, payload.alasan, user.username);
+
+    if(!result.ok){
+        return json(res, 400, { error: result.error });
+    }
+
+    console.log(`[utang] dibatalkan oleh ${user.username}: nota ${result.debt.nota} (${result.debt.pelanggan}), alasan: ${result.debt.void.alasan}`);
+
+    json(res, 200, result.debt);
 
 }
 
@@ -688,10 +880,17 @@ const ROUTES = [
     ["POST",   /^\/api\/me\/password$/,                  handleChangePassword,     "superadmin"],
     ["POST",   /^\/api\/submit$/,                        handleSubmit,             "user"],
     ["GET",    /^\/api\/menu$/,                          handleMenuList,           "user"],
+    ["PUT",    /^\/api\/categories$/,                   handleCategoriesSave,     "superadmin"],
     ["POST",   /^\/api\/menu$/,                          handleMenuCreate,         "superadmin"],
     ["PUT",    /^\/api\/menu\/([\w-]{6,80})$/,           handleMenuUpdate,         "superadmin"],
     ["DELETE", /^\/api\/menu\/([\w-]{6,80})$/,           handleMenuDelete,         "superadmin"],
     ["POST",   /^\/api\/menu\/([\w-]{6,80})\/image$/,    handleMenuImage,          "superadmin"],
+    ["PUT",    /^\/api\/shifts\/([\w.-]{6,80})$/,       handleShiftSave,          "user"],
+    ["GET",    /^\/api\/shifts$/,                       handleShiftList,          "superadmin"],
+    ["GET",    /^\/api\/debts$/,                        handleDebtsList,          "user"],
+    ["GET",    /^\/api\/debts\/([\w.-]{6,80})$/,        handleDebtGet,            "user"],
+    ["POST",   /^\/api\/debts\/([\w.-]{6,80})\/payments$/, handleDebtPayment,     "user"],
+    ["POST",   /^\/api\/debts\/([\w.-]{6,80})\/void$/,   handleDebtVoid,           "superadmin"],
     ["GET",    /^\/api\/report$/,                        handleReport,             "superadmin"],
     ["GET",    /^\/api\/users$/,                         handleUsersList,          "superadmin"],
     ["POST",   /^\/api\/users$/,                         handleUsersCreate,        "superadmin"],
@@ -763,6 +962,9 @@ async function route(req, res){
                 return json(res, 403, { error: "Akses ditolak." });
             }
 
+            /* Ada aktivitas: perpanjang sesi. */
+            issueSession(res, user);
+
         }
 
         req.query = url.searchParams;
@@ -784,6 +986,10 @@ async function route(req, res){
     }
 
     const user = currentUser(req);
+
+    if(user && (pathname === "/" || pathname.endsWith(".html"))){
+        issueSession(res, user);
+    }
 
     if(!user){
 
@@ -853,7 +1059,7 @@ server.listen(PORT, () => {
 
     console.log(
         `Broodle jalan di http://localhost:${PORT}\n` +
-        `  sesi: ${SESSION_HOURS} jam` +
+        `  sesi superadmin: ${ADMIN_SESSION_MINUTES} menit tidak aktif | kasir: sampai keluar` +
         (SECURE_COOKIE ? " | cookie Secure aktif" : "") +
         (TRUST_PROXY ? " | trust proxy" : "")
     );

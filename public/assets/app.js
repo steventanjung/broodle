@@ -10,7 +10,7 @@ const App = (() => {
 
     const STORE = {
         name: "Kukikoe",
-        tagline: "Mooncake Festival"
+        tagline: "085156983170"
     };
 
 
@@ -86,10 +86,17 @@ const App = (() => {
         const data = await response.json().catch(() => ({}));
 
         if(!response.ok){
-            throw Object.assign(
-                new Error(data.error || "Permintaan gagal (" + response.status + ")."),
-                { status: response.status }
-            );
+
+            /*
+             * Alamat API tidak dikenal = halaman sudah versi baru tapi
+             * server masih versi lama (belum di-restart / di-deploy).
+             */
+            const message = response.status === 404 && data.error === "Not found"
+                ? "Fitur ini belum ada di server yang sedang berjalan. Restart server (npm start) atau deploy ulang, lalu coba lagi."
+                : data.error || "Permintaan gagal (" + response.status + ").";
+
+            throw Object.assign(new Error(message), { status: response.status });
+
         }
 
         return data;
@@ -133,7 +140,12 @@ const App = (() => {
 
     const isSuperadmin = () => session?.role === "superadmin";
 
+    /* true saat keluar lewat tombol Keluar: peringatan "tinggalkan halaman" tidak perlu muncul. */
+    let leaving = false;
+
     async function logout(){
+
+        leaving = true;
 
         try{ await fetch("/api/logout", { method: "POST" }); }catch(e){}
 
@@ -158,13 +170,22 @@ const App = (() => {
 
     try{ menus = JSON.parse(localStorage.getItem("menuCache")) || []; }catch(e){}
 
+    /* Daftar kategori dari server (boleh ada yang belum punya produk), urutan = urutan di kasir. */
+    let categoryList = [];
+
+    try{ categoryList = JSON.parse(localStorage.getItem("categoryCache")) || []; }catch(e){}
+
     /* "loading" hanya kalau belum ada salinan lokal sama sekali. */
     let menuStatus = menus.length ? "ready" : "loading";
     let lastMenuFetch = 0;
 
-    function setMenus(list){
+    function setMenus(list, order){
         menus = list;
         localStorage.setItem("menuCache", JSON.stringify(list));
+        if(Array.isArray(order)){
+            categoryList = order;
+            localStorage.setItem("categoryCache", JSON.stringify(order));
+        }
         emit("menus", list);
     }
 
@@ -186,8 +207,12 @@ const App = (() => {
             menuStatus = "ready";
 
             /* Tidak ada yang berubah: jangan render ulang (kartu tidak berkedip). */
-            if(hadNothing || JSON.stringify(data.menus) !== JSON.stringify(menus)){
-                setMenus(data.menus);
+            const order = data.categories || [];
+
+            if(hadNothing ||
+               JSON.stringify(data.menus) !== JSON.stringify(menus) ||
+               JSON.stringify(order) !== JSON.stringify(categoryList)){
+                setMenus(data.menus, order);
             }
 
         }catch(error){
@@ -234,8 +259,17 @@ const App = (() => {
     }
 
     /* Kategori unik sesuai urutan kemunculan di menu. */
-    function categories(){
-        return [...new Set(menus.map(m => m.kategori || "Lainnya"))];
+    /*
+     * categories()          kategori yang punya produk (tombol kasir, daftar menu)
+     * categories({ all })   semua kategori, termasuk yang masih kosong (form & pengaturan)
+     */
+    function categories({ all = false } = {}){
+
+        const used = [...new Set(menus.map(m => m.kategori || "Lainnya"))];
+        const ordered = [...categoryList, ...used.filter(c => !categoryList.includes(c))];
+
+        return all ? ordered : ordered.filter(c => used.includes(c));
+
     }
 
 
@@ -263,7 +297,9 @@ const App = (() => {
         currentView = name;
 
         if(first){
-            const label = $(`.tab[data-view="${name}"]`)?.textContent.trim();
+            /* Hanya teks tab, tanpa angka badge (mis. jumlah utang). */
+            const tab = $(`.tab[data-view="${name}"]`);
+            const label = tab && [...tab.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join("").trim();
             document.title = (label ? label + " — " : "") + STORE.name;
             window.scrollTo(0, 0);
         }
@@ -356,6 +392,21 @@ const App = (() => {
     });
 
 
+    /*
+     * Dialog terbuka: fokus ke dialognya sendiri, bukan ke tombol
+     * pertama (biasanya tombol tutup), supaya tidak muncul cincin
+     * fokus yang membingungkan. Skrip yang perlu fokus ke kolom
+     * isian memanggil .focus() sesudahnya seperti biasa.
+     */
+    const showModal = HTMLDialogElement.prototype.showModal;
+
+    HTMLDialogElement.prototype.showModal = function(){
+        showModal.call(this);
+        this.tabIndex = -1;
+        this.focus({ preventScroll: true });
+    };
+
+
     /* --- tombol sibuk --- */
 
     async function busy(button, label, task){
@@ -371,6 +422,78 @@ const App = (() => {
             button.disabled = false;
             button.innerHTML = html;
         }
+
+    }
+
+
+    /* --- sesi superadmin: keluar otomatis kalau tidak aktif --- */
+
+    /*
+     * Server memperpanjang sesi tiap ada permintaan. Mengetik di form
+     * panjang tidak memanggil server, jadi selama ada sentuhan / ketikan
+     * halaman memperpanjang sesi (paling sering sekali per menit).
+     * Semenit sebelum habis muncul peringatan; kalau dibiarkan, keluar.
+     */
+    function watchIdle(minutes){
+
+        const limit = minutes * 60 * 1000;
+
+        /* Perpanjang di server cukup sering agar tidak kedaluwarsa saat aktif (maks. tiap menit). */
+        const pingEvery = Math.min(60000, limit / 3);
+        let lastActive = Date.now();
+        let lastPing = Date.now();
+        let warned = false;
+
+        const ping = () => {
+            lastPing = Date.now();
+            fetch("/api/me").then(r => { if(r.status === 401){ expire(); } }).catch(() => {});
+        };
+
+        const expire = () => {
+            leaving = true;
+            fetch("/api/logout", { method: "POST" }).catch(() => {}).finally(() => {
+                localStorage.removeItem("session");
+                location.replace("/login.html?expired=1&next=" + encodeURIComponent(location.pathname + location.hash));
+            });
+        };
+
+        const activity = () => {
+            lastActive = Date.now();
+            if(Date.now() - lastPing > pingEvery){
+                ping();
+            }
+        };
+
+        ["pointerdown", "keydown"].forEach(type => document.addEventListener(type, activity, { capture: true, passive: true }));
+
+        setInterval(async () => {
+
+            const idle = Date.now() - lastActive;
+
+            if(idle >= limit){
+                return expire();
+            }
+
+            if(idle >= limit - 60000 && !warned){
+
+                warned = true;
+
+                const stay = await confirmDialog({
+                    title: "Masih di sini?",
+                    message: `Demi keamanan, akun superadmin keluar otomatis setelah ${minutes} menit tidak aktif.`,
+                    confirmText: "Tetap masuk"
+                });
+
+                warned = false;
+
+                if(stay && Date.now() - lastActive < limit){
+                    lastActive = Date.now();
+                    ping();
+                }
+
+            }
+
+        }, 10000);
 
     }
 
@@ -391,11 +514,16 @@ const App = (() => {
         $("#whoName").textContent = session.username;
         $("#whoRole").textContent = admin ? "Superadmin" : "Kasir";
 
+        /* Kasir melihat tab Kasir & Utang; superadmin melihat semua. */
         $$(".tab[data-admin]").forEach(t => t.hidden = !admin);
-        document.body.classList.toggle("has-tabs", admin);
-        $(".tabs").hidden = !admin;
+        document.body.classList.add("has-tabs");
+        $(".tabs").hidden = false;
 
         $("#logoutButton").addEventListener("click", () => emit("logout-request"));
+
+        if(admin && session.sessionMinutes){
+            watchIdle(session.sessionMinutes);
+        }
 
         emit("ready", session);
 
@@ -411,7 +539,7 @@ const App = (() => {
     return {
         STORE,
         $, $$, isTouchDevice, icon, escapeHtml, rupiah, parseNumber, numberFmt,
-        api, isSuperadmin, logout, get session(){ return session; },
+        api, isSuperadmin, logout, get session(){ return session; }, get leaving(){ return leaving; },
         on, emit,
         get menus(){ return menus; }, get menuStatus(){ return menuStatus; },
         setMenus, refreshMenus, categories,

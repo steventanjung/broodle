@@ -14,6 +14,12 @@
      * memaksa ambil data terbaru.
      */
     let rows = null;
+
+    /* Data utang dari server (untuk Uang masuk & Piutang berjalan). null = tidak bisa dimuat. */
+    let debtData = null;
+
+    /* Setoran kasir (semua), difilter sesuai rentang tanggal saat ditampilkan. */
+    let shiftData = [];
     let preset = "30";
 
 
@@ -159,7 +165,7 @@
 
     function aggregate(transactions, from, to){
 
-        let total = 0, cash = 0, qris = 0, items = 0;
+        let total = 0, cash = 0, qris = 0, transfer = 0, debit = 0, utang = 0, items = 0;
 
         const byDay = new Map();
         const byHour = new Map();
@@ -171,6 +177,9 @@
 
             if(t.payment === "CASH") cash += t.total;
             if(t.payment === "QRIS") qris += t.total;
+            if(t.payment === "TRANSFER" || t.payment === "TRANSFER BCA") transfer += t.total;
+            if(t.payment === "DEBIT") debit += t.total;
+            if(t.payment === "UTANG") utang += t.total;
 
             byDay.set(t.date, (byDay.get(t.date) || 0) + t.total);
 
@@ -222,7 +231,7 @@
             .sort((a, b) => b.subtotal - a.subtotal);
 
         return {
-            total, cash, qris, items, trend, products,
+            total, cash, qris, transfer, debit, utang, items, trend, products,
             count: transactions.length,
             average: transactions.length ? total / transactions.length : 0
         };
@@ -477,10 +486,10 @@
     }
 
 
-    function renderPayments(cash, qris){
+    function renderPayments(cash, qris, transfer, debit, utang){
 
         const el = $("#paymentChart");
-        const total = cash + qris;
+        const total = cash + qris + transfer + debit + utang;
 
         if(total <= 0){
             el.innerHTML = `<div class="empty">Tidak ada data.</div>`;
@@ -489,31 +498,49 @@
 
         const pct = v => Math.round((v / total) * 100);
 
+        /* Transfer & Utang hanya tampil kalau ada; urutan & warna tetap per metode. */
+        const parts = [
+            ["Cash", cash, "var(--series-cash)"],
+            ["QRIS", qris, "var(--series-qris)"],
+            ...(transfer > 0 ? [["Transfer BCA", transfer, "var(--series-transfer)"]] : []),
+            ...(debit > 0 ? [["Debit", debit, "var(--series-debit)"]] : []),
+            ...(utang > 0 ? [["Utang", utang, "var(--series-utang)"]] : [])
+        ];
+
         el.innerHTML = `
             <div class="split">
-                ${cash ? `<div style="width:${(cash / total) * 100}%;background:var(--series-cash)"></div>` : ""}
-                ${qris ? `<div style="width:${(qris / total) * 100}%;background:var(--series-qris)"></div>` : ""}
+                ${parts.filter(p => p[1] > 0).map(([, v, c]) => `<div style="width:${(v / total) * 100}%;background:${c}"></div>`).join("")}
             </div>
             <div class="legend">
-                <div class="legend-item"><span class="swatch" style="background:var(--series-cash)"></span>Cash
-                    <span class="muted">${pct(cash)}%</span><b class="num">${rupiah(cash)}</b></div>
-                <div class="legend-item"><span class="swatch" style="background:var(--series-qris)"></span>QRIS
-                    <span class="muted">${pct(qris)}%</span><b class="num">${rupiah(qris)}</b></div>
+                ${parts.map(([name, v, c]) => `
+                    <div class="legend-item"><span class="swatch" style="background:${c}"></span>${name}
+                        <span class="muted">${pct(v)}%</span><b class="num">${rupiah(v)}</b></div>`).join("")}
             </div>`;
 
     }
 
 
-    /* =================================================
-       RINGKASAN & TABEL
-       ================================================= */
-
-    function renderKpis(agg){
+    function renderKpis(agg, from, to){
 
         $("#kpiTotal").textContent = rupiah(agg.total);
         $("#kpiCount").textContent = numberFmt.format(agg.count);
         $("#kpiAverage").textContent = rupiah(agg.average);
         $("#kpiItems").textContent = numberFmt.format(agg.items);
+
+        if(!debtData){
+            $("#kpiInflow").textContent = rupiah(agg.cash + agg.qris + agg.transfer + agg.debit);
+            $("#kpiReceivable").textContent = "–";
+            return;
+        }
+
+        /* Pembayaran utang yang diterima di rentang ini (tanggal lokal perangkat). */
+        const repaid = debtData.debts
+            .flatMap(d => d.payments)
+            .filter(p => { const day = toISO(new Date(p.at)); return day >= from && day <= to; })
+            .reduce((sum, p) => sum + p.jumlah, 0);
+
+        $("#kpiInflow").textContent = rupiah(agg.cash + agg.qris + agg.transfer + agg.debit + repaid);
+        $("#kpiReceivable").textContent = rupiah(debtData.summary.openTotal);
 
     }
 
@@ -577,6 +604,56 @@
     }
 
 
+    function paymentBadge(payment){
+
+        if(payment === "QRIS"){
+            return `<span class="badge badge-accent">${icon("qr", "i-sm")}<span class="pay-text">QRIS</span></span>`;
+        }
+
+        if(payment === "TRANSFER" || payment === "TRANSFER BCA"){
+            return `<span class="badge badge-accent">${icon("bank", "i-sm")}<span class="pay-text">Transfer BCA</span></span>`;
+        }
+
+        if(payment === "DEBIT"){
+            return `<span class="badge badge-accent">${icon("card", "i-sm")}<span class="pay-text">Debit</span></span>`;
+        }
+
+        if(payment === "UTANG"){
+            return `<span class="badge badge-warn">${icon("book", "i-sm")}<span class="pay-text">Utang</span></span>`;
+        }
+
+        return `<span class="badge">${icon("cash", "i-sm")}<span class="pay-text">Cash</span></span>`;
+
+    }
+
+
+    function renderShifts(from, to){
+
+        const list = shiftData.filter(sh => { const d = toISO(new Date(sh.openedAt)); return d >= from && d <= to; });
+        const time = iso => { const d = new Date(iso); return `${d.getDate()}/${d.getMonth() + 1} ${pad(d.getHours())}.${pad(d.getMinutes())}`; };
+
+        $("#shiftCount").textContent = list.length ? list.length + " setoran" : "";
+
+        $("#shiftBody").innerHTML = list.length ? list.map(sh => {
+
+            const t = sh.totals;
+
+            return `
+                <tr>
+                    <td><b>${escapeHtml(sh.kasir)}</b></td>
+                    <td class="num">${time(sh.openedAt)} – ${sh.closedAt ? time(sh.closedAt).split(" ")[1] : `<span class="badge badge-warn">Belum ditutup</span>`}</td>
+                    <td class="r num hide-sm">${rupiah(sh.modal)}</td>
+                    <td class="r num"><b>${rupiah(sh.modal + t.cash + t.cashPay)}</b></td>
+                    <td class="r num">${rupiah(t.qris + t.qrisPay)}</td>
+                    <td class="r num">${rupiah(t.transfer + t.transferPay)}</td>
+                    <td class="r num">${rupiah((t.debit || 0) + (t.debitPay || 0))}</td>
+                </tr>`;
+
+        }).join("") : `<tr><td colspan="7" class="muted">Tidak ada setoran pada rentang ini.</td></tr>`;
+
+    }
+
+
     function renderPage(){
 
         const total = sortedTx.length;
@@ -604,7 +681,7 @@
                 <td><b>${escapeHtml(String(t.nota).padStart(3, "0"))}</b></td>
                 <td class="num">${multiDay ? fmtShort.format(fromISO(t.date)) + ", " : ""}${escapeHtml(t.time)}</td>
                 <td class="tx-products" title="${escapeHtml(productNames(t))}">${escapeHtml(t.items[0]?.product || "-")}${extra > 0 ? ` <span class="muted">+${extra}</span>` : ""}</td>
-                <td><span class="badge ${t.payment === "QRIS" ? "badge-accent" : ""}">${t.payment === "QRIS" ? icon("qr", "i-sm") + '<span class="pay-text">QRIS</span>' : icon("cash", "i-sm") + '<span class="pay-text">Cash</span>'}</span></td>
+                <td>${paymentBadge(t.payment)}</td>
                 <td class="r num"><b>${rupiah(t.total)}</b></td>
                 <td class="r tx-chev" style="width:36px">${icon("chevron-down", "i-sm")}</td>
             </tr>`;
@@ -740,7 +817,15 @@
         label.textContent = "Memuat…";
 
         try{
-            rows = await fetchRows(refresh);
+            let shiftResult;
+
+            [rows, debtData, shiftResult] = await Promise.all([
+                fetchRows(refresh),
+                api("/api/debts").catch(() => null),
+                api("/api/shifts").catch(() => null)
+            ]);
+
+            shiftData = shiftResult?.shifts || [];
             $("#reportUpdated").textContent = "Diperbarui " + (d => `${pad(d.getHours())}:${pad(d.getMinutes())}`)(new Date());
             render();
         }catch(error){
@@ -794,10 +879,11 @@
 
         $("#trendTitle").textContent = from === to ? "Penjualan per jam" : "Penjualan harian";
 
-        renderKpis(agg);
+        renderKpis(agg, from, to);
+        renderShifts(from, to);
         renderTrend(agg.trend, from !== to);
         renderProducts(foldTop(agg.products, 8));
-        renderPayments(agg.cash, agg.qris);
+        renderPayments(agg.cash, agg.qris, agg.transfer, agg.debit, agg.utang);
         renderTable(transactions);
 
     }

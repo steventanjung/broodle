@@ -91,6 +91,7 @@ function load(){
             });
 
             cache = parsed;
+            ensureCategories(cache);
             cacheMtime = fileMtime();
             return cache;
 
@@ -106,9 +107,48 @@ function load(){
 
     cache = { menus: DEFAULT_MENUS, updatedAt: Date.now() };
 
+    ensureCategories(cache);
+
     persist();
 
     return cache;
+
+}
+
+
+/*
+ * Kategori berdiri sendiri (boleh kosong tanpa produk), urutannya =
+ * urutan tombol di kasir. Data lama (kategori hanya ada di produk,
+ * atau "categoryOrder" versi sebelumnya) diubah otomatis di sini.
+ */
+
+function ensureCategories(data){
+
+    const list = Array.isArray(data.categories) ? data.categories
+        : Array.isArray(data.categoryOrder) ? data.categoryOrder
+        : [];
+
+    data.categories = [...new Set(list)];
+
+    data.menus.forEach(m => addCategory(data, m.kategori));
+
+    delete data.categoryOrder;
+
+}
+
+
+/* Tambah kategori kalau belum ada (tidak peka huruf besar/kecil); kembalikan ejaan yang tersimpan. */
+function addCategory(data, name){
+
+    const found = data.categories.find(c => c.toLowerCase() === String(name).toLowerCase());
+
+    if(found){
+        return found;
+    }
+
+    data.categories.push(name);
+
+    return name;
 
 }
 
@@ -303,7 +343,11 @@ function create(input){
         return { ok: false, error: result.error };
     }
 
-    load().menus.push(result.value);
+    const data = load();
+
+    result.value.kategori = addCategory(data, result.value.kategori);
+
+    data.menus.push(result.value);
 
     persist();
 
@@ -327,6 +371,8 @@ function update(id, input){
         return { ok: false, error: result.error };
     }
 
+    result.value.kategori = addCategory(data, result.value.kategori);
+
     data.menus[index] = result.value;
 
     persist();
@@ -342,6 +388,78 @@ function update(id, input){
  * urutan semula (sort stabil). Dipakai seeder supaya urutan
  * menu selalu sama di tiap server.
  */
+
+/*
+ * Kelola kategori sekaligus (dari dialog Kategori):
+ *   { from: "Snack", to: "Cemilan" }  ganti nama, semua produk ikut
+ *   { from: "Choco", to: "Dubai" }    sama dengan kategori lain = digabung
+ *   { from: null, to: "Minuman" }     kategori baru (boleh tanpa produk)
+ *   kategori lama yang tidak dikirim  = dihapus, hanya kalau kosong
+ * Urutan daftar = urutan tombol kategori di kasir.
+ */
+
+function saveCategories(input){
+
+    if(!Array.isArray(input) || input.length > 100){
+        return { ok: false, error: "Daftar kategori tidak valid." };
+    }
+
+    const data = load();
+    const renames = new Map();
+    const order = [];
+
+    for(const item of input){
+
+        const from = item?.from == null ? null : String(item.from);
+        const to = String(item?.to ?? "").trim().slice(0, 30);
+
+        if(from !== null && !data.categories.includes(from)){
+            return { ok: false, error: `Kategori "${from}" tidak ditemukan. Muat ulang halaman.` };
+        }
+
+        if(!to){
+            return { ok: false, error: "Nama kategori tidak boleh kosong." };
+        }
+
+        if(from !== null){
+            renames.set(from, to);
+        }
+
+        if(!order.some(o => o.toLowerCase() === to.toLowerCase())){
+            order.push(to);
+        }
+
+    }
+
+    const removed = data.categories.filter(c => !renames.has(c));
+    const stillUsed = removed.find(c => data.menus.some(m => m.kategori === c));
+
+    if(stillUsed){
+        const count = data.menus.filter(m => m.kategori === stillUsed).length;
+        return { ok: false, error: `Kategori "${stillUsed}" masih dipakai ${count} produk. Pindahkan atau gabungkan dulu.` };
+    }
+
+    if(order.length === 0){
+        return { ok: false, error: "Minimal harus ada satu kategori." };
+    }
+
+    /* Penggabungan tidak peka huruf besar/kecil: pakai ejaan yang tampil pertama. */
+    const canonical = name => order.find(o => o.toLowerCase() === name.toLowerCase()) || name;
+
+    data.menus.forEach(m => {
+        if(renames.has(m.kategori)){
+            m.kategori = canonical(renames.get(m.kategori));
+        }
+    });
+
+    data.categories = order;
+
+    persist();
+
+    return { ok: true, data };
+
+}
+
 
 function reorder(ids){
 
@@ -381,5 +499,6 @@ module.exports = {
     create,
     update,
     reorder,
+    saveCategories,
     remove
 };

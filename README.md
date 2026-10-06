@@ -2,8 +2,9 @@
 
 A web-based point of sale (kasir) for Kukikoe. Transactions go to Google Sheets through an Apps Script, receipts print to a Bluetooth thermal printer through Cleanter, and the kasir keeps working offline (unsent transactions are queued on the device and uploaded when the connection returns).
 
-- **Kasir** — product grid, cart, Cash/QRIS payment, receipt printing
-- **Menu** (superadmin) — products, prices, categories, Best Seller, photos, and optional variants (e.g. flavors) each with their own price
+- **Kasir** — product grid, cart, payment by Cash, QRIS, Transfer BCA, Debit or Utang (credit), receipt printing
+- **Menu** (superadmin) — products, prices, Best Seller, photos, optional variants (e.g. flavors) each with their own price, and categories (create — even before any product uses them — rename, merge, delete empty ones, and set the order of the category buttons on the kasir; the product form picks from this list)
+- **Utang** (kasir & superadmin) — sales on credit: list of unpaid invoices, partial or full payments, reprints
 - **Laporan** (superadmin) — sales report from Google Sheets
 - **Akun** (superadmin) — kasir accounts
 
@@ -49,7 +50,7 @@ On first start the server creates `data/menus.json` with the default 14 products
 | `APPS_SCRIPT_SUBMIT_URL` | yes | Apps Script web app URL (`doPost`) that receives transactions. |
 | `APPS_SCRIPT_REPORT_URL` | yes | Apps Script URL (`doGet`) that returns the sales rows for the report. |
 | `SESSION_SECRET` | yes | At least 32 characters. Changing it logs everyone out. |
-| `SESSION_HOURS` | no | Session length in hours. Default `12`. |
+| `ADMIN_SESSION_MINUTES` | no | Superadmin is logged out after this many minutes **without activity** (each action renews it; a warning appears one minute before). Default `15`. Kasir stay logged in until they log out themselves. |
 | `SECURE_COOKIE` | no | `true` when served over HTTPS (required in production). |
 | `TRUST_PROXY` | no | `true` **only** behind Nginx/Caddy, so login rate-limiting uses the real client IP. Leave `false` otherwise — the header can be spoofed. |
 | `DATA_DIR` | no | Where accounts and menu are stored. Default `./data`. |
@@ -238,6 +239,34 @@ Sessions survive restarts as long as `SESSION_SECRET` stays the same. Browsers p
 
 ---
 
+## Setoran (kasir shifts)
+
+Only **kasir** accounts open and close a setoran; superadmin is never asked.
+
+1. **Login → Buka kasir.** The kasir confirms the cash in the drawer (*uang modal*, pre-filled Rp300.000) and starts selling.
+2. **Totalan tab.** Shows the running total of the current setoran only: *Tunai di laci* (modal + cash sales + debt payments in cash), *QRIS*, *Transfer BCA* and *Debit* (sales + debt payments by that method).
+3. **Logout → Tutup kasir.** The same totals are shown so the kasir can match them with the physical cash and the QRIS / bank statements, then the setoran is closed and they are logged out. Nothing has to be typed. Logging in again starts a new setoran.
+4. **Left open?** Closing the browser during a setoran shows the browser's own "leave page?" warning (some tablets cannot show it). If a setoran is still open at the next login, the kasir must close it first before opening a new one.
+
+Every sale is tagged with the kasir and setoran (extra fields `kasir`, `setoran` sent to Google Sheets). Setoran records are saved in `data/shifts.json` and listed for the superadmin under **Laporan → Setoran kasir** for the selected dates. Totals are counted on the tablet, so sales made offline are included.
+
+---
+
+## Utang (sales on credit)
+
+1. At the kasir, choose **Utang** as the payment method and press **Catat utang**. Enter the customer's name (required), and optionally a phone number, due date and note. The invoice prints immediately, marked **UTANG – BELUM LUNAS** with the balance.
+2. The debt appears in the **Utang** tab (the tab shows how many are open). Tap one to see the invoice, then **Terima pembayaran**: pay the full balance (**Lunasi**) or any smaller amount, by Cash, QRIS, Transfer BCA or Debit. A payment receipt prints each time; when the balance reaches 0 the debt becomes **Lunas**.
+3. **Cetak ulang nota** reprints the invoice with the latest paid/remaining amounts. Each payment in the history has its own reprint button.
+4. Only a superadmin can **cancel** a debt (a reason is required). It is kept, marked *Dibatalkan*, and can no longer be paid.
+
+**Where the data lives.** The sale itself goes to Google Sheets like any other, with payment `Utang` (plus `pelanggan`, `telepon`, `jatuhTempo`, `catatan` fields your Apps Script may ignore). The debt and its payments live in `data/debts.json` on the server — **back this file up**; it is the only record of who still owes what. Debt payments are not sent to Google Sheets.
+
+**Offline.** A sale on credit made offline waits in the device queue like any sale, shows in the Utang tab as *Menunggu terkirim*, and becomes a normal debt when the connection returns. Recording a *payment* needs the internet.
+
+**In Laporan.** *Pendapatan* counts sales on the day they were made, including credit sales. *Uang masuk* is money actually received in the range (Cash + QRIS + Transfer BCA + Debit sales + debt payments). *Piutang berjalan* is what is still owed right now. Cancelling a debt does not remove its sale from Google Sheets, so fix that row in the sheet if the sale really did not happen.
+
+---
+
 ## Seeding the menu
 
 The whole menu is defined in `scripts/seeds/` so a new server can be filled in one command:
@@ -275,7 +304,7 @@ Everything that matters at runtime lives in two folders, both outside git:
 
 | Folder | Contents |
 |---|---|
-| `data/` | `users.json` (password hashes), `menus.json` (menu) |
+| `data/` | `users.json` (password hashes), `menus.json` (menu), `debts.json` (customer debts & payments), `shifts.json` (kasir setoran) |
 | `uploads/` | product photos |
 
 Transactions themselves are in Google Sheets.
@@ -352,6 +381,8 @@ Any 2xx response counts as success; anything else keeps the transaction in the q
 server.js           HTTP server, routing, access control, Apps Script proxy
 auth.js             password hashing (scrypt), signed session cookies, user store
 menu.js             menu store (data/menus.json) + validation
+debts.js            customer debts & payments (data/debts.json)
+shifts.js           kasir setoran records (data/shifts.json)
 scripts/user.js     account CLI
 public/             the only folder served to browsers
   index.html        app shell: Kasir / Menu / Laporan / Akun
@@ -359,7 +390,10 @@ public/             the only folder served to browsers
   assets/
     app.css         all styles
     app.js          shared: API, session, router, dialogs, toasts
-    kasir.js        cart, payment, offline queue, printing
+    kasir.js        cart, payment, offline queue
+    printer.js      receipt layouts + sending to Cleanter
+    utang.js        debts list, payments, reprints
+    setoran.js      kasir shift: modal, running totals, closing at logout
     admin.js        menu & account management
     report.js       sales report & charts
     icons.svg       icon sprite
