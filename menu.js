@@ -184,6 +184,24 @@ const IMAGE_PATTERN =
     /^\/(images\/\d+\.jpg|uploads\/products\/[a-zA-Z0-9_-]+\.jpg(\?v=\d+)?)$/;
 
 
+/* Harga Grab opsional: kosong / 0 = belum diisi (null). */
+function grabPrice(value, label){
+
+    if(value === undefined || value === null || value === "" || Number(value) === 0){
+        return { value: null };
+    }
+
+    const n = Number(value);
+
+    if(!Number.isInteger(n) || n < 0 || n > 100_000_000){
+        return { error: `Harga Grab ${label} harus angka bulat.` };
+    }
+
+    return { value: n };
+
+}
+
+
 const MAX_VARIANTS = 30;
 
 const VARIANT_ID_PATTERN = /^[\w-]{4,40}$/;
@@ -222,6 +240,12 @@ function sanitizeVariants(list){
             return { error: `Harga varian "${nama}" harus angka bulat lebih dari 0.` };
         }
 
+        const grab = grabPrice(item?.hargaGrab, `varian "${nama}"`);
+
+        if(grab.error){
+            return { error: grab.error };
+        }
+
         const key = nama.toLowerCase();
 
         if(seen.has(key)){
@@ -233,7 +257,8 @@ function sanitizeVariants(list){
         out.push({
             id: VARIANT_ID_PATTERN.test(String(item.id || "")) ? item.id : crypto.randomUUID(),
             nama,
-            harga
+            harga,
+            hargaGrab: grab.value
         });
 
     }
@@ -294,6 +319,12 @@ function sanitize(input, existing){
         return { error: "Isi harga, atau aktifkan harga custom atau varian." };
     }
 
+    const grab = grabPrice(src.hargaGrab !== undefined ? src.hargaGrab : base.hargaGrab, "produk");
+
+    if(grab.error){
+        return { error: grab.error };
+    }
+
     const gambar = src.gambar !== undefined ? src.gambar : base.gambar;
 
     return {
@@ -304,6 +335,7 @@ function sanitize(input, existing){
             kategori,
             unggulan: Boolean(src.unggulan ?? base.unggulan),
             hargaKustom,
+            hargaGrab: adaVarian ? null : grab.value,
             adaVarian,
             varian: variants.value,
             gambar:

@@ -170,6 +170,17 @@ const App = (() => {
 
     try{ menus = JSON.parse(localStorage.getItem("menuCache")) || []; }catch(e){}
 
+    /* Pengaturan toko (potongan Grab), disalin di tablet untuk dipakai saat offline. */
+    let settings = { grabCommission: 20 };
+
+    try{ settings = { ...settings, ...JSON.parse(localStorage.getItem("settingsCache")) }; }catch(e){}
+
+    function setSettings(next){
+        settings = { ...settings, ...next };
+        localStorage.setItem("settingsCache", JSON.stringify(settings));
+        emit("settings", settings);
+    }
+
     /* Daftar kategori dari server (boleh ada yang belum punya produk), urutan = urutan di kasir. */
     let categoryList = [];
 
@@ -208,6 +219,10 @@ const App = (() => {
 
             /* Tidak ada yang berubah: jangan render ulang (kartu tidak berkedip). */
             const order = data.categories || [];
+
+            if(data.settings && JSON.stringify({ ...settings, ...data.settings }) !== JSON.stringify(settings)){
+                setSettings(data.settings);
+            }
 
             if(hadNothing ||
                JSON.stringify(data.menus) !== JSON.stringify(menus) ||
@@ -383,13 +398,11 @@ const App = (() => {
         }
     }, true);
 
-    /* Klik backdrop menutup dialog. */
-    document.addEventListener("pointerdown", e => {
-        /* Dialog berisi isian (data-lock): tidak tertutup karena tersentuh di luar, supaya ketikan tidak hilang. */
-        if(e.target.tagName === "DIALOG" && !e.target.hasAttribute("data-lock")){
-            e.target.close();
-        }
-    });
+    /*
+     * Ketuk di luar dialog TIDAK menutupnya (semua dialog): di layar
+     * sentuh, sentuhan tak sengaja di tepi akan menutup & membuang isian.
+     * Dialog hanya tertutup lewat tombolnya sendiri (×, Batal, dst).
+     */
 
 
     /*
@@ -542,6 +555,7 @@ const App = (() => {
         api, isSuperadmin, logout, get session(){ return session; }, get leaving(){ return leaving; },
         on, emit,
         get menus(){ return menus; }, get menuStatus(){ return menuStatus; },
+        get settings(){ return settings; }, setSettings,
         setMenus, refreshMenus, categories,
         registerView, showView,
         toast, confirmDialog, busy,

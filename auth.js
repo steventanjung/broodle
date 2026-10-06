@@ -139,34 +139,46 @@ async function verifyPassword(password, stored){
    USER STORE
    ===================================================== */
 
+/*
+ * Dibaca di SETIAP permintaan (cek akun masih ada), jadi disimpan di
+ * memori dan hanya dibaca ulang kalau users.json berubah. Pemanggil
+ * mendapat salinan, supaya mengubahnya tidak mengubah cache diam-diam.
+ */
+let usersCache = null;
+let usersMtime = -1;
+
 function loadUsers(){
 
+    let mtime = 0;
+
     try{
-
-        const raw =
-            fs.readFileSync(USERS_FILE, "utf8");
-
-        const parsed =
-            JSON.parse(raw);
-
-        return Array.isArray(parsed.users)
-            ? parsed.users
-            : [];
-
+        mtime = fs.statSync(USERS_FILE).mtimeMs;
     }catch(error){
-
         if(error.code !== "ENOENT"){
+            console.error("users.json tidak bisa dibaca:", error.message);
+        }
+        return [];
+    }
 
-            console.error(
-                "users.json tidak bisa dibaca:",
-                error.message
-            );
+    if(!usersCache || mtime !== usersMtime){
+
+        try{
+
+            const parsed = JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
+
+            usersCache = Array.isArray(parsed.users) ? parsed.users : [];
+            usersMtime = mtime;
+
+        }catch(error){
+
+            console.error("users.json tidak bisa dibaca:", error.message);
+            return [];
 
         }
 
-        return [];
-
     }
+
+    return structuredClone(usersCache);
 
 }
 
@@ -384,6 +396,9 @@ function resetPassword(username, newPassword){
 
     entry.password = hashPassword(newPassword);
 
+    /* Semua sesi yang dibuat sebelum ini jadi tidak berlaku (perangkat lain ikut keluar). */
+    entry.passwordChangedAt = Date.now();
+
     saveUsers(users);
 
     return { ok:true };
@@ -505,7 +520,8 @@ function createSession(user, secret, maxAgeSeconds){
         b64url(JSON.stringify({
             u: user.username,
             r: user.role,
-            e: expiresAt
+            e: expiresAt,
+            i: Date.now()
         }));
 
     return payload + "." + sign(payload, secret);
@@ -576,8 +592,35 @@ function readSession(token, secret){
     return {
         username: data.u,
         role: data.r,
-        expiresAt: data.e
+        expiresAt: data.e,
+        issuedAt: Number(data.i) || 0
     };
+
+}
+
+
+/*
+ * Cookie yang sah belum cukup: akunnya harus masih ada, perannya sama,
+ * dan sesi dibuat SETELAH password terakhir diganti. Akun dihapus atau
+ * password diganti = semua perangkat akun itu keluar di permintaan berikutnya.
+ */
+function validateSession(session){
+
+    if(!session){
+        return null;
+    }
+
+    const user = findUser(session.username);
+
+    if(!user || user.role !== session.role){
+        return null;
+    }
+
+    if((user.passwordChangedAt || 0) > session.issuedAt){
+        return null;
+    }
+
+    return { ...session, username: user.username };
 
 }
 
@@ -622,6 +665,7 @@ module.exports = {
     authenticate,
     createSession,
     readSession,
+    validateSession,
     parseCookies,
     validateUsername,
     validatePassword,

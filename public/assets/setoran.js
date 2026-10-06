@@ -26,7 +26,7 @@
     const isKasir = () => App.session?.role === "kasir";
     const isOpen = () => !!shift && !shift.closedAt;
 
-    const emptyTotals = () => ({ cash: 0, qris: 0, transfer: 0, debit: 0, utang: 0, cashPay: 0, qrisPay: 0, transferPay: 0, debitPay: 0, count: 0 });
+    const emptyTotals = () => ({ cash: 0, qris: 0, transfer: 0, debit: 0, grab: 0, utang: 0, cashPay: 0, qrisPay: 0, transferPay: 0, debitPay: 0, count: 0 });
 
     /* Uang yang seharusnya ada, per tempat. */
     const drawer   = s => s.modal + s.totals.cash + s.totals.cashPay;
@@ -182,6 +182,7 @@
                 <div class="shift-row"><span>${icon("qr", "i-sm")}QRIS</span><strong class="num">${rupiah(qris(s))}</strong></div>
                 <div class="shift-row"><span>${icon("bank", "i-sm")}Transfer BCA</span><strong class="num">${rupiah(transfer(s))}</strong></div>
                 <div class="shift-row"><span>${icon("card", "i-sm")}Debit</span><strong class="num">${rupiah(debit(s))}</strong></div>
+                ${s.totals.grab ? `<div class="shift-row"><span>${icon("bike", "i-sm")}Grab <span class="muted small">dicairkan Grab, di luar total</span></span><strong class="num">${rupiah(s.totals.grab)}</strong></div>` : ""}
                 <div class="shift-foot">
                     <div><span>Modal awal</span><span class="num">${rupiah(s.modal)}</span></div>
                     <div><span>Uang di laci seharusnya <span class="muted">(tunai + modal)</span></span><b class="num">${rupiah(drawer(s))}</b></div>
@@ -246,7 +247,7 @@
        TOTAL BERJALAN
        ================================================= */
 
-    const SALE_KEY = { Cash: "cash", QRIS: "qris", "Transfer BCA": "transfer", Transfer: "transfer", Debit: "debit", Utang: "utang" };
+    const SALE_KEY = { Cash: "cash", QRIS: "qris", "Transfer BCA": "transfer", Transfer: "transfer", Debit: "debit", Grab: "grab", Utang: "utang" };
     const PAY_KEY = { Cash: "cashPay", QRIS: "qrisPay", "Transfer BCA": "transferPay", Transfer: "transferPay", Debit: "debitPay" };
 
     App.on("sale-recorded", tx => {

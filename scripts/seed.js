@@ -84,9 +84,22 @@ for(const { file, name } of selected){
 
         const data = { ...seed };
 
-        /* Sudah ada: jangan timpa foto hasil upload admin. */
+        /* Sudah ada: jangan timpa foto & harga Grab yang diisi admin. */
         if(existing){
+
             data.gambar = existing.gambar || seed.gambar;
+
+            if(seed.hargaGrab === undefined){
+                data.hargaGrab = existing.hargaGrab;
+            }
+
+            if(Array.isArray(seed.varian)){
+                data.varian = seed.varian.map(v => {
+                    const old = existing.varian?.find(o => o.id === v.id || o.nama.toLowerCase() === v.nama.toLowerCase());
+                    return v.hargaGrab === undefined && old?.hargaGrab ? { ...v, hargaGrab: old.hargaGrab } : v;
+                });
+            }
+
         }
 
         const result = existing

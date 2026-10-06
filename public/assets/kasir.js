@@ -221,6 +221,8 @@
 
         const active = renderCategories();
 
+        catalogGrab = isGrab();
+
         /* Belum ada salinan menu sama sekali (login pertama di perangkat ini). */
         if(App.menus.length === 0 && App.menuStatus !== "ready"){
 
@@ -255,11 +257,7 @@
                 <span class="product-minus" role="button" aria-label="Kurangi" hidden>${icon("minus", "i-sm")}</span>
                 <div class="product-info">
                     <span class="product-name">${escapeHtml(m.nama)}</span>
-                    <span class="product-price num">
-                        ${usesVariants(m)
-                            ? icon("layers", "i-sm") + "Mulai " + rupiah(cheapest(m))
-                            : m.hargaKustom ? icon("tag", "i-sm") + "Harga custom" : rupiah(m.harga)}
-                    </span>
+                    <span class="product-price num">${priceLabel(m)}</span>
                 </div>
             </button>
         `).join("");
@@ -298,10 +296,44 @@
 
     const findMenu = id => App.menus.find(m => m.id === id);
 
+    let catalogGrab = false;
+
     /* Produk bervarian: ketuk membuka pilihan varian, harga ada di tiap varian. */
     const usesVariants = m => !!m && !!m.adaVarian && Array.isArray(m.varian) && m.varian.length > 0;
 
     const cheapest = m => Math.min(...m.varian.map(v => v.harga));
+
+    /*
+     * GRAB: tiap produk / varian punya harga Grab sendiri (diisi superadmin).
+     * Saat metode Grab dipilih, harga di layar & nota = harga Grab;
+     * yang tercatat sebagai penjualan = harga Grab dikurangi potongan Grab.
+     */
+    const isGrab = () => payment === "grab";
+    const grabRate = () => 1 - (Number(App.settings.grabCommission) || 0) / 100;
+    const grabNet = price => Math.round(price * grabRate());
+
+    const linePrice = line => isGrab() ? (line.hargaGrab || 0) : line.harga;
+    const missingGrab = () => [...cart.values()].filter(l => !l.hargaGrab);
+
+    const cheapestGrab = m => {
+        const prices = m.varian.map(v => v.hargaGrab).filter(Boolean);
+        return prices.length ? Math.min(...prices) : null;
+    };
+
+    function priceLabel(m){
+
+        if(isGrab()){
+            const grab = usesVariants(m) ? cheapestGrab(m) : m.hargaGrab;
+            return grab
+                ? (usesVariants(m) ? icon("layers", "i-sm") + "Mulai " : "") + rupiah(grab)
+                : `<span class="no-grab">Belum ada harga Grab</span>`;
+        }
+
+        return usesVariants(m)
+            ? icon("layers", "i-sm") + "Mulai " + rupiah(cheapest(m))
+            : m.hargaKustom ? icon("tag", "i-sm") + "Harga custom" : rupiah(m.harga);
+
+    }
 
 
     /* =================================================
@@ -348,7 +380,8 @@
         }else{
             cart.set(key, {
                 key, menuId: menu.id, nama: menu.nama, harga, qty, custom,
-                varian: variant ? variant.nama : null
+                varian: variant ? variant.nama : null,
+                hargaGrab: (variant ? variant.hargaGrab : menu.hargaGrab) || null
             });
         }
 
@@ -407,7 +440,7 @@
 
     const getTotal = () => {
         let total = 0;
-        cart.forEach(l => total += l.harga * l.qty);
+        cart.forEach(l => total += linePrice(l) * l.qty);
         return total;
     };
 
@@ -446,9 +479,10 @@
         $("#orderLines").innerHTML = [...cart.values()].map(line => `
             <div class="line" data-key="${escapeHtml(line.key)}">
                 <span class="line-name">${escapeHtml(line.nama)}${line.varian ? ` <span class="badge">${escapeHtml(line.varian)}</span>` : ""}</span>
-                <span class="line-sub num">${rupiah(line.harga * line.qty)}</span>
+                <span class="line-sub num">${isGrab() && !line.hargaGrab ? "–" : rupiah(linePrice(line) * line.qty)}</span>
                 <span class="line-meta num">
-                    ${rupiah(line.harga)}
+                    ${isGrab() && !line.hargaGrab ? `<span class="no-grab">Belum ada harga Grab</span>` : rupiah(linePrice(line))}
+                    ${isGrab() && line.hargaGrab ? `<span class="badge">Grab</span>` : ""}
                     ${line.custom ? `<span class="badge badge-accent">${icon("tag", "i-sm")}custom</span>` : ""}
                 </span>
                 <div class="stepper">
@@ -507,7 +541,7 @@
                 <div class="variant-row ${qty ? "picked" : ""}" data-vid="${escapeHtml(v.id)}">
                     <div class="variant-info">
                         <span class="variant-name">${escapeHtml(v.nama)}</span>
-                        <span class="variant-price num">${rupiah(v.harga)}</span>
+                        <span class="variant-price num">${isGrab() ? (v.hargaGrab ? rupiah(v.hargaGrab) + " · Grab" : "Belum ada harga Grab") : rupiah(v.harga)}</span>
                     </div>
                     <div class="stepper">
                         <button type="button" data-vstep="-1" aria-label="Kurangi ${escapeHtml(v.nama)}" ${qty ? "" : "disabled"}>${icon(qty === 1 ? "trash" : "minus", "i-sm")}</button>
@@ -634,6 +668,25 @@
         $("#qrisSection").hidden = payment !== "qris";
         $("#transferSection").hidden = payment !== "transfer";
         $("#debitSection").hidden = payment !== "debit";
+        $("#grabSection").hidden = !isGrab();
+
+        if(isGrab()){
+
+            const missing = missingGrab();
+
+            $("#grabSection").className = "notice " + (missing.length ? "notice-warn" : "notice-info");
+            $("#grabText").innerHTML = missing.length
+                ? `Harga Grab belum diisi untuk: <b>${missing.map(l => escapeHtml(l.nama + (l.varian ? " (" + l.varian + ")" : ""))).join(", ")}</b>.`
+                : `Nota memakai harga Grab. Tercatat sebagai penjualan <b class="num">${rupiah([...cart.values()].reduce((sum, l) => sum + grabNet(l.hargaGrab) * l.qty, 0))}</b> (harga Grab − ${App.settings.grabCommission}%).`;
+
+        }
+
+        /* Ganti ke/dari Grab: harga di kartu produk & baris pesanan ikut berganti. */
+        if(catalogGrab !== isGrab()){
+            renderCatalog();
+            renderVariantRows();
+            renderLines();
+        }
         $("#utangSection").hidden = payment !== "utang";
 
         $("#quickCash").innerHTML = quickAmounts(total).map((amount, i) =>
@@ -659,7 +712,7 @@
             button.innerHTML = payment === "utang"
                 ? icon("book") + (empty ? "Catat utang" : `Catat utang ${rupiah(total)}`)
                 : icon("receipt") + (empty ? "Bayar" : `Bayar ${rupiah(total)}`);
-            button.disabled = processing || empty || (payment === "cash" && received < total);
+            button.disabled = processing || empty || (payment === "cash" && received < total) || (isGrab() && missingGrab().length > 0);
         }
 
         $("#reprintNotice").hidden = !awaitingReprint;
@@ -688,16 +741,32 @@
             tanggal: now.toLocaleDateString("id-ID"),
             jam: now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false }),
             nota: String(nota).padStart(3, "0"),
-            pembayaran: { cash: "Cash", qris: "QRIS", transfer: "Transfer BCA", debit: "Debit", utang: "Utang" }[payment],
+            pembayaran: { cash: "Cash", qris: "QRIS", transfer: "Transfer BCA", debit: "Debit", grab: "Grab", utang: "Utang" }[payment],
             cashReceived: cash,
             change: payment === "cash" ? cash - total : 0,
-            total,
-            items: [...cart.values()].map(l => ({
-                nama: l.varian ? `${l.nama} (${l.varian})` : l.nama,
-                qty: l.qty,
-                harga: l.harga,
-                subtotal: l.harga * l.qty
-            })),
+            /* Grab: total yang tercatat = jumlah harga bersih (harga Grab − potongan). */
+            total: isGrab() ? [...cart.values()].reduce((sum, l) => sum + grabNet(l.hargaGrab) * l.qty, 0) : total,
+            /* Grab: yang tercatat = harga Grab − potongan, per item. */
+            items: [...cart.values()].map(l => {
+                const harga = isGrab() ? grabNet(l.hargaGrab) : l.harga;
+                return {
+                    nama: l.varian ? `${l.nama} (${l.varian})` : l.nama,
+                    qty: l.qty,
+                    harga,
+                    subtotal: harga * l.qty
+                };
+            }),
+            /* Grab: harga Grab asli untuk dicetak di nota. */
+            ...(isGrab() ? {
+                grabPotongan: Number(App.settings.grabCommission) || 0,
+                grabTotal: total,
+                grabItems: [...cart.values()].map(l => ({
+                    nama: l.varian ? `${l.nama} (${l.varian})` : l.nama,
+                    qty: l.qty,
+                    harga: l.hargaGrab,
+                    subtotal: l.hargaGrab * l.qty
+                }))
+            } : {}),
             kasir: App.session?.username,
             setoran: App.shiftId || null,
             /* Hanya untuk utang: dicatat server sebagai utang pelanggan. */
@@ -726,6 +795,10 @@
         if(payment === "cash" && cashReceived() < total){
             $("#cashInput").focus();
             return toast("Uang diterima kurang dari total.", "error");
+        }
+
+        if(isGrab() && missingGrab().length){
+            return toast("Harga Grab belum diisi untuk sebagian produk.", "error");
         }
 
         /* Utang: minta data pelanggan dulu; dialog memanggil pay() lagi dengan datanya. */
@@ -912,8 +985,12 @@
 
         $("#receiptSlip").innerHTML = Printer.toHtml(Printer.saleReceipt(t));
 
+        const missing = isGrab() ? missingGrab() : [];
+
         $("#receiptNote").textContent =
-            payment === "cash" && t.cashReceived < t.total
+            missing.length
+                ? `Harga Grab belum diisi untuk: ${missing.map(l => l.nama + (l.varian ? " (" + l.varian + ")" : "")).join(", ")}. Nota belum bisa dicetak.`
+            : payment === "cash" && t.cashReceived < t.total
                 ? "Uang diterima belum diisi. Nomor nota dan jam mengikuti saat Bayar."
                 : "Nomor nota dan jam mengikuti saat Bayar ditekan.";
 

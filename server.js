@@ -26,6 +26,7 @@ const auth = require("./auth.js");
 const menu = require("./menu.js");
 const debts = require("./debts.js");
 const shifts = require("./shifts.js");
+const settings = require("./settings.js");
 
 
 /* =====================================================
@@ -237,7 +238,7 @@ function currentUser(req){
 
     const cookies = auth.parseCookies(req.headers.cookie);
 
-    return auth.readSession(cookies[auth.COOKIE_NAME], SESSION_SECRET);
+    return auth.validateSession(auth.readSession(cookies[auth.COOKIE_NAME], SESSION_SECRET));
 
 }
 
@@ -435,6 +436,10 @@ async function handleUsersResetPassword(req, res, user, target){
         return json(res, 400, { error: result.error });
     }
 
+    if(target.toLowerCase() === user.username.toLowerCase()){
+        issueSession(res, user);
+    }
+
     console.log(`[akun] password direset oleh ${user.username}: ${target}`);
 
     json(res, 200, { ok: true });
@@ -475,6 +480,9 @@ async function handleChangePassword(req, res, user){
 
     loginAttempts.delete(key);
 
+    /* Perangkat lain keluar; perangkat yang mengganti tetap masuk dengan sesi baru. */
+    issueSession(res, user);
+
     console.log(`[akun] ${user.username} mengganti passwordnya sendiri`);
 
     json(res, 200, { ok: true });
@@ -489,7 +497,23 @@ async function handleChangePassword(req, res, user){
 
 function handleMenuList(req, res){
 
-    json(res, 200, menu.list());
+    /* Pengaturan ikut dikirim: kasir butuh potongan Grab, juga saat offline (disalin di tablet). */
+    json(res, 200, { ...menu.list(), settings: settings.get() });
+
+}
+
+
+async function handleSettingsSave(req, res, user){
+
+    const result = settings.update(await readJson(req));
+
+    if(!result.ok){
+        return json(res, 400, { error: result.error });
+    }
+
+    console.log(`[pengaturan] diubah oleh ${user.username}: potongan Grab ${result.settings.grabCommission}%`);
+
+    json(res, 200, result.settings);
 
 }
 
@@ -880,6 +904,7 @@ const ROUTES = [
     ["POST",   /^\/api\/me\/password$/,                  handleChangePassword,     "superadmin"],
     ["POST",   /^\/api\/submit$/,                        handleSubmit,             "user"],
     ["GET",    /^\/api\/menu$/,                          handleMenuList,           "user"],
+    ["PUT",    /^\/api\/settings$/,                     handleSettingsSave,       "superadmin"],
     ["PUT",    /^\/api\/categories$/,                   handleCategoriesSave,     "superadmin"],
     ["POST",   /^\/api\/menu$/,                          handleMenuCreate,         "superadmin"],
     ["PUT",    /^\/api\/menu\/([\w-]{6,80})$/,           handleMenuUpdate,         "superadmin"],

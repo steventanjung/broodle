@@ -2,7 +2,7 @@
 
 A web-based point of sale (kasir) for Kukikoe. Transactions go to Google Sheets through an Apps Script, receipts print to a Bluetooth thermal printer through Cleanter, and the kasir keeps working offline (unsent transactions are queued on the device and uploaded when the connection returns).
 
-- **Kasir** — product grid, cart, payment by Cash, QRIS, Transfer BCA, Debit or Utang (credit), receipt printing
+- **Kasir** — product grid, cart, payment by Cash, QRIS, Transfer BCA, Debit, Grab (Grab prices) or Utang (credit), receipt printing, receipt preview
 - **Menu** (superadmin) — products, prices, Best Seller, photos, optional variants (e.g. flavors) each with their own price, and categories (create — even before any product uses them — rename, merge, delete empty ones, and set the order of the category buttons on the kasir; the product form picks from this list)
 - **Utang** (kasir & superadmin) — sales on credit: list of unpaid invoices, partial or full payments, reprints
 - **Laporan** (superadmin) — sales report from Google Sheets
@@ -239,6 +239,16 @@ Sessions survive restarts as long as `SESSION_SECRET` stays the same. Browsers p
 
 ---
 
+## Grab orders
+
+- **Prices.** Each product (and each variant) has its own **Harga Grab**, set by the superadmin in the Menu tab. The form suggests "+25%" as a starting point; type the rounded price used in the Grab app. The menu list flags products that have no Grab price yet.
+- **Selling.** Add products as usual, then choose **Grab** as the payment method. All prices in the cart switch to the Grab prices; switching back restores the normal prices. Bayar is blocked while any product in the cart has no Grab price.
+- **Invoice vs. sales.** The invoice prints the Grab prices. What is saved as the sale (Google Sheets, Laporan, setoran) is each Grab price **minus the Grab commission** — e.g. Grab Rp50.000 with 20% → Rp40.000. The gross total and the commission used are sent along (`grabTotal`, `grabPotongan`).
+- **Commission.** Set in the **Pengaturan** tab (default 20%). It applies to new sales only.
+- **Totalan / Laporan.** Grab has its own row and chart slice. It is kept out of the drawer, *Total diterima* and *Uang masuk*, because Grab pays out separately.
+
+---
+
 ## Setoran (kasir shifts)
 
 Only **kasir** accounts open and close a setoran; superadmin is never asked.
@@ -304,7 +314,7 @@ Everything that matters at runtime lives in two folders, both outside git:
 
 | Folder | Contents |
 |---|---|
-| `data/` | `users.json` (password hashes), `menus.json` (menu), `debts.json` (customer debts & payments), `shifts.json` (kasir setoran) |
+| `data/` | `users.json` (password hashes), `menus.json` (menu & Grab prices), `debts.json` (customer debts & payments), `shifts.json` (kasir setoran), `settings.json` (Grab commission) |
 | `uploads/` | product photos |
 
 Transactions themselves are in Google Sheets.
@@ -383,6 +393,7 @@ auth.js             password hashing (scrypt), signed session cookies, user stor
 menu.js             menu store (data/menus.json) + validation
 debts.js            customer debts & payments (data/debts.json)
 shifts.js           kasir setoran records (data/shifts.json)
+settings.js         store settings, e.g. Grab commission (data/settings.json)
 scripts/user.js     account CLI
 public/             the only folder served to browsers
   index.html        app shell: Kasir / Menu / Laporan / Akun

@@ -192,7 +192,7 @@
 
     function aggregate(transactions, from, to){
 
-        let total = 0, cash = 0, qris = 0, transfer = 0, debit = 0, utang = 0, items = 0;
+        let total = 0, cash = 0, qris = 0, transfer = 0, debit = 0, grab = 0, utang = 0, items = 0;
 
         const byDay = new Map();
         const byHour = new Map();
@@ -206,6 +206,7 @@
             if(t.payment === "QRIS") qris += t.total;
             if(t.payment === "TRANSFER" || t.payment === "TRANSFER BCA") transfer += t.total;
             if(t.payment === "DEBIT") debit += t.total;
+            if(t.payment === "GRAB") grab += t.total;
             if(t.payment === "UTANG") utang += t.total;
 
             byDay.set(t.date, (byDay.get(t.date) || 0) + t.total);
@@ -258,7 +259,7 @@
             .sort((a, b) => b.subtotal - a.subtotal);
 
         return {
-            total, cash, qris, transfer, debit, utang, items, trend, products,
+            total, cash, qris, transfer, debit, grab, utang, items, trend, products,
             count: transactions.length,
             average: transactions.length ? total / transactions.length : 0
         };
@@ -513,10 +514,10 @@
     }
 
 
-    function renderPayments(cash, qris, transfer, debit, utang){
+    function renderPayments(cash, qris, transfer, debit, grab, utang){
 
         const el = $("#paymentChart");
-        const total = cash + qris + transfer + debit + utang;
+        const total = cash + qris + transfer + debit + grab + utang;
 
         if(total <= 0){
             el.innerHTML = `<div class="empty">Tidak ada data.</div>`;
@@ -531,6 +532,7 @@
             ["QRIS", qris, "var(--series-qris)"],
             ...(transfer > 0 ? [["Transfer BCA", transfer, "var(--series-transfer)"]] : []),
             ...(debit > 0 ? [["Debit", debit, "var(--series-debit)"]] : []),
+            ...(grab > 0 ? [["Grab", grab, "var(--series-grab)"]] : []),
             ...(utang > 0 ? [["Utang", utang, "var(--series-utang)"]] : [])
         ];
 
@@ -641,6 +643,10 @@
             return `<span class="badge badge-accent">${icon("bank", "i-sm")}<span class="pay-text">Transfer BCA</span></span>`;
         }
 
+        if(payment === "GRAB"){
+            return `<span class="badge badge-ok">${icon("bike", "i-sm")}<span class="pay-text">Grab</span></span>`;
+        }
+
         if(payment === "DEBIT"){
             return `<span class="badge badge-accent">${icon("card", "i-sm")}<span class="pay-text">Debit</span></span>`;
         }
@@ -674,9 +680,10 @@
                     <td class="r num">${rupiah(t.qris + t.qrisPay)}</td>
                     <td class="r num">${rupiah(t.transfer + t.transferPay)}</td>
                     <td class="r num">${rupiah((t.debit || 0) + (t.debitPay || 0))}</td>
+                    <td class="r num">${rupiah(t.grab || 0)}</td>
                 </tr>`;
 
-        }).join("") : `<tr><td colspan="7" class="muted">Tidak ada setoran pada rentang ini.</td></tr>`;
+        }).join("") : `<tr><td colspan="8" class="muted">Tidak ada setoran pada rentang ini.</td></tr>`;
 
     }
 
@@ -910,7 +917,7 @@
         renderShifts(from, to);
         renderTrend(agg.trend, from !== to);
         renderProducts(foldTop(agg.products, 8));
-        renderPayments(agg.cash, agg.qris, agg.transfer, agg.debit, agg.utang);
+        renderPayments(agg.cash, agg.qris, agg.transfer, agg.debit, agg.grab, agg.utang);
         renderTable(transactions);
 
     }

@@ -17,7 +17,7 @@ const auth = require("./auth.js");
 const SHIFT_FILE = path.join(auth.DATA_DIR, "shifts.json");
 
 const ID_PATTERN = /^[\w.-]{6,80}$/;
-const TOTAL_KEYS = ["cash", "qris", "transfer", "debit", "utang", "cashPay", "qrisPay", "transferPay", "debitPay", "count"];
+const TOTAL_KEYS = ["cash", "qris", "transfer", "debit", "grab", "utang", "cashPay", "qrisPay", "transferPay", "debitPay", "count"];
 const MAX_AMOUNT = 10_000_000_000;
 
 

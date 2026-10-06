@@ -65,15 +65,18 @@ const Printer = (() => {
      */
     function saleReceipt(t){
 
+        /* Grab: nota dicetak dengan harga Grab (yang tercatat = harga bersih). */
+        const grab = t.pembayaran === "Grab" && Array.isArray(t.grabItems);
+
         const content = [
             ...header(),
             ...(t.reprint ? [text("CETAK ULANG", { align: "center" })] : []),
             text("No Nota : " + t.nota, { align: "center", bold: true }),
             text(t.tanggal + " • " + t.jam, { align: "center" }),
             divider,
-            ...itemLines(t.items),
+            ...itemLines(grab ? t.grabItems : t.items),
             divider,
-            row("TOTAL", rupiah(t.total), { bold: true }),
+            row("TOTAL", rupiah(grab ? t.grabTotal : t.total), { bold: true }),
             divider
         ];
 

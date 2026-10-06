@@ -47,6 +47,9 @@
         <a class="tab" href="#laporan" data-view="laporan" data-admin hidden>
             <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#chart"/></svg>Laporan
         </a>
+        <a class="tab" href="#pengaturan" data-view="pengaturan" data-admin hidden>
+            <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#settings"/></svg>Pengaturan
+        </a>
         <a class="tab" href="#akun" data-view="akun" data-admin hidden>
             <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#users"/></svg>Akun
         </a>
@@ -136,6 +139,9 @@
                     <button type="button" data-payment="debit" aria-pressed="false">
                         <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#card"/></svg>Debit
                     </button>
+                    <button type="button" data-payment="grab" aria-pressed="false">
+                        <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#bike"/></svg>Grab
+                    </button>
                     <button type="button" data-payment="utang" aria-pressed="false">
                         <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#book"/></svg>Utang
                     </button>
@@ -167,6 +173,11 @@
                 <div id="debitSection" class="notice notice-info" hidden>
                     <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#card"/></svg>
                     <span>Pastikan transaksi di mesin EDC berhasil dan struknya keluar sebelum menekan Bayar.</span>
+                </div>
+
+                <div id="grabSection" class="notice notice-info" hidden>
+                    <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#bike"/></svg>
+                    <span id="grabText"></span>
                 </div>
 
                 <div id="utangSection" class="notice notice-info" hidden>
@@ -269,6 +280,40 @@
         <button id="totalanClose" type="button" class="btn btn-lg btn-block" style="margin-top:16px">
             <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#logout"/></svg>Tutup kasir & keluar
         </button>
+
+    </div>
+</main>
+
+
+<!-- =====================================================
+     PENGATURAN (superadmin)
+     ===================================================== -->
+
+<main id="view-pengaturan" class="view">
+    <div class="page page-narrow">
+
+        <div class="page-head">
+            <div>
+                <h1>Pengaturan</h1>
+                <p>Berlaku untuk semua perangkat kasir</p>
+            </div>
+        </div>
+
+        <form id="settingsForm" class="panel panel-body settings-form" autocomplete="off">
+            <div class="settings-title">
+                <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#bike"/></svg>
+                <h2>Grab</h2>
+            </div>
+            <div class="field">
+                <label class="label" for="sGrab">Potongan Grab</label>
+                <div class="input-group input-suffix">
+                    <input id="sGrab" name="grabCommission" class="input input-lg num" inputmode="decimal" required>
+                    <span class="suffix">%</span>
+                </div>
+                <span id="sGrabExample" class="hint"></span>
+            </div>
+            <button id="settingsSave" type="submit" class="btn btn-primary" style="align-self:flex-start">Simpan</button>
+        </form>
 
     </div>
 </main>
@@ -420,7 +465,7 @@
                     <div class="kpi-head"><span>Uang masuk</span>
                         <button type="button" class="info-btn" aria-label="Penjelasan Uang masuk" aria-expanded="false">
                             <svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#info"/></svg>
-                            <span class="info-tip" role="tooltip">Uang yang benar-benar diterima pada rentang ini: penjualan Cash, QRIS, Transfer BCA &amp; Debit ditambah pembayaran utang. Penjualan utang yang belum dibayar tidak dihitung.</span>
+                            <span class="info-tip" role="tooltip">Uang yang benar-benar diterima pada rentang ini: penjualan Cash, QRIS, Transfer BCA &amp; Debit ditambah pembayaran utang. Penjualan Grab tidak termasuk karena dicairkan Grab terpisah. Penjualan utang yang belum dibayar tidak dihitung.</span>
                         </button>
                     </div>
                     <strong id="kpiInflow" class="num"></strong>
@@ -493,7 +538,7 @@
                 <div style="overflow-x:auto">
                     <table class="tx-table shift-table">
                         <thead>
-                            <tr><th>Kasir</th><th>Waktu</th><th class="r hide-sm">Modal</th><th class="r">Tunai</th><th class="r">QRIS</th><th class="r">Transfer BCA</th><th class="r">Debit</th></tr>
+                            <tr><th>Kasir</th><th>Waktu</th><th class="r hide-sm">Modal</th><th class="r">Tunai</th><th class="r">QRIS</th><th class="r">Transfer BCA</th><th class="r">Debit</th><th class="r">Grab</th></tr>
                         </thead>
                         <tbody id="shiftBody"></tbody>
                     </table>
@@ -611,6 +656,15 @@
                 <span id="priceHint" class="hint" hidden>Muncul sebagai isian awal; kasir tetap bisa mengetik harga lain tiap jual.</span>
             </div>
 
+            <div id="grabField" class="field">
+                <label class="label" for="pHargaGrab">Harga Grab</label>
+                <div class="input-group">
+                    <span class="prefix">Rp</span>
+                    <input id="pHargaGrab" name="hargaGrab" class="input num" inputmode="numeric" placeholder="Belum diisi">
+                </div>
+                <span id="grabHint" class="hint"></span>
+            </div>
+
             <label class="switch">
                 <input type="checkbox" name="unggulan">
                 <span class="switch-track"></span>
@@ -620,7 +674,7 @@
             <label class="switch">
                 <input type="checkbox" name="adaVarian">
                 <span class="switch-track"></span>
-                <span class="switch-text">Punya varian<small>Rasa atau ukuran, masing-masing dengan harga sendiri</small></span>
+                <span class="switch-text">Punya varian<small>Untuk produk yang memiliki variasi</small></span>
             </label>
 
             <div id="variantEditor" class="field" hidden>
@@ -635,7 +689,7 @@
             <label class="switch">
                 <input type="checkbox" name="hargaKustom">
                 <span class="switch-track"></span>
-                <span class="switch-text">Harga custom<small>Kasir mengisi harga tiap jual, mis. isi box beda-beda</small></span>
+                <span class="switch-text">Harga custom<small>Nyalakan untuk produk dengan harga yang bervariasi</small></span>
             </label>
 
         </div>

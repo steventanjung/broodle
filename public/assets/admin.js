@@ -93,6 +93,7 @@
                         <span class="row-title">${escapeHtml(m.nama)}</span>
                         ${m.hargaKustom ? `<span class="row-sub">${icon("tag", "i-sm")} Harga custom, diisi kasir tiap jual</span>` : ""}
                         ${hasVariants(m) ? `<span class="row-sub">${icon("layers", "i-sm")} ${m.varian.length} varian: ${escapeHtml(m.varian.slice(0, 3).map(v => v.nama).join(", "))}${m.varian.length > 3 ? ", …" : ""}</span>` : ""}
+                        ${grabStatus(m)}
                     </div>
                     <span class="row-price num">${hasVariants(m)
                         ? `<span class="muted small">mulai</span> ${rupiah(m.harga)}`
@@ -161,6 +162,19 @@
 
     const hasVariants = m => m.adaVarian && Array.isArray(m.varian) && m.varian.length > 0;
 
+    /* Status harga Grab di daftar menu. */
+    function grabStatus(m){
+
+        const missing = hasVariants(m) ? m.varian.filter(v => !v.hargaGrab).length : (m.hargaGrab ? 0 : 1);
+
+        if(missing){
+            return `<span class="row-sub no-grab">${icon("bike", "i-sm")} ${hasVariants(m) ? `Harga Grab belum diisi untuk ${missing} varian` : "Belum ada harga Grab"}</span>`;
+        }
+
+        return `<span class="row-sub">${icon("bike", "i-sm")} Grab ${hasVariants(m) ? "mulai " + rupiah(Math.min(...m.varian.map(v => v.hargaGrab))) : rupiah(m.hargaGrab)}</span>`;
+
+    }
+
     function renderVariantEditor(focusLast){
 
         $("#variantList").innerHTML = variantDraft.map((v, i) => `
@@ -168,7 +182,11 @@
                 <input class="input" data-f="nama" maxlength="40" placeholder="Nama varian, mis. Blueberry" value="${escapeHtml(v.nama)}" aria-label="Nama varian">
                 <div class="input-group">
                     <span class="prefix">Rp</span>
-                    <input class="input num" data-f="harga" inputmode="numeric" placeholder="0" value="${v.harga ? numberFmt.format(v.harga) : ""}" aria-label="Harga varian">
+                    <input class="input num" data-f="harga" inputmode="numeric" placeholder="Harga" value="${v.harga ? numberFmt.format(v.harga) : ""}" aria-label="Harga varian">
+                </div>
+                <div class="input-group">
+                    <span class="prefix">Grab</span>
+                    <input class="input num" data-f="hargaGrab" inputmode="numeric" placeholder="${v.harga ? numberFmt.format(Math.round(v.harga * 1.25)) : "Harga Grab"}" value="${v.hargaGrab ? numberFmt.format(v.hargaGrab) : ""}" aria-label="Harga Grab varian">
                 </div>
                 <button type="button" class="btn btn-ghost btn-icon btn-danger" data-vdel aria-label="Hapus varian">${icon("trash")}</button>
             </div>
@@ -205,12 +223,13 @@
 
         form.nama.value = menu?.nama || "";
         form.harga.value = menu?.harga ? numberFmt.format(menu.harga) : "";
+        form.hargaGrab.value = menu?.hargaGrab ? numberFmt.format(menu.hargaGrab) : "";
         fillCategorySelect(menu?.kategori || menuCategory);
         form.unggulan.checked = !!menu?.unggulan;
         form.hargaKustom.checked = !!menu?.hargaKustom;
         form.adaVarian.checked = !!menu?.adaVarian;
 
-        variantDraft = (menu?.varian || []).map(v => ({ id: v.id, nama: v.nama, harga: v.harga }));
+        variantDraft = (menu?.varian || []).map(v => ({ id: v.id, nama: v.nama, harga: v.harga, hargaGrab: v.hargaGrab || 0 }));
         renderVariantEditor(false);
 
         setPhotoPreview(menu?.gambar || null);
@@ -253,6 +272,13 @@
 
         /* Produk bervarian: harga ada di tiap varian, kolom harga biasa disembunyikan. */
         $("#priceField").hidden = variants;
+        $("#grabField").hidden = variants;
+
+        /* Saran +25% sebagai patokan; pemilik membulatkan sendiri. */
+        const base = parseNumber(form.harga.value);
+        $("#grabHint").textContent = base
+            ? `Saran +25%: Rp${numberFmt.format(Math.round(base * 1.25))}.`
+            : "Harga yang tampil di aplikasi Grab. Kosongkan kalau tidak dijual di Grab.";
         $("#variantEditor").hidden = !variants;
 
     }
@@ -273,13 +299,14 @@
         const body = {
             nama: form.nama.value.trim(),
             harga: parseNumber(form.harga.value),
+            hargaGrab: parseNumber(form.hargaGrab.value) || null,
             kategori: form.kategori.value.trim(),
             unggulan: form.unggulan.checked,
             hargaKustom: form.hargaKustom.checked,
             adaVarian: form.adaVarian.checked,
             varian: variantDraft
                 .filter(v => v.nama.trim() || v.harga)
-                .map(v => ({ id: v.id, nama: v.nama.trim(), harga: v.harga }))
+                .map(v => ({ id: v.id, nama: v.nama.trim(), harga: v.harga, hargaGrab: v.hargaGrab || null }))
         };
 
         if(removePhoto){
@@ -487,9 +514,13 @@
 
             const v = variantDraft[Number(row.dataset.i)];
 
-            if(field === "harga"){
-                v.harga = parseNumber(e.target.value);
-                e.target.value = v.harga ? numberFmt.format(v.harga) : "";
+            if(field === "harga" || field === "hargaGrab"){
+                v[field] = parseNumber(e.target.value);
+                e.target.value = v[field] ? numberFmt.format(v[field]) : "";
+                if(field === "harga"){
+                    /* Saran harga Grab ikut berubah (harga + 25%). */
+                    row.querySelector("[data-f=hargaGrab]").placeholder = v.harga ? numberFmt.format(Math.round(v.harga * 1.25)) : "Harga Grab";
+                }
             }else{
                 v.nama = e.target.value;
             }
@@ -508,6 +539,12 @@
         });
 
         form.harga.addEventListener("input", e => {
+            const n = parseNumber(e.target.value);
+            e.target.value = n ? numberFmt.format(n) : "";
+            syncPriceHint();
+        });
+
+        form.hargaGrab.addEventListener("input", e => {
             const n = parseNumber(e.target.value);
             e.target.value = n ? numberFmt.format(n) : "";
         });
@@ -803,6 +840,53 @@
 
 
     /* =================================================
+       PENGATURAN
+       ================================================= */
+
+    function renderSettings(){
+
+        const form = $("#settingsForm");
+
+        form.grabCommission.value = String(App.settings.grabCommission).replace(".", ",");
+        updateSettingsExample();
+
+    }
+
+
+    function updateSettingsExample(){
+
+        const pct = Number(String($("#settingsForm").grabCommission.value).replace(",", "."));
+
+        $("#sGrabExample").textContent = Number.isFinite(pct) && pct >= 0 && pct < 100
+            ? `Penjualan Grab tercatat sebesar harga Grab dikurangi ${String(pct).replace(".", ",")}%. Contoh: harga Grab Rp50.000 → tercatat ${rupiah(Math.round(50000 * (1 - pct / 100)))}.`
+            : "Isi angka 0 sampai 99.";
+
+    }
+
+
+    async function saveSettings(event){
+
+        event.preventDefault();
+
+        const pct = Number(String(event.target.grabCommission.value).replace(",", "."));
+
+        await busy($("#settingsSave"), "Menyimpan…", async () => {
+
+            try{
+                const saved = await api("/api/settings", { method: "PUT", body: { grabCommission: pct } });
+                App.setSettings(saved);
+                renderSettings();
+                toast(`Potongan Grab ${String(saved.grabCommission).replace(".", ",")}% disimpan`);
+            }catch(error){
+                toast(error.message, "error");
+            }
+
+        });
+
+    }
+
+
+    /* =================================================
        KELOLA AKUN
        Akun superadmin baru hanya lewat CLI di server,
        supaya satu sesi browser yang disalahgunakan
@@ -1037,6 +1121,7 @@
 
     App.registerView("menu", { adminOnly: true, onShow: renderMenuAdmin });
     App.registerView("akun", { adminOnly: true, onShow: loadAccounts });
+    App.registerView("pengaturan", { adminOnly: true, onShow: renderSettings });
 
     App.on("ready", () => {
 
@@ -1046,6 +1131,9 @@
 
         bindMenu();
         bindCategories();
+
+        $("#settingsForm").addEventListener("submit", saveSettings);
+        $("#settingsForm").grabCommission.addEventListener("input", updateSettingsExample);
         bindAccounts();
         bindProfile();
 

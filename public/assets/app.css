@@ -611,6 +611,7 @@ dialog::backdrop{ background:rgba(28,26,23,.45); }
     --series-qris:#eb6834;
     --series-transfer:#4a3aa7;
     --series-debit:#eda100;
+    --series-grab:#008300;
     --series-utang:#1baf7a;
     --series-trend:#2a78d6;
     --series-trend-wash:rgba(42,120,214,.1);
@@ -1033,3 +1034,38 @@ select.input{ appearance:auto; }
 }
 .shift-foot > div{ display:flex; justify-content:space-between; gap:12px; }
 .shift-foot b{ color:var(--text); }
+
+
+/* =====================================================
+   GRAB & PENGATURAN
+   ===================================================== */
+
+.no-grab{ color:var(--warn); font-weight:600; }
+.product-price .no-grab{ font-size:12.5px; }
+
+/* Enam metode bayar: dua baris berisi tiga, ikon & teks sebaris. */
+#paymentToggle{ grid-auto-flow:row; grid-template-columns:repeat(3, minmax(0, 1fr)); }
+#paymentToggle button{ flex-direction:row; justify-content:center; gap:6px; min-height:44px; padding:0 4px; font-size:13px; line-height:1.15; text-align:left; }
+
+.variant-edit > .input-group{ flex:0 0 120px; }
+.variant-edit .prefix{ font-size:12.5px; }
+.variant-edit .input-group:nth-of-type(2) > .input{ padding-left:44px; }
+
+.settings-form{ display:flex; flex-direction:column; gap:14px; }
+.settings-title{ display:flex; align-items:center; gap:8px; }
+.settings-title h2{ font-size:16px; }
+.input-suffix{ max-width:200px; }
+.input-suffix > .input{ padding-right:36px; }
+.input-suffix > .suffix{ position:absolute; right:14px; color:var(--muted); font-weight:600; pointer-events:none; }
+
+/*
+ * Metode bayar: enam ubin seragam (3 × 2) — ikon di atas, label satu baris
+ * di bawah, tinggi sama. Menggantikan aturan-aturan sebelumnya.
+ */
+#paymentToggle{ grid-template-columns:repeat(3, minmax(0, 1fr)); gap:4px; }
+#paymentToggle button{
+    flex-direction:column; justify-content:center; align-items:center; gap:5px;
+    min-height:60px; padding:6px 2px;
+    font-size:12.5px; line-height:1.1; text-align:center; white-space:nowrap;
+}
+#paymentToggle button .i{ width:20px; height:20px; }
