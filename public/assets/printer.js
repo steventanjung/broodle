@@ -86,7 +86,7 @@ const Printer = (() => {
             const sisa = t.sisa ?? t.total;
 
             content.push(
-                text(sisa === 0 ? "UTANG - LUNAS" : "UTANG - BELUM LUNAS", { align: "center", bold: true }),
+                text("UTANG - BELUM LUNAS", { align: "center", bold: true }),
                 text("Atas nama : " + t.pelanggan)
             );
 
@@ -101,7 +101,7 @@ const Printer = (() => {
             content.push(row("Sisa utang", rupiah(sisa), { bold: true }));
 
             return content.concat(footer(
-                sisa > 0 ? [text("Simpan nota ini untuk pelunasan", { align: "center" })] : []
+                [text("Simpan nota ini untuk pelunasan", { align: "center" })]
             ));
 
         }
@@ -129,8 +129,36 @@ const Printer = (() => {
     }
 
 
+    /*
+     * Nota utang yang sudah lunas: seperti nota penjualan biasa
+     * (item, total, metode bayar), tanpa status / rincian utang.
+     * Bertanggal saat pelunasan.
+     */
+    function paidInvoice(debt, payment, reprint){
+
+        const at = new Date(payment.at);
+
+        return saleReceipt({
+            nota: debt.nota,
+            tanggal: `${at.getDate()}/${at.getMonth() + 1}/${at.getFullYear()}`,
+            jam: `${pad(at.getHours())}.${pad(at.getMinutes())}`,
+            items: debt.items,
+            total: debt.total,
+            pembayaran: payment.metode,
+            reprint
+        });
+
+    }
+
+
     /* Cetak ulang nota utang dari catatan server (status pembayaran terbaru). */
     function debtInvoice(debt){
+
+        const last = debt.payments?.[debt.payments.length - 1];
+
+        if(debt.status === "lunas" && last){
+            return paidInvoice(debt, last, true);
+        }
 
         return saleReceipt({
             ...debt,
@@ -147,6 +175,11 @@ const Printer = (() => {
         const upTo = debt.payments.slice(0, debt.payments.findIndex(p => p.id === payment.id) + 1);
         const paid = upTo.reduce((sum, p) => sum + p.jumlah, 0);
         const sisa = Math.max(debt.total - paid, 0);
+
+        /* Pembayaran yang melunasi: cukup nota dengan total. */
+        if(sisa === 0){
+            return paidInvoice(debt, payment, false);
+        }
 
         return [
             ...header(),

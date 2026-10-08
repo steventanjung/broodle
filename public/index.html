@@ -119,12 +119,13 @@
 
             <div id="orderLines" class="order-lines"></div>
 
-            <div class="order-foot">
+            <!-- Total di luar area yang di-scroll: selalu terlihat. -->
+            <div class="total-row order-total">
+                <span>Total</span>
+                <strong id="grandTotal" class="num">Rp0</strong>
+            </div>
 
-                <div class="total-row">
-                    <span>Total</span>
-                    <strong id="grandTotal" class="num">Rp0</strong>
-                </div>
+            <div class="order-foot">
 
                 <!-- Bagi 2 metode: menggantikan pilihan metode selama aktif. -->
                 <div id="splitSection" class="split-card" hidden>
