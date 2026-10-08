@@ -250,21 +250,54 @@
     const SALE_KEY = { Cash: "cash", QRIS: "qris", "Transfer BCA": "transfer", Transfer: "transfer", Debit: "debit", Grab: "grab", Utang: "utang" };
     const PAY_KEY = { Cash: "cashPay", QRIS: "qrisPay", "Transfer BCA": "transferPay", Transfer: "transferPay", Debit: "debitPay" };
 
-    App.on("sale-recorded", tx => {
+    /* Tambah (+1) atau kurangi (-1) satu penjualan dari total setoran. Tidak ada: dilewati. */
+    function applySale(tx, sign){
 
         /* Dibagi 2 metode: tiap bagian masuk ke metodenya sendiri. */
         const parts = Array.isArray(tx.pembayaranBagi)
             ? tx.pembayaranBagi
             : [{ metode: tx.pembayaran, jumlah: tx.total }];
 
-        if(!isKasir() || !isOpen() || !parts.every(p => SALE_KEY[p.metode])){
-            return;
+        if(!parts.every(p => SALE_KEY[p.metode])){
+            return false;
         }
 
         parts.forEach(p => {
-            shift.totals[SALE_KEY[p.metode]] = (shift.totals[SALE_KEY[p.metode]] || 0) + p.jumlah;
+            shift.totals[SALE_KEY[p.metode]] = Math.max(0, (shift.totals[SALE_KEY[p.metode]] || 0) + sign * p.jumlah);
         });
+
+        return true;
+
+    }
+
+
+    App.on("sale-recorded", tx => {
+
+        if(!isKasir() || !isOpen() || !applySale(tx, 1)){
+            return;
+        }
+
         shift.totals.count += 1;
+
+        save();
+        renderTotalan();
+
+    });
+
+    /* Nota diubah / dibatalkan (tab Riwayat): hanya nota setoran yang sedang berjalan mengubah totalan. */
+    App.on("sale-corrected", ({ before, after }) => {
+
+        if(!isKasir() || !isOpen() || before.setoran !== shift.id){
+            return;
+        }
+
+        applySale(before, -1);
+
+        if(after){
+            applySale(after, 1);
+        }else{
+            shift.totals.count = Math.max(0, shift.totals.count - 1);
+        }
 
         save();
         renderTotalan();

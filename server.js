@@ -25,6 +25,7 @@ if(fs.existsSync(path.join(__dirname, ".env"))){
 const auth = require("./auth.js");
 const menu = require("./menu.js");
 const debts = require("./debts.js");
+const sales = require("./sales.js");
 const shifts = require("./shifts.js");
 const settings = require("./settings.js");
 const backup   = require("./backup.js");
@@ -698,6 +699,11 @@ async function handleSubmit(req, res, user){
 
     }
 
+    /* Salinan di server supaya nota yang sudah lunas bisa diubah / dibatalkan. */
+    if(tx){
+        sales.record(tx, user.username);
+    }
+
     /* Apps Script membalas 302 ke googleusercontent, fetch mengikutinya. */
     const upstream = await fetch(SUBMIT_URL, {
         method: "POST",
@@ -828,6 +834,85 @@ async function handleDebtVoid(req, res, user, id){
 }
 
 
+/* =====================================================
+   KOREKSI NOTA
+   Nota yang sudah lunas bisa diubah / dibatalkan. Kasir wajib
+   password koreksi dari superadmin (dicek di sini, bukan di
+   browser); superadmin tidak diminta password.
+   ===================================================== */
+
+function handleSalesList(req, res, user){
+
+    const DATE = /^\d{4}-\d{2}-\d{2}$/;
+    const from = req.query.get("from");
+    const to = req.query.get("to");
+
+    json(res, 200, {
+        sales: sales.list({
+            user,
+            setoran: req.query.get("setoran"),
+            from: DATE.test(from || "") ? from : null,
+            to: DATE.test(to || "") ? to : null
+        }),
+        passwordSet: sales.hasPassword()
+    });
+
+}
+
+
+async function handleSaleCancel(req, res, user, id){
+
+    const result = await sales.cancel(id, user, await readJson(req));
+
+    if(!result.ok){
+        return json(res, result.status || 400, { error: result.error });
+    }
+
+    reportCache = null;
+    console.log(`[koreksi] nota ${result.sale.nota} DIBATALKAN oleh ${user.username}: ${result.sale.cancelReason}`);
+
+    json(res, 200, result.sale);
+
+}
+
+
+async function handleSaleEdit(req, res, user, id){
+
+    const result = await sales.edit(id, user, await readJson(req));
+
+    if(!result.ok){
+        return json(res, result.status || 400, { error: result.error });
+    }
+
+    reportCache = null;
+    console.log(`[koreksi] nota ${result.sale.nota} diubah oleh ${user.username}: ${result.sale.history[result.sale.history.length - 1].alasan}`);
+
+    json(res, 200, result.sale);
+
+}
+
+
+function handleKoreksiStatus(req, res){
+    json(res, 200, { passwordSet: sales.hasPassword() });
+}
+
+
+async function handleKoreksiPassword(req, res, user){
+
+    const payload = await readJson(req);
+    const result = payload.password ? sales.setPassword(payload.password) : sales.clearPassword();
+
+    if(!result.ok){
+        return json(res, 400, { error: result.error });
+    }
+
+    console.log(`[koreksi] password koreksi ${payload.password ? "diatur" : "dihapus"} oleh ${user.username}`);
+
+    json(res, 200, { passwordSet: sales.hasPassword() });
+
+}
+
+
 async function handleReport(req, res){
 
     const fresh =
@@ -853,7 +938,7 @@ async function handleReport(req, res){
         "Cache-Control": "no-store"
     });
 
-    res.end(reportCache.text);
+    res.end(sales.applyToReport(reportCache.text));
 
 }
 
@@ -957,6 +1042,11 @@ const ROUTES = [
     ["GET",    /^\/api\/debts\/([\w.-]{6,80})$/,        handleDebtGet,            "user"],
     ["POST",   /^\/api\/debts\/([\w.-]{6,80})\/payments$/, handleDebtPayment,     "user"],
     ["POST",   /^\/api\/debts\/([\w.-]{6,80})\/void$/,   handleDebtVoid,           "superadmin"],
+    ["GET",    /^\/api\/sales$/,                        handleSalesList,          "user"],
+    ["POST",   /^\/api\/sales\/([\w.-]{6,80})\/cancel$/, handleSaleCancel,        "user"],
+    ["POST",   /^\/api\/sales\/([\w.-]{6,80})\/edit$/,   handleSaleEdit,          "user"],
+    ["GET",    /^\/api\/koreksi$/,                      handleKoreksiStatus,      "superadmin"],
+    ["PUT",    /^\/api\/koreksi$/,                      handleKoreksiPassword,    "superadmin"],
     ["GET",    /^\/api\/report$/,                        handleReport,             "superadmin"],
     ["GET",    /^\/api\/users$/,                         handleUsersList,          "superadmin"],
     ["POST",   /^\/api\/users$/,                         handleUsersCreate,        "superadmin"],

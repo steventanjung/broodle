@@ -6,6 +6,7 @@ A web-based point of sale (kasir) for Kukikoe. Transactions go to Google Sheets 
 - **Menu** (superadmin) — products, prices, Best Seller, photos, optional variants (e.g. flavors) each with their own price, and categories (create — even before any product uses them — rename, merge, delete empty ones, and set the order of the category buttons on the kasir; the product form picks from this list)
 - **Utang** (kasir & superadmin) — sales on credit: list of unpaid invoices, paid off in full in one payment (no installments), reprints
 - **Laporan** (superadmin) — sales report from Google Sheets
+- **Riwayat** (kasir & superadmin) — paid invoices; edit or cancel them (kasir needs the superadmin's correction password)
 - **Akun** (superadmin) — kasir accounts
 
 No npm dependencies — only Node.js built-ins.
@@ -258,6 +259,18 @@ One sale paid in full with two methods, e.g. Rp50.000 = Rp25.000 Cash + Rp25.000
 - The invoice lists both parts. Totalan/setoran and Laporan count each part under its own method.
 - Google Sheets receives `pembayaran` as `Cash 25000 + QRIS 25000` (plus a `pembayaranBagi` array your Apps Script may ignore). Laporan splits that text back into the two methods, so no Apps Script change is needed.
 
+## Edit & cancel a paid invoice (Riwayat)
+
+The **Riwayat** tab lists paid invoices. Tap one to **Ubah nota** (change item quantities — 0 removes an item — and the payment method Cash / QRIS / Transfer BCA / Debit) or **Batalkan nota**. A reason is required, and every change is kept in the invoice's history. After an edit the corrected receipt can be reprinted.
+
+- **Kasir** only sees invoices from their own current setoran and must enter the **correction password**. Superadmin sees any date range and is never asked for a password.
+- **Setting the password.** Superadmin: **Pengaturan → Koreksi nota → Atur password** (min. 6 characters, use something different from the account password). Until it is set, kasir cannot correct anything. Five wrong attempts lock that kasir out for 5 minutes. The password is checked on the server and stored hashed.
+- **Not editable.** Grab and split-payment invoices can only be cancelled (then re-entered). Prices cannot be changed. Credit sales (Utang) are cancelled from the Utang tab.
+- **Totalan / Laporan.** The kasir's running Totalan is adjusted right away (only for the setoran in progress). Laporan applies the corrections on top of the Google Sheets rows. **The sheet itself is not changed**, so fix the row there if you need the sheet to match.
+- **Data.** Invoices are copied to `data/sales.json` (included in the backup) when they are submitted. Invoices from before this feature existed, or still waiting in the offline queue, are not listed. Editing / cancelling needs the internet.
+
+---
+
 ## Setoran (kasir shifts)
 
 Only **kasir** accounts open and close a setoran; superadmin is never asked.
@@ -323,7 +336,7 @@ Everything that matters at runtime lives in two folders, both outside git:
 
 | Folder | Contents |
 |---|---|
-| `data/` | `users.json` (password hashes), `menus.json` (menu & Grab prices), `debts.json` (customer debts & payments), `shifts.json` (kasir setoran), `settings.json` (Grab commission) |
+| `data/` | `users.json` (password hashes), `menus.json` (menu & Grab prices), `debts.json` (customer debts & payments), `shifts.json` (kasir setoran), `settings.json` (Grab commission), `sales.json` (invoice copies, corrections, correction password hash) |
 | `uploads/` | product photos |
 
 Transactions themselves are in Google Sheets.

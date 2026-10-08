@@ -1233,3 +1233,26 @@ body.has-tabs .set-bar{ bottom:76px; }
     .line .stepper button{ width:40px; height:40px; }
     .line .stepper input{ width:36px; height:40px; }
 }
+
+
+/* Riwayat nota: nota yang dibatalkan dibuat pudar. */
+.debt-row.is-void{ opacity:.6; }
+#saleBody .line{ grid-template-columns:minmax(0, 1fr) auto; }
+#saleBody .line .stepper{ grid-row:1; }
+#saleBody .segmented{ flex-wrap:wrap; }
+#riwayatRange{ flex-wrap:nowrap; align-items:center; }
+#riwayatRange .input{ width:auto; min-width:0; }
+@media (max-width:640px){
+    #riwayatRange{ flex:1 1 100%; }
+    #riwayatRange .input{ flex:1; }
+}
+.range-field{ display:flex; flex-direction:column; gap:2px; }
+.range-sep{ align-self:flex-end; padding-bottom:12px; }
+
+
+/* Riwayat nota: pratinjau item & keadaan kosong */
+.rw-items{ color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+#riwayatRows .row{ transition:background .12s; }
+#riwayatRows .row:hover{ background:var(--surface-2); }
+#riwayatRows .empty{ padding:56px 16px; }
+#riwayatRows .empty .i{ width:40px; height:40px; padding:10px; box-sizing:content-box; border-radius:50%; background:var(--surface-2); }

@@ -53,7 +53,7 @@
     }
 
     function init(){
-        document.querySelectorAll("input[type=password]").forEach(enhance);
+        document.querySelectorAll("input[type=password]:not([data-no-reveal])").forEach(enhance);
     }
 
     /* Dialog ditutup: kembalikan ke tersembunyi, jangan tertinggal terbuka untuk pengguna berikutnya. */

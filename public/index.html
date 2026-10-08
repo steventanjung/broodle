@@ -14,6 +14,7 @@
 <script src="/assets/admin.js" defer></script>
 <script src="/assets/report.js" defer></script>
 <script src="/assets/utang.js" defer></script>
+<script src="/assets/riwayat.js" defer></script>
 <script src="/assets/setoran.js" defer></script>
 </head>
 
@@ -37,6 +38,9 @@
         </a>
         <a class="tab" href="#utang" data-view="utang">
             <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#book"/></svg>Utang<span id="utangBadge" class="tab-badge num" hidden></span>
+        </a>
+        <a class="tab" href="#riwayat" data-view="riwayat">
+            <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#receipt"/></svg>Riwayat
         </a>
         <a class="tab" href="#totalan" data-view="totalan" hidden>
             <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#cash"/></svg>Totalan
@@ -288,6 +292,54 @@
 </main>
 
 
+<main id="view-riwayat" class="view">
+    <div class="page">
+
+        <div class="page-head">
+            <div>
+                <h1>Riwayat nota</h1>
+                <p>Nota yang sudah lunas. Ubah atau batalkan kalau ada yang salah.</p>
+            </div>
+            <div class="toolbar">
+                <div id="riwayatRange" class="toolbar" style="gap:8px">
+                    <label class="range-field"><span class="small muted">Tanggal mulai</span>
+                        <input id="riwayatFrom" class="input" type="date"></label>
+                    <span class="range-sep muted" aria-hidden="true">–</span>
+                    <label class="range-field"><span class="small muted">Tanggal akhir</span>
+                        <input id="riwayatTo" class="input" type="date"></label>
+                </div>
+                <button id="riwayatRefresh" type="button" class="btn">
+                    <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#refresh"/></svg><span>Muat ulang</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="kpis kpis-3">
+            <div class="panel kpi"><span>Jumlah nota</span><strong id="riwayatCount" class="num">–</strong></div>
+            <div class="panel kpi"><span>Total penjualan</span><strong id="riwayatSum" class="num">–</strong></div>
+            <div class="panel kpi"><span>Dibatalkan</span><strong id="riwayatVoid" class="num">–</strong></div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-head" style="flex-wrap:wrap">
+                <div class="input-group" style="flex:1;min-width:200px">
+                    <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#search"/></svg>
+                    <input id="riwayatSearch" class="input" type="search" placeholder="Cari nomor nota, produk, atau metode" autocomplete="off">
+                </div>
+                <div id="riwayatFilter" class="chips" role="group" aria-label="Status">
+                    <button type="button" class="chip" data-status="semua" aria-pressed="true">Semua</button>
+                    <button type="button" class="chip" data-status="aktif" aria-pressed="false">Lunas</button>
+                    <button type="button" class="chip" data-status="diubah" aria-pressed="false">Diubah</button>
+                    <button type="button" class="chip" data-status="batal" aria-pressed="false">Dibatalkan</button>
+                </div>
+            </div>
+            <div id="riwayatRows"></div>
+        </div>
+
+    </div>
+</main>
+
+
 <!-- =====================================================
      TOTALAN (kasir): total setoran yang sedang berjalan
      ===================================================== -->
@@ -328,6 +380,24 @@
 
         <form id="settingsForm" class="set-groups" autocomplete="off" novalidate>
             <div id="settingsGroups"></div>
+
+            <section class="set-group">
+                <h2 class="set-group-title"><svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#lock"/></svg>Koreksi nota</h2>
+                <div class="panel">
+                    <div class="set-row">
+                        <div class="set-text">
+                            <span class="set-label">Password koreksi kasir</span>
+                            <p class="set-help">Kasir wajib mengisi password ini untuk mengubah atau membatalkan nota yang sudah lunas. Superadmin tidak diminta. Kasih tahu password hanya ke yang dipercaya.</p>
+                            <p id="koreksiStatus" class="set-help"></p>
+                        </div>
+                        <div class="set-control">
+                            <button id="koreksiSet" type="button" class="btn">
+                                <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#key"/></svg><span>Atur password</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
             <section class="set-group">
                 <h2 class="set-group-title"><svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#database"/></svg>Data</h2>
@@ -976,6 +1046,47 @@
         <div class="dialog-foot">
             <button type="button" class="btn" data-close>Tidak jadi</button>
             <button id="voidSubmit" type="submit" class="btn btn-solid-danger">Ya, batalkan</button>
+        </div>
+    </form>
+</dialog>
+
+
+<dialog id="saleDialog" class="dialog-wide debt-dialog" autofocus>
+    <form id="saleForm" autocomplete="off">
+        <div class="dialog-head">
+            <div>
+                <h2 id="saleTitle"></h2>
+                <span id="saleMeta" class="small muted"></span>
+            </div>
+            <div class="toolbar" style="gap:2px">
+                <button id="saleReprint" type="button" class="btn btn-ghost btn-icon btn-sm" aria-label="Cetak ulang nota" title="Cetak ulang nota">
+                    <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#printer"/></svg>
+                </button>
+                <button type="button" class="btn btn-ghost btn-icon btn-sm" data-close aria-label="Tutup">
+                    <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#x"/></svg>
+                </button>
+            </div>
+        </div>
+        <div id="saleBody" class="dialog-body"></div>
+        <div id="saleFoot" class="dialog-foot"></div>
+    </form>
+</dialog>
+
+
+<dialog id="koreksiDialog" autofocus data-lock>
+    <form id="koreksiForm" autocomplete="off">
+        <div class="dialog-head"><h2>Password koreksi kasir</h2></div>
+        <div class="dialog-body">
+            <p class="dialog-msg">Dipakai kasir untuk mengubah atau membatalkan nota yang sudah lunas. Gunakan password yang berbeda dari password akun.</p>
+            <div class="field">
+                <label class="label" for="koreksiPw">Password baru</label>
+                <input id="koreksiPw" name="password" class="input" type="password" minlength="6" maxlength="128" autocomplete="new-password">
+                <span class="small muted">Minimal 6 karakter. Kosongkan lalu simpan untuk menonaktifkan (kasir tidak bisa mengoreksi).</span>
+            </div>
+        </div>
+        <div class="dialog-foot">
+            <button type="button" class="btn" data-close>Batal</button>
+            <button id="koreksiSubmit" type="submit" class="btn btn-primary">Simpan</button>
         </div>
     </form>
 </dialog>

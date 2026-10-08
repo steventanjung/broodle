@@ -18,7 +18,7 @@ const { DATA_DIR, ROLES } = require("./auth.js");
 const FORMAT  = "broodle-backup";
 const VERSION = 1;
 
-const FILES = ["users.json", "menus.json", "debts.json", "shifts.json", "settings.json"];
+const FILES = ["users.json", "menus.json", "debts.json", "shifts.json", "settings.json", "sales.json"];
 
 const PHOTO_NAME = /^[\w-]{1,80}\.jpg$/;
 const SAFETY_DIR = path.join(DATA_DIR, "backups");

@@ -953,6 +953,51 @@
 
 
     /* =================================================
+       PASSWORD KOREKSI NOTA
+       ================================================= */
+
+    async function loadKoreksi(){
+
+        try{
+            const { passwordSet } = await api("/api/koreksi");
+            $("#koreksiStatus").textContent = passwordSet
+                ? "Sudah diatur. Kasir bisa mengoreksi nota dengan password ini."
+                : "Belum diatur. Selama kosong, kasir tidak bisa mengubah atau membatalkan nota.";
+            $("#koreksiSet span").textContent = passwordSet ? "Ganti password" : "Atur password";
+        }catch(error){
+            $("#koreksiStatus").textContent = error.message;
+        }
+
+    }
+
+
+    async function saveKoreksi(event){
+
+        event.preventDefault();
+
+        const password = event.target.password.value;
+
+        if(password && password.length < 6){
+            return toast("Password koreksi minimal 6 karakter.", "error");
+        }
+
+        await busy($("#koreksiSubmit"), "Menyimpan…", async () => {
+
+            try{
+                await api("/api/koreksi", { method: "PUT", body: { password } });
+                $("#koreksiDialog").close();
+                toast(password ? "Password koreksi disimpan" : "Password koreksi dinonaktifkan");
+                loadKoreksi();
+            }catch(error){
+                toast(error.message, "error");
+            }
+
+        });
+
+    }
+
+
+    /* =================================================
        CADANGAN DATA
        ================================================= */
 
@@ -1300,7 +1345,7 @@
 
     App.registerView("menu", { adminOnly: true, onShow: renderMenuAdmin });
     App.registerView("akun", { adminOnly: true, onShow: loadAccounts });
-    App.registerView("pengaturan", { adminOnly: true, onShow: () => { renderSettings(); renderBackupLast(); } });
+    App.registerView("pengaturan", { adminOnly: true, onShow: () => { renderSettings(); renderBackupLast(); loadKoreksi(); } });
 
     /* Nilai terbaru dari server (setelah memuat / diubah perangkat lain): tampilkan, kecuali sedang diedit. */
     App.on("settings", () => {
@@ -1319,6 +1364,11 @@
         bindCategories();
 
         $("#settingsForm").addEventListener("submit", saveSettings);
+        $("#koreksiForm").addEventListener("submit", saveKoreksi);
+        $("#koreksiSet").addEventListener("click", () => {
+            $("#koreksiForm").reset();
+            $("#koreksiDialog").showModal();
+        });
         $("#settingsForm").addEventListener("input", refreshSettings);
         $("#settingsReset").addEventListener("click", renderSettings);
         $("#backupDownload").addEventListener("click", downloadBackup);
