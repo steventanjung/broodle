@@ -119,9 +119,7 @@
 
             <div id="orderLines" class="order-lines"></div>
 
-            <!-- Total + pembayaran: di tablet jadi bilah bawah selebar layar. -->
-            <div class="checkout">
-
+            <!-- Total di luar area yang di-scroll: selalu terlihat. -->
             <div class="total-row order-total">
                 <span>Total</span>
                 <strong id="grandTotal" class="num">Rp0</strong>
@@ -170,16 +168,7 @@
                     <button type="button" data-payment="utang" aria-pressed="false">
                         <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#book"/></svg>Utang
                     </button>
-                
-                    <select id="paymentSelect" class="input payment-select" aria-label="Metode pembayaran">
-                        <option value="cash">Cash</option>
-                        <option value="qris">QRIS</option>
-                        <option value="transfer">Transfer</option>
-                        <option value="debit">Debit</option>
-                        <option value="grab">Grab</option>
-                        <option value="utang">Utang</option>
-                    </select>
-</div>
+                </div>
 
                 <button id="splitOpen" type="button" class="split-open" disabled>
                     <svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#layers"/></svg>Split pembayaran
@@ -235,8 +224,6 @@
                 <button id="payButton" type="button" class="btn btn-primary btn-lg btn-block" disabled>Bayar</button>
 
                 <button id="skipPrint" type="button" class="btn btn-ghost btn-block" hidden>Lanjut tanpa cetak nota</button>
-
-            </div>
 
             </div>
 
