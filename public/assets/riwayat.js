@@ -33,6 +33,17 @@
         return sale.items.length > 2 ? `${shown} +${sale.items.length - 2} lainnya` : shown;
     }
 
+    /*
+     * Jam jual dari transactionId (Date.now() saat Bayar), ditampilkan
+     * dalam WITA — sama dengan Laporan. Kolom jam lama ditulis memakai
+     * jam tablet, yang bisa salah zona waktu.
+     */
+    function when(sale){
+        const ms = Number(String(sale.id).split("-")[0]);
+        const t = App.shopTime(ms > 1.5e12 && ms < 4e12 ? ms : sale.createdAt);
+        return `${t.tanggal} ${t.jam}`;
+    }
+
     const itemCount = sale => sale.items.reduce((sum, i) => sum + i.qty, 0);
 
 
@@ -40,21 +51,23 @@
        DATA
        ================================================= */
 
-    function url(){
+    function url(refresh){
+
+        const extra = refresh ? "&refresh=1" : "";
 
         if(isKasir()){
-            return "/api/sales?setoran=" + encodeURIComponent(App.shiftId || "");
+            return "/api/sales?setoran=" + encodeURIComponent(App.shiftId || "") + extra;
         }
 
         const from = $("#riwayatFrom").value;
         const to = $("#riwayatTo").value;
 
-        return `/api/sales?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+        return `/api/sales?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}${extra}`;
 
     }
 
 
-    async function load(){
+    async function load(refresh){
 
         const btn = $("#riwayatRefresh");
         btn.disabled = true;
@@ -66,8 +79,12 @@
 
         try{
 
-            data = await api(url());
+            data = await api(url(refresh === true));
             render();
+
+            if(!data.synced){
+                toast("Google Sheets tidak bisa diambil. Nota lama mungkin belum tampil.", "error");
+            }
 
         }catch(error){
 
@@ -121,8 +138,9 @@
 
             const badges = [
                 s.status === "batal" && `<span class="badge badge-danger">${icon("ban", "i-sm")}Dibatalkan</span>`,
+                s.utang && `<span class="badge badge-warn">${icon("book", "i-sm")}Utang</span>`,
                 s.status === "aktif" && s.history.length > 0 && `<span class="badge badge-warn">${icon("pencil", "i-sm")}Diubah</span>`,
-                `<span class="badge ${s.status === "batal" ? "" : "badge-accent"}">${escapeHtml(s.pembayaran)}</span>`
+                !s.utang && `<span class="badge ${s.status === "batal" ? "" : "badge-accent"}">${escapeHtml(s.pembayaran)}</span>`
             ].filter(Boolean).join(" ");
 
             return `
@@ -131,7 +149,7 @@
                     <div class="row-main">
                         <span class="row-title">Nota ${escapeHtml(s.nota)} ${badges}</span>
                         <span class="row-sub rw-items">${escapeHtml(preview(s))}</span>
-                        <span class="row-sub">${escapeHtml(s.tanggal)} ${escapeHtml(s.jam)} · ${itemCount(s)} item${isKasir() ? "" : " · " + escapeHtml(s.kasir)}</span>
+                        <span class="row-sub">${escapeHtml(when(s))} · ${itemCount(s)} item${isKasir() ? "" : " · " + escapeHtml(s.kasir)}</span>
                     </div>
                     <div class="debt-amount"><strong class="num"${s.status === "batal" ? ` style="text-decoration:line-through"` : ""}>${rupiah(s.total)}</strong></div>
                 </button>`;
@@ -192,7 +210,7 @@
         const s = current;
 
         $("#saleTitle").textContent = "Nota " + s.nota;
-        $("#saleMeta").textContent = `${s.tanggal} ${s.jam} · ${s.kasir}`;
+        $("#saleMeta").textContent = `${when(s)} · ${s.kasir}`;
         $("#saleReprint").hidden = s.status !== "aktif";
 
         const locked = isKasir() && !data.passwordSet;
@@ -204,6 +222,7 @@
             $("#saleBody").innerHTML = `
                 ${s.status === "batal"
                     ? `<div class="debt-hero is-void"><span>${icon("ban", "i-sm")}Dibatalkan oleh ${escapeHtml(s.cancelledBy)} · ${escapeHtml(s.cancelReason)}</span><strong class="num">${rupiah(s.total)}</strong></div>`
+                    : s.utang ? `<div class="debt-hero"><span>${icon("book", "i-sm")}Utang</span><strong class="num">${rupiah(s.total)}</strong></div>`
                     : `<div class="debt-hero is-done"><span>${icon("check", "i-sm")}Lunas · ${escapeHtml(s.pembayaran)}</span><strong class="num">${rupiah(s.total)}</strong></div>`}
                 ${itemsHtml(s)}
                 ${s.status === "aktif" && s.history.length ? `<p class="small muted">Terakhir diubah oleh ${escapeHtml(s.history[s.history.length - 1].oleh)}: ${escapeHtml(last.alasan)}</p>` : ""}
@@ -216,6 +235,12 @@
                                 <span class="num">${rupiah(h.total)}</span></li>`).join("")}
                     </ul>
                 </details>` : ""}`;
+
+            if(s.readonly){
+                $("#saleFoot").innerHTML = `<span class="small muted" style="align-self:center">${s.utang ? "Nota utang: lunasi atau batalkan lewat tab Utang." : "Nota lama: ubah langsung di Google Sheets."}</span>
+                    <button type="button" class="btn" data-close>Tutup</button>`;
+                return;
+            }
 
             $("#saleFoot").innerHTML = s.status !== "aktif" ? `<button type="button" class="btn" data-close>Tutup</button>` : `
                 <button type="button" class="btn btn-solid-danger" data-sale="cancel" ${locked ? "disabled" : ""}>${icon("ban", "i-sm")}Batalkan nota</button>
@@ -339,7 +364,8 @@
         draft = {
             qty: current.items.map(i => i.qty),
             metode: current.pembayaran,
-            cash: current.pembayaran === "Cash" ? current.cashReceived : 0,
+            /* Nota dari Sheets tidak menyimpan uang diterima: isi dengan totalnya. */
+            cash: current.pembayaran === "Cash" ? (current.cashReceived || current.total) : 0,
             alasan: ""
         };
 
@@ -504,7 +530,7 @@
 
     function bind(){
 
-        const today = new Date().toLocaleDateString("sv-SE");
+        const today = App.shopTime().iso;
 
         $("#riwayatFrom").value = today;
         $("#riwayatTo").value = today;
@@ -512,7 +538,7 @@
 
         $("#riwayatTo").min = $("#riwayatFrom").value;
 
-        $("#riwayatRefresh").addEventListener("click", load);
+        $("#riwayatRefresh").addEventListener("click", () => load(true));
 
         $("#riwayatRange").addEventListener("change", e => {
 

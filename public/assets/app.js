@@ -19,6 +19,29 @@ const App = (() => {
     /* Layar sentuh: jangan buka keyboard layar otomatis kalau tidak perlu. */
     const isTouchDevice = () => matchMedia("(pointer:coarse)").matches;
 
+    /*
+     * Jam & tanggal toko selalu WITA, apa pun zona waktu perangkatnya.
+     * Tablet yang zonanya salah (mis. WIB) tidak boleh menggeser jam
+     * di nota, Sheets, Riwayat, dan Laporan.
+     */
+    const SHOP_TZ = "Asia/Makassar";
+    const shopFmt = new Intl.DateTimeFormat("en-GB", {
+        timeZone: SHOP_TZ, year: "numeric", month: "numeric", day: "numeric",
+        hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+    });
+
+    function shopTime(date = new Date()){
+        const p = Object.fromEntries(shopFmt.formatToParts(new Date(date)).map(x => [x.type, x.value]));
+        const pad = n => String(n).padStart(2, "0");
+        return {
+            iso: `${p.year}-${pad(p.month)}-${pad(p.day)}`,
+            tanggal: `${Number(p.day)}/${Number(p.month)}/${p.year}`,
+            jam: `${p.hour}.${p.minute}`,
+            hhmm: `${p.hour}:${p.minute}`,
+            hour: Number(p.hour)
+        };
+    }
+
     const $  = (sel, root = document) => root.querySelector(sel);
     const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
@@ -550,7 +573,7 @@ const App = (() => {
 
 
     return {
-        STORE,
+        STORE, SHOP_TZ, shopTime,
         $, $$, isTouchDevice, icon, escapeHtml, rupiah, parseNumber, numberFmt,
         api, isSuperadmin, logout, get session(){ return session; }, get leaving(){ return leaving; },
         on, emit,

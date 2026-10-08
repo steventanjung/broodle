@@ -61,8 +61,11 @@ const SECURE_COOKIE = process.env.SECURE_COOKIE === "true";
  */
 const TRUST_PROXY = process.env.TRUST_PROXY === "true";
 
-/* Data laporan di-cache sebentar: Apps Script lambat (2-5 detik). */
-const REPORT_CACHE_MS = 60 * 1000;
+/*
+ * Apps Script lambat (2-5 detik): salinan sheet diperbarui di latar
+ * belakang, halaman tidak menunggu Google kecuali belum ada salinan.
+ */
+const REPORT_REFRESH_MS = 90 * 1000;
 
 
 const missing = [
@@ -523,7 +526,7 @@ async function handleSettingsSave(req, res, user){
 /* Cadangan: semua data + foto produk dalam satu file JSON. */
 function handleBackupDownload(req, res, user){
 
-    const day = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+    const day = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Makassar" });
 
     console.log(`[cadangan] diunduh oleh ${user.username}`);
 
@@ -713,8 +716,8 @@ async function handleSubmit(req, res, user){
     });
 
     if(upstream.ok){
-        /* Ada transaksi baru: laporan berikutnya harus ambil ulang. */
-        reportCache = null;
+        /* Ada transaksi baru: perbarui salinan sheet di latar belakang (beri jeda supaya Apps Script selesai menulis). */
+        setTimeout(() => refreshReport().catch(() => {}), 3000).unref();
     }else{
         console.error("[submit] gagal:", upstream.status);
     }
@@ -770,8 +773,8 @@ function handleShiftList(req, res){
 function handleDebtsList(req, res){
 
     const all = debts.list();
-    /* Tanggal toko (WIB), bukan UTC server — server hosting biasanya UTC. */
-    const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+    /* Tanggal toko (WITA), bukan UTC server — server hosting biasanya UTC. */
+    const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Makassar" });
     const open = all.filter(d => d.status === "belum");
 
     json(res, 200, {
@@ -841,7 +844,21 @@ async function handleDebtVoid(req, res, user, id){
    browser); superadmin tidak diminta password.
    ===================================================== */
 
-function handleSalesList(req, res, user){
+async function handleSalesList(req, res, user){
+
+    /*
+     * Nota yang hanya ada di Sheets sudah disalin tiap kali salinan sheet
+     * diperbarui (refreshReport). Di sini cukup menunggu kalau belum ada
+     * salinan sama sekali, atau tombol "Muat ulang" ditekan.
+     */
+    let synced = true;
+
+    try{
+        synced = (await reportText(req.query.get("refresh") === "1")) !== null;
+    }catch(error){
+        console.error("[riwayat] sinkron Sheets gagal:", error.message);
+        synced = false;
+    }
 
     const DATE = /^\d{4}-\d{2}-\d{2}$/;
     const from = req.query.get("from");
@@ -854,7 +871,8 @@ function handleSalesList(req, res, user){
             from: DATE.test(from || "") ? from : null,
             to: DATE.test(to || "") ? to : null
         }),
-        passwordSet: sales.hasPassword()
+        passwordSet: sales.hasPassword(),
+        synced
     });
 
 }
@@ -868,7 +886,6 @@ async function handleSaleCancel(req, res, user, id){
         return json(res, result.status || 400, { error: result.error });
     }
 
-    reportCache = null;
     console.log(`[koreksi] nota ${result.sale.nota} DIBATALKAN oleh ${user.username}: ${result.sale.cancelReason}`);
 
     json(res, 200, result.sale);
@@ -884,7 +901,6 @@ async function handleSaleEdit(req, res, user, id){
         return json(res, result.status || 400, { error: result.error });
     }
 
-    reportCache = null;
     console.log(`[koreksi] nota ${result.sale.nota} diubah oleh ${user.username}: ${result.sale.history[result.sale.history.length - 1].alasan}`);
 
     json(res, 200, result.sale);
@@ -913,23 +929,78 @@ async function handleKoreksiPassword(req, res, user){
 }
 
 
-async function handleReport(req, res){
+/*
+ * Salinan sheet di memori. Diperbarui di latar belakang tiap
+ * REPORT_REFRESH_MS dan beberapa detik setelah ada penjualan baru,
+ * jadi Laporan & Riwayat langsung terbuka dari salinan ini.
+ * Setiap pembaruan juga menyalin nota baru ke sales.json (Riwayat).
+ */
+let reportInflight = null;
 
-    const fresh =
-        reportCache &&
-        Date.now() - reportCache.at < REPORT_CACHE_MS &&
-        req.query.get("refresh") !== "1";
+function refreshReport(){
 
-    if(!fresh){
+    /* Satu permintaan ke Google sekaligus; yang lain menumpang. */
+    if(reportInflight){
+        return reportInflight;
+    }
+
+    reportInflight = (async () => {
 
         const upstream = await fetch(REPORT_URL, { redirect: "follow" });
 
         if(!upstream.ok){
-            return json(res, 502, { error: "Gagal mengambil data dari Google Sheets." });
+            throw new Error("HTTP " + upstream.status);
         }
 
-        reportCache = { at: Date.now(), text: await upstream.text() };
+        const text = await upstream.text();
 
+        reportCache = { at: Date.now(), text };
+
+        const added = sales.syncFromSheet(text);
+        if(added){ console.log(`[riwayat] ${added} nota disalin dari Sheets`); }
+
+        return text;
+
+    })().finally(() => { reportInflight = null; });
+
+    return reportInflight;
+
+}
+
+
+/* Isi sheet: dari salinan, kecuali belum ada atau diminta segar. null = Google Sheets tidak bisa diambil. */
+async function reportText(refresh){
+
+    if(reportCache && !refresh){
+
+        /* Salinan agak lama: tetap dipakai sekarang, perbarui di belakang. */
+        if(Date.now() - reportCache.at > REPORT_REFRESH_MS){
+            refreshReport().catch(() => {});
+        }
+
+        return reportCache.text;
+
+    }
+
+    try{
+        return await refreshReport();
+    }catch(error){
+        console.error("[laporan] gagal mengambil sheet:", error.message);
+        return reportCache?.text ?? null;
+    }
+
+}
+
+
+setInterval(() => {
+    refreshReport().catch(error => console.error("[laporan] pembaruan latar gagal:", error.message));
+}, REPORT_REFRESH_MS).unref();
+
+
+async function handleReport(req, res){
+
+    if(await reportText(req.query.get("refresh") === "1") === null){
+        return json(res, 502, { error: "Gagal mengambil data dari Google Sheets." });
     }
 
     res.writeHead(200, {
@@ -1212,6 +1283,9 @@ server.on("error", error => {
 
 
 server.listen(PORT, () => {
+
+    /* Ambil salinan sheet pertama segera, supaya pembuka Laporan pertama tidak menunggu. */
+    refreshReport().catch(error => console.error("[laporan] pengambilan awal gagal:", error.message));
 
     console.log(
         `Broodle jalan di http://localhost:${PORT}\n` +

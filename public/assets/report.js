@@ -148,7 +148,8 @@
         data.forEach(row => {
 
             const moment = saleMoment(row);
-            const date = moment ? toISO(moment) : normalizeDate(row.tanggal);
+            const shop = moment && App.shopTime(moment);
+            const date = shop ? shop.iso : normalizeDate(row.tanggal);
 
             if(date < from || date > to){
                 return;
@@ -161,7 +162,7 @@
             if(!t){
                 t = {
                     date,
-                    time: moment ? `${pad(moment.getHours())}:${pad(moment.getMinutes())}` : formatTime(row.jam),
+                    time: shop ? shop.hhmm : formatTime(row.jam),
                     payment: String(row.pembayaran || "").trim().toUpperCase(),
                     nota: row.nota,
                     total: 0,
@@ -577,7 +578,7 @@
         /* Pembayaran utang yang diterima di rentang ini (tanggal lokal perangkat). */
         const repaid = debtData.debts
             .flatMap(d => d.payments)
-            .filter(p => { const day = toISO(new Date(p.at)); return day >= from && day <= to; })
+            .filter(p => { const day = App.shopTime(p.at).iso; return day >= from && day <= to; })
             .reduce((sum, p) => sum + p.jumlah, 0);
 
         $("#kpiInflow").textContent = rupiah(agg.cash + agg.qris + agg.transfer + agg.debit + repaid);
@@ -684,8 +685,8 @@
 
     function renderShifts(from, to){
 
-        const list = shiftData.filter(sh => { const d = toISO(new Date(sh.openedAt)); return d >= from && d <= to; });
-        const time = iso => { const d = new Date(iso); return `${d.getDate()}/${d.getMonth() + 1} ${pad(d.getHours())}.${pad(d.getMinutes())}`; };
+        const list = shiftData.filter(sh => { const d = App.shopTime(sh.openedAt).iso; return d >= from && d <= to; });
+        const time = iso => { const t = App.shopTime(iso); return `${t.tanggal.split("/").slice(0, 2).join("/")} ${t.jam}`; };
 
         $("#shiftCount").textContent = list.length ? list.length + " setoran" : "";
 
@@ -847,7 +848,8 @@
 
         preset = name;
 
-        const today = new Date();
+        /* "Hari ini" = tanggal toko (WITA), bukan tanggal perangkat. */
+        const today = fromISO(App.shopTime().iso);
         const from = {
             today: today,
             "7": addDays(today, -6),

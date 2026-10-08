@@ -18,7 +18,6 @@ const Printer = (() => {
     const divider = { type: "divider" };
     const feed = lines => ({ type: "feed", lines });
 
-    const pad = n => String(n).padStart(2, "0");
 
     /* "2026-10-12" -> "12/10/2026" (sama dengan format tanggal nota) */
     const isoDate = iso => {
@@ -26,10 +25,10 @@ const Printer = (() => {
         return `${Number(d)}/${Number(m)}/${y}`;
     };
 
-    /* ISO waktu -> "5/10/2026 • 14.05" (waktu lokal perangkat) */
+    /* ISO waktu -> "5/10/2026 • 14.05" (WITA) */
     const stamp = iso => {
-        const d = new Date(iso);
-        return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} • ${pad(d.getHours())}.${pad(d.getMinutes())}`;
+        const t = App.shopTime(iso);
+        return `${t.tanggal} • ${t.jam}`;
     };
 
     function header(){
@@ -136,12 +135,12 @@ const Printer = (() => {
      */
     function paidInvoice(debt, payment, reprint){
 
-        const at = new Date(payment.at);
+        const at = App.shopTime(payment.at);
 
         return saleReceipt({
             nota: debt.nota,
-            tanggal: `${at.getDate()}/${at.getMonth() + 1}/${at.getFullYear()}`,
-            jam: `${pad(at.getHours())}.${pad(at.getMinutes())}`,
+            tanggal: at.tanggal,
+            jam: at.jam,
             items: debt.items,
             total: debt.total,
             pembayaran: payment.metode,

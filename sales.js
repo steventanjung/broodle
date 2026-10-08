@@ -87,7 +87,7 @@ function persist(){
 }
 
 
-const day = iso => new Date(iso).toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+const day = iso => new Date(iso).toLocaleDateString("sv-SE", { timeZone: "Asia/Makassar" });
 
 const clean = value => String(value ?? "").trim();
 
@@ -151,12 +151,161 @@ function record(tx, username){
 }
 
 
+/* =====================================================
+   SINKRON DARI SHEETS
+   Nota yang tercatat sebelum fitur ini ada (atau dari perangkat
+   lain) hanya ada di Sheets. Supaya Riwayat sama dengan Laporan,
+   setiap transaksi di Sheets yang belum ada di sini disalin
+   (source: "sheet"). Isinya persis baris Sheets; uang diterima
+   tidak diketahui. Nota utang ikut tampil tapi dikelola di tab Utang.
+   ===================================================== */
+
+const SHOP_TZ = "Asia/Makassar";
+const SHOP_OFFSET = "+08:00";
+const pad2 = n => String(n).padStart(2, "0");
+
+/* Sama dengan report.js: tanggal sheet -> "YYYY-MM-DD". */
+function sheetDate(value){
+
+    const str = clean(value);
+    const parts = str.split("/");
+
+    if(parts.length === 3){
+        return `${parts[2]}-${pad2(parts[1])}-${pad2(parts[0])}`;
+    }
+
+    if(/^\d{4}-\d{2}-\d{2}T/.test(str)){
+        return new Date(Date.parse(str) + 12 * 3600 * 1000).toISOString().slice(0, 10);
+    }
+
+    return /^\d{4}-\d{2}-\d{2}$/.test(str) ? str : null;
+
+}
+
+/* Sama dengan report.js: kolom jam (12.33 / "12:33" / ISO) -> "HH:MM". */
+function sheetTime(value){
+
+    const str = clean(value);
+    const iso = str.match(/T(\d{2}):(\d{2})/);
+
+    if(iso){ return `${iso[1]}:${iso[2]}`; }
+    if(str.includes(":")){ const [h, m] = str.split(":"); return `${pad2(h)}:${pad2(m || "0")}`; }
+    if(str && !isNaN(Number(str))){ const [h, m = "0"] = str.split("."); return `${pad2(h)}:${(m + "00").slice(0, 2)}`; }
+
+    return "00:00";
+
+}
+
+const SPLIT = /^(.+?) (\d+) \+ (.+?) (\d+)$/;
+
+function syncFromSheet(text){
+
+    let parsed;
+
+    try{
+        parsed = JSON.parse(text);
+    }catch(error){
+        return 0;
+    }
+
+    const rows = Array.isArray(parsed) ? parsed : parsed?.data;
+
+    if(!Array.isArray(rows)){
+        return 0;
+    }
+
+    const data = load();
+    const known = new Set(data.sales.map(s => s.id));
+    const groups = new Map();
+
+    for(const row of rows){
+
+        const txId = clean(row?.transactionId);
+        const ms = Number(txId.split("-")[0]);
+        const fromId = ms > 1.5e12 && ms < 4e12;
+
+        let id = txId, at;
+
+        if(fromId && ID_PATTERN.test(txId)){
+            at = new Date(ms);
+        }else{
+            /* Baris lama tanpa transactionId: kunci = tanggal + nota, sama dengan Laporan. */
+            const date = sheetDate(row?.tanggal);
+            if(!date){ continue; }
+            id = `sheet-${date}-${clean(row?.nota).replace(/[^\w]/g, "") || "x"}`;
+            at = new Date(`${date}T${sheetTime(row?.jam)}:00${SHOP_OFFSET}`);
+            if(isNaN(at)){ continue; }
+        }
+
+        if(known.has(id)){
+            continue;
+        }
+
+        let g = groups.get(id);
+
+        if(!g){
+            g = { id, at, row, items: [] };
+            groups.set(id, g);
+        }
+
+        const qty = Number(row.qty) || 0;
+        const subtotal = Number(row.subtotal) || 0;
+
+        g.items.push({
+            nama: clean(row.nama).slice(0, 120) || "(Tanpa nama)",
+            qty,
+            harga: Number(row.harga) || (qty ? subtotal / qty : 0),
+            subtotal
+        });
+
+    }
+
+    for(const { id, at, row, items } of groups.values()){
+
+        const pembayaran = clean(row.pembayaran).slice(0, 80);
+        const split = SPLIT.exec(pembayaran);
+        const t = new Intl.DateTimeFormat("en-GB", { timeZone: SHOP_TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(at);
+        const isoDay = day(at.toISOString());
+        const [y, m, d] = isoDay.split("-");
+
+        data.sales.push({
+            id,
+            source: "sheet",
+            nota: clean(row.nota).slice(0, 20),
+            tanggal: `${Number(d)}/${Number(m)}/${y}`,
+            jam: t.replace(":", "."),
+            kasir: auth.findUser(clean(row.kasir))?.username || clean(row.kasir).slice(0, 40) || "-",
+            setoran: ID_PATTERN.test(clean(row.setoran)) ? clean(row.setoran) : null,
+            createdAt: at.toISOString(),
+            status: "aktif",
+            pembayaran,
+            pembayaranBagi: split ? [{ metode: split[1], jumlah: Number(split[2]) }, { metode: split[3], jumlah: Number(split[4]) }] : null,
+            cashReceived: 0,
+            change: 0,
+            total: items.reduce((sum, i) => sum + i.subtotal, 0),
+            items,
+            history: []
+        });
+
+    }
+
+    if(groups.size){
+        persist();
+    }
+
+    return groups.size;
+
+}
+
+
 /* Bentuk yang dikirim ke browser. */
 function view(sale){
 
     return {
         ...sale,
         /* Hanya sebagian jenis yang bisa diubah; semua yang bukan utang bisa dibatalkan. */
+        utang: sale.pembayaran === "Utang",
+        readonly: sale.pembayaran === "Utang" || sale.id.startsWith("sheet-"),
         editable: sale.status === "aktif" && !sale.pembayaranBagi && sale.pembayaran !== "Grab" && METHODS.includes(sale.pembayaran)
     };
 
@@ -165,7 +314,7 @@ function view(sale){
 
 /*
  * kasir: hanya penjualan miliknya di setoran tertentu.
- * superadmin: rentang tanggal (WIB), semua kasir.
+ * superadmin: rentang tanggal (WITA), semua kasir.
  */
 function list({ user, setoran, from, to }){
 
@@ -182,7 +331,6 @@ function list({ user, setoran, from, to }){
 
     return sales
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-        .slice(0, 300)
         .map(view);
 
 }
@@ -295,6 +443,15 @@ function findFor(id, user){
 
     if(sale.status !== "aktif"){
         return { error: "Nota ini sudah dibatalkan." };
+    }
+
+    if(sale.pembayaran === "Utang"){
+        return { error: "Nota utang diubah atau dibatalkan lewat tab Utang." };
+    }
+
+    /* Baris sheet lama tanpa transactionId: koreksinya tidak bisa diterapkan ke Laporan. */
+    if(sale.id.startsWith("sheet-")){
+        return { error: "Nota lama ini tidak bisa dikoreksi dari aplikasi. Ubah langsung di Google Sheets." };
     }
 
     return { sale };
@@ -502,6 +659,7 @@ function applyToReport(text){
 module.exports = {
     MIN_KOREKSI_PASSWORD,
     record,
+    syncFromSheet,
     list,
     hasPassword,
     setPassword,

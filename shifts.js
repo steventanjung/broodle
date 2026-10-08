@@ -144,10 +144,10 @@ function upsert(input, sessionUser){
 }
 
 
-/* Setoran yang dibuka di rentang tanggal toko (WIB), terbaru dulu. */
+/* Setoran yang dibuka di rentang tanggal toko (WITA), terbaru dulu. */
 function list(from, to){
 
-    const day = iso => new Date(iso).toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+    const day = iso => new Date(iso).toLocaleDateString("sv-SE", { timeZone: "Asia/Makassar" });
 
     return load().shifts
         .filter(s => { const d = day(s.openedAt); return (!from || d >= from) && (!to || d <= to); })

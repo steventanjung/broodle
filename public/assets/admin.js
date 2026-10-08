@@ -37,7 +37,7 @@
         }
 
         $("#menuSummary").textContent =
-            `${menus.length} produk · ${cats.length} kategori · tampil di semua perangkat kasir`;
+            `Total terdapat ${menus.length} produk & ${cats.length} kategori`;
 
         /* Filter kategori: pertahankan pilihan kalau masih ada. */
         if(menuCategory && !cats.includes(menuCategory)){

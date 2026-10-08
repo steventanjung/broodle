@@ -872,8 +872,9 @@
 
         return {
             transactionId: Date.now() + "-" + Math.random().toString(36).slice(2, 8),
-            tanggal: now.toLocaleDateString("id-ID"),
-            jam: now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false }),
+            /* WITA, bukan jam tablet: tablet dengan zona waktu salah tidak menggeser jam nota. */
+            tanggal: App.shopTime(now).tanggal,
+            jam: App.shopTime(now).jam,
             nota: String(nota).padStart(3, "0"),
             /* Dibagi: "Cash 25000 + QRIS 25000" — terbaca di sheet dan dipecah lagi oleh laporan. */
             pembayaran: parts ? parts.map(p => `${p.metode} ${p.jumlah}`).join(" + ") : METHOD_NAME[payment],
