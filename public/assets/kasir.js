@@ -782,6 +782,7 @@
 
         $$("#paymentToggle button").forEach(b =>
             b.setAttribute("aria-pressed", usesMethod(b.dataset.payment)));
+        $("#paymentSelect").value = payment;
 
         /* Saat dibagi, kartu bagi menggantikan pilihan metode. Grab & Utang tidak bisa dibagi. */
         $("#paymentToggle").hidden = split;
@@ -837,8 +838,8 @@
             button.disabled = processing;
         }else{
             button.innerHTML = payment === "utang"
-                ? icon("book") + (empty ? "Catat utang" : `Catat utang ${rupiah(total)}`)
-                : icon("receipt") + (empty ? "Bayar" : `Bayar ${rupiah(total)}`);
+                ? icon("book") + (empty ? "Catat utang" : `Catat utang <span class="pay-amt">${rupiah(total)}</span>`)
+                : icon("receipt") + (empty ? "Bayar" : `Bayar <span class="pay-amt">${rupiah(total)}</span>`);
             button.disabled = processing || empty
                 || (split && !splitValid())
                 || (usesMethod("cash") && received < due)
@@ -1251,6 +1252,19 @@
                     $("#cashInput").focus();
                 }
             }
+
+        });
+
+        /* Pilihan metode berbentuk dropdown (tablet): sama dengan menekan tombol metode. */
+        $("#paymentSelect").addEventListener("change", e => {
+
+            if(cartLocked()){
+                e.target.value = payment;
+                return;
+            }
+
+            payment = e.target.value;
+            renderPayment();
 
         });
 

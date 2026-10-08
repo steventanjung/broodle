@@ -301,6 +301,7 @@ button{ cursor:pointer; }
 .pos{
     display:grid; grid-template-columns:minmax(0,1fr) clamp(320px, 36vw, 380px);
     min-height:calc(100vh - var(--topbar-h));
+    min-height:calc(100dvh - var(--topbar-h));
 }
 
 .catalog{ padding:16px; min-width:0; }
@@ -364,6 +365,7 @@ button{ cursor:pointer; }
 .order{
     position:sticky; top:var(--topbar-h);
     height:calc(100vh - var(--topbar-h));
+    height:calc(100dvh - var(--topbar-h));
     display:flex; flex-direction:column;
     background:var(--surface); border-left:1px solid var(--border);
 }
@@ -421,7 +423,7 @@ button{ cursor:pointer; }
     border-color:transparent;
 }
 .order-foot::after{ content:""; flex:none; height:6px; }
-@media (max-height:900px){
+@media (max-height:1000px){
     .order-foot{ max-height:52%; }
 }
 .total-row{ display:flex; align-items:baseline; justify-content:space-between; }
@@ -1192,7 +1194,7 @@ body.has-tabs .set-bar{ bottom:76px; }
 @media (max-width:1050px){
     #paymentToggle button{ padding:0 8px; gap:6px; }
 }
-@media (max-height:900px){
+@media (max-height:1000px){
     .order-head{ padding-top:10px; padding-bottom:10px; }
     .order-total{ padding-top:8px; padding-bottom:8px; }
     .order-foot{ gap:8px; padding-top:10px; }
@@ -1232,4 +1234,159 @@ body.has-tabs .set-bar{ bottom:76px; }
 @media (pointer:coarse){
     .line .stepper button{ width:40px; height:40px; }
     .line .stepper input{ width:36px; height:40px; }
+}
+
+/* Pembungkus Total + pembayaran: transparan kecuali di tablet landscape. */
+.checkout{ display:contents; }
+.payment-select{ display:none; }
+
+/*
+ * Tablet landscape: layout kasir dengan bilah bawah selebar layar.
+ *   atas kiri  : produk (scroll sendiri)
+ *   atas kanan : daftar pesanan, setinggi sisa layar
+ *   bawah      : metode bayar | uang diterima | Total + Bayar
+ * Tetap satu layar, tanpa langkah tambahan.
+ */
+@media (min-width:1000px) and (max-height:1000px) and (orientation:landscape){
+
+    .pos{
+        height:calc(100vh - var(--topbar-h)); height:calc(100dvh - var(--topbar-h));
+        min-height:0; overflow:hidden;
+        grid-template-columns:minmax(0, 1fr) clamp(340px, 34vw, 420px);
+        grid-template-rows:auto minmax(0, 1fr) auto;
+    }
+
+    .catalog{ grid-column:1; grid-row:1 / 3; overflow-y:auto; min-height:0; }
+
+    /* .order & .foot hanya pembungkus: anaknya jadi item grid .pos / .checkout. */
+    .order, .order-foot{ display:contents; }
+
+    .order-head, .order-lines{
+        grid-column:2; background:var(--surface); border-left:1px solid var(--border);
+    }
+    .order-head{ grid-row:1; padding-top:10px; padding-bottom:10px; }
+    .order-lines{ grid-row:2; min-height:0; flex:none; }
+
+    /* Baris item: satu baris (nama | stepper | subtotal) */
+    .line{ grid-template-columns:minmax(0, 1fr) auto 96px; padding:8px 0; }
+
+    .checkout{
+        grid-column:1 / -1; grid-row:3;
+        display:grid; align-items:stretch; gap:6px 14px;
+        grid-template-columns:minmax(150px, .55fr) minmax(0, 1.7fr) clamp(250px, 26vw, 320px);
+        grid-template-rows:auto minmax(58px, auto) minmax(54px, auto);
+        padding:10px 16px 12px; background:var(--surface);
+        border-top:2px solid var(--border-strong);
+        box-shadow:0 -6px 16px rgba(0,0,0,.06);
+    }
+
+    /* kolom 1: metode bayar = satu dropdown (lebih hemat tempat), split di bawahnya */
+    #paymentToggle{
+        grid-column:1; grid-row:1 / 3;
+        display:flex; flex-direction:column; gap:4px;
+        padding:0; background:none; border-radius:0;
+    }
+    #paymentToggle::before{
+        content:"Metode bayar"; font-size:13px; font-weight:600; color:var(--text-2);
+    }
+    #paymentToggle > button{ display:none; }
+    #paymentToggle .payment-select{
+        display:block; flex:1; min-height:56px; font-size:20px; font-weight:700;
+    }
+    /* Bagi 2 metode: kartu bagi menggantikan dropdown & dapat kolom lebih lebar. */
+    .checkout:has(#splitSection:not([hidden])){
+        grid-template-columns:minmax(0, 1.3fr) minmax(0, 1fr) clamp(250px, 26vw, 320px);
+    }
+    #splitSection{ grid-column:1; grid-row:1 / 4; }
+    #splitSection .split-line .input{ min-height:50px; }
+    /* Saat dibagi, tunai & pemberitahuan metode lain tampil bersamaan: pemberitahuan pindah ke baris bawah. */
+    .checkout:has(#splitSection:not([hidden])) .notice{
+        grid-column:1 / 3; grid-row:4; padding:10px 14px; font-size:14px; justify-content:flex-start;
+    }
+    .checkout:has(#splitSection:not([hidden])) .notice > .i{ width:20px; height:20px; }
+    #splitOpen{ grid-column:1; grid-row:3; margin:0; min-height:0; height:100%; }
+
+    /* kolom 2: uang diterima / kembalian / uang cepat — target ketuk besar */
+    #cashSection, .checkout .notice{ grid-column:2; grid-row:1 / 4; }
+    #cashSection{
+        display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-rows:auto minmax(58px, auto) minmax(54px, auto); gap:6px 8px;
+    }
+    #cashSection > .label{ grid-column:1 / -1; grid-row:1; font-size:13px; }
+    #cashSection > .input-group{ grid-column:1; grid-row:2; }
+    #cashSection .input-group .input{ height:100%; min-height:56px; font-size:clamp(20px, 2.2vw, 26px); }
+    #cashSection .input-group .prefix{ font-size:16px; }
+    /*
+     * Kembalian: label di atas (sebaris dengan "Uang diterima"), kotak nilai
+     * di bawahnya selebar & setinggi kotak uang diterima. changeRow sendiri
+     * transparan; warna status (kurang / cukup) dipindah ke kotak nilainya.
+     */
+    #changeRow{ display:contents; }
+    #changeLabel{
+        grid-column:2; grid-row:1; font-size:13px; font-weight:600; color:var(--text-2);
+    }
+    #changeValue{
+        grid-column:2; grid-row:2; min-width:0;
+        display:flex; align-items:center; justify-content:flex-end;
+        padding:0 12px; border-radius:var(--radius-sm); background:var(--surface-2);
+        font-size:clamp(18px, 2vw, 24px); white-space:nowrap; overflow:hidden;
+    }
+    #changeRow.short #changeValue{ background:var(--danger-soft); color:var(--danger); }
+    #changeRow.enough #changeValue{ background:var(--ok-soft); color:var(--ok); }
+    #changeRow.short #changeLabel{ color:var(--danger); }
+    #changeRow.enough #changeLabel{ color:var(--ok); }
+    #cashSection .quick-cash{ grid-column:1 / -1; grid-row:3; }
+    #cashSection .quick-cash button{ min-height:0; height:100%; font-size:15px; }
+    #reprintNotice{ grid-column:1 / -1; grid-row:4; }
+
+    /* Pemberitahuan metode (QRIS, Transfer, Debit, Grab, Utang): isi di tengah, teks besar. */
+    .checkout .notice{
+        align-items:center; justify-content:center; text-align:center;
+        gap:14px; padding:0 28px; font-size:17px; line-height:1.4; font-weight:500;
+    }
+    .checkout .notice > .i{ width:30px; height:30px; flex:none; margin:0; }
+    .checkout .notice > span{ max-width:46ch; }
+    .checkout .notice.notice-warn{ font-weight:500; }
+    #reprintNotice{ text-align:left; justify-content:flex-start; font-size:14px; padding:10px 14px; }
+
+    /*
+     * Metode non-tunai (QRIS, Transfer, Debit, Grab, Utang): tidak ada uang
+     * yang diketik, jadi bilah dipadatkan jadi satu baris:
+     * [metode] [split] [pemberitahuan] [Total] [Bayar]
+     */
+    .checkout:has(#cashSection[hidden]):not(:has(#splitSection:not([hidden]))){
+        grid-template-columns:minmax(150px, .5fr) minmax(130px, .42fr) minmax(0, 1.3fr) auto clamp(190px, 20vw, 240px);
+        grid-template-rows:auto 58px;
+    }
+    .checkout:has(#cashSection[hidden]):not(:has(#splitSection:not([hidden]))) #splitOpen{ grid-column:2; grid-row:2; }
+    .checkout:has(#cashSection[hidden]):not(:has(#splitSection:not([hidden]))) .notice:not(#reprintNotice){
+        grid-column:3; grid-row:2; padding:0 16px; font-size:15px; gap:10px;
+    }
+    .checkout:has(#cashSection[hidden]):not(:has(#splitSection:not([hidden]))) .notice:not(#reprintNotice) > .i{ width:24px; height:24px; }
+    .checkout:has(#cashSection[hidden]):not(:has(#splitSection:not([hidden]))) .order-total{
+        grid-column:4; grid-row:1 / 3; flex-direction:column; align-items:flex-end; justify-content:center; gap:0;
+    }
+    .checkout:has(#cashSection[hidden]):not(:has(#splitSection:not([hidden]))) #payButton{ grid-column:5; grid-row:1 / 3; }
+    .checkout:has(#cashSection[hidden]):not(:has(#splitSection:not([hidden]))) #skipPrint{ grid-column:5; }
+
+    /* Dropdown metode: tampilan sama dengan input lain, panah sendiri. */
+    #paymentToggle .payment-select{
+        appearance:none; -webkit-appearance:none; padding:0 44px 0 16px;
+        background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center;
+    }
+
+    /* kolom 3: Total (label kiri, angka kanan) di atas tombol Bayar besar */
+    .order-total{
+        grid-column:3; grid-row:1 / 3; padding:0; border:0; background:none;
+        display:flex; flex-direction:row; align-items:center; justify-content:space-between; gap:10px;
+    }
+    .order-total span{ font-size:15px; }
+    .order-total strong{ font-size:clamp(26px, 2.8vw, 32px); line-height:1.1; }
+    .checkout #payButton{
+        grid-column:3; grid-row:3; position:static; align-self:stretch;
+        min-height:0; height:100%; font-size:19px; box-shadow:none;
+    }
+    /* Total sudah tampil di atas: jangan diulang di tombol. */
+    .checkout .pay-amt{ display:none; }
+    #skipPrint{ grid-column:3; grid-row:4; }
 }
