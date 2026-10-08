@@ -15,6 +15,10 @@
     let data = null;
     let query = "";
     let status = "semua";
+
+    /* Halaman daftar: 20 nota per halaman, cukup untuk satu layar tablet tanpa terlalu banyak gulir. */
+    const PAGE_SIZE = 20;
+    let page = 1;
     let current = null;
 
     /* Mode dialog: "view" | "edit" | "cancel". Draft = isian formulir ubah. */
@@ -130,11 +134,22 @@
                 : "Tidak ada nota pada tanggal ini.";
 
             $("#riwayatRows").innerHTML = `<div class="empty">${icon(q ? "search" : "receipt")}<span>${message}</span></div>`;
+            $("#riwayatPager").hidden = true;
             return;
 
         }
 
-        $("#riwayatRows").innerHTML = list.map(s => {
+        const pages = Math.ceil(list.length / PAGE_SIZE);
+
+        /* Setelah ubah / batal halaman tetap; kalau daftar menyusut, jangan lewat halaman terakhir. */
+        page = Math.min(page, pages);
+
+        const start = (page - 1) * PAGE_SIZE;
+        const shown = list.slice(start, start + PAGE_SIZE);
+
+        renderPager(list.length, pages, start, shown.length);
+
+        $("#riwayatRows").innerHTML = shown.map(s => {
 
             const badges = [
                 s.status === "batal" && `<span class="badge badge-danger">${icon("ban", "i-sm")}Dibatalkan</span>`,
@@ -155,6 +170,42 @@
                 </button>`;
 
         }).join("");
+
+    }
+
+
+    /* [1, "gap", 4, 5, 6, "gap", 12] */
+    function pageList(current, pages){
+
+        const nums = [...new Set([1, pages, current - 1, current, current + 1])]
+            .filter(n => n >= 1 && n <= pages)
+            .sort((a, b) => a - b);
+
+        return nums.flatMap((n, i) => i > 0 && n - nums[i - 1] > 1 ? ["gap", n] : [n]);
+
+    }
+
+
+    function renderPager(total, pages, start, shown){
+
+        const pager = $("#riwayatPager");
+
+        pager.hidden = false;
+
+        const btn = (label, target) =>
+            `<button type="button" class="btn btn-sm btn-icon" data-page="${target}"
+                ${target < 1 || target > pages ? "disabled" : ""}>${label}</button>`;
+
+        pager.innerHTML = `
+            <span class="small muted">Menampilkan ${start + 1}–${start + shown} dari ${total}</span>
+            <div class="pager-controls" ${pages === 1 ? "hidden" : ""}>
+                ${btn(icon("chevron-down", "i-sm pager-prev"), page - 1)}
+                ${pageList(page, pages).map(n => n === "gap"
+                    ? `<span class="muted">…</span>`
+                    : `<button type="button" class="btn btn-sm ${n === page ? "btn-primary" : ""}" data-page="${n}" ${n === page ? 'aria-current="page"' : ""}>${n}</button>`
+                ).join("")}
+                ${btn(icon("chevron-down", "i-sm pager-next"), page + 1)}
+            </div>`;
 
     }
 
@@ -556,6 +607,7 @@
                 return;
             }
 
+            page = 1;
             load();
 
         });
@@ -564,13 +616,31 @@
             const chip = e.target.closest("[data-status]");
             if(!chip){ return; }
             status = chip.dataset.status;
+            page = 1;
             $$("#riwayatFilter .chip").forEach(c => c.setAttribute("aria-pressed", String(c === chip)));
             if(data){ render(); }
         });
 
         $("#riwayatSearch").addEventListener("input", e => {
             query = e.target.value;
+            page = 1;
             if(data){ render(); }
+        });
+
+        $("#riwayatPager").addEventListener("click", e => {
+
+            const btn = e.target.closest("[data-page]");
+
+            if(!btn || btn.disabled){
+                return;
+            }
+
+            page = Number(btn.dataset.page);
+            render();
+
+            /* Pager di bawah daftar: kembali ke awal daftar. */
+            $("#riwayatPanel").scrollIntoView({ block: "start", behavior: "smooth" });
+
         });
 
         $("#riwayatRows").addEventListener("click", e => {
