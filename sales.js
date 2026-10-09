@@ -91,6 +91,16 @@ const day = iso => new Date(iso).toLocaleDateString("sv-SE", { timeZone: "Asia/M
 
 const clean = value => String(value ?? "").trim();
 
+/*
+ * Sheets menyimpan nota sebagai angka dan membuang nol di depan:
+ * "091026001" -> 91026001, "001" -> 1. Kembalikan bentuk aslinya.
+ */
+const sheetNota = value => {
+    const n = clean(value);
+    if(!/^\d+$/.test(n)){ return n; }
+    return n.length === 8 ? n.padStart(9, "0") : n.length < 3 ? n.padStart(3, "0") : n;
+};
+
 
 /* =====================================================
    PENCATATAN
@@ -271,7 +281,7 @@ function syncFromSheet(text){
         data.sales.push({
             id,
             source: "sheet",
-            nota: clean(row.nota).slice(0, 20),
+            nota: sheetNota(row.nota).slice(0, 20),
             tanggal: `${Number(d)}/${Number(m)}/${y}`,
             jam: t.replace(":", "."),
             kasir: auth.findUser(clean(row.kasir))?.username || clean(row.kasir).slice(0, 40) || "-",

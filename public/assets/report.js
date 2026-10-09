@@ -40,6 +40,13 @@
 
 
     /* Sheet: "17/9/2026" -> "2026-09-17" */
+    /* Sheets membuang nol di depan nota: 91026001 -> "091026001", 1 -> "001". */
+    function sheetNota(value){
+        const n = String(value ?? "").trim();
+        if(!/^\d+$/.test(n)){ return n; }
+        return n.length === 8 ? n.padStart(9, "0") : n.length < 3 ? n.padStart(3, "0") : n;
+    }
+
     function normalizeDate(value){
 
         const str = String(value ?? "").trim();
@@ -164,7 +171,7 @@
                     date,
                     time: shop ? shop.hhmm : formatTime(row.jam),
                     payment: String(row.pembayaran || "").trim().toUpperCase(),
-                    nota: row.nota,
+                    nota: sheetNota(row.nota),
                     total: 0,
                     items: []
                 };
@@ -602,8 +609,14 @@
 
     const productNames = t => t.items.map(i => i.product).join(", ");
 
+    /* Urut per hari, lalu urutan nota (091026001 -> 1; nota lama "001" -> 1). */
+    const notaSeq = nota => {
+        const n = String(nota ?? "");
+        return Number(n.length >= 9 ? n.slice(6) : n) || 0;
+    };
+
     const SORTERS = {
-        nota:   t => Number(t.nota) || 0,
+        nota:   t => t.date + " " + String(notaSeq(t.nota)).padStart(6, "0"),
         waktu:  t => t.date + " " + t.time,
         produk: t => productNames(t).toLowerCase(),
         bayar:  t => t.payment,

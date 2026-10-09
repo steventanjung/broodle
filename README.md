@@ -379,7 +379,7 @@ If printing fails, the transaction is **already recorded**. The order panel show
   "transactionId": "1790920853544-gphoj4",
   "tanggal": "2/10/2026",
   "jam": "13.00",
-  "nota": "001",
+  "nota": "021026001",
   "pembayaran": "Cash",
   "cashReceived": 100000,
   "change": 45000,

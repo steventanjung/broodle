@@ -50,7 +50,18 @@
      */
     let awaitingReprint = null;
 
-    let nota = parseInt(localStorage.getItem("nota"), 10) || 1;
+    /*
+     * Nomor nota: DDMMYY + urutan 3 digit, mulai dari 001 tiap hari (WITA).
+     * Contoh 9 Oktober 2026, nota pertama: 091026001.
+     */
+    let notaSeq = parseInt(localStorage.getItem("nota"), 10) || 1;
+    let notaDay = localStorage.getItem("notaDay") || "";
+
+    function nextNota(now){
+        const [y, m, d] = App.shopTime(now).iso.split("-");
+        const day = d + m + y.slice(2);
+        return day + String(day === notaDay ? notaSeq : 1).padStart(3, "0");
+    }
 
 
     /* =================================================
@@ -876,7 +887,7 @@
             /* WITA, bukan jam tablet: tablet dengan zona waktu salah tidak menggeser jam nota. */
             tanggal: App.shopTime(now).tanggal,
             jam: App.shopTime(now).jam,
-            nota: String(nota).padStart(3, "0"),
+            nota: nextNota(now),
             /* Dibagi: "Cash 25000 + QRIS 25000" — terbaca di sheet dan dipecah lagi oleh laporan. */
             pembayaran: parts ? parts.map(p => `${p.metode} ${p.jumlah}`).join(" + ") : METHOD_NAME[payment],
             ...(parts ? { pembayaranBagi: parts } : {}),
@@ -962,8 +973,10 @@
          * Nomor nota langsung maju: transaksi ini sudah
          * tercatat, apa pun hasil cetaknya.
          */
-        nota++;
-        localStorage.setItem("nota", nota);
+        notaDay = transaction.nota.slice(0, 6);
+        notaSeq = Number(transaction.nota.slice(6)) + 1;
+        localStorage.setItem("nota", notaSeq);
+        localStorage.setItem("notaDay", notaDay);
 
         /* Masuk ke total setoran kasir. */
         App.emit("sale-recorded", transaction);
