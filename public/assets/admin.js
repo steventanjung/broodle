@@ -36,8 +36,11 @@
 
         }
 
+        const hiddenCount = menus.filter(m => m.tersembunyi).length;
+
         $("#menuSummary").textContent =
-            `Total terdapat ${menus.length} produk & ${cats.length} kategori`;
+            `Total terdapat ${menus.length} produk & ${cats.length} kategori` +
+            (hiddenCount ? ` · ${hiddenCount} disembunyikan dari kasir` : "");
 
         /* Filter kategori: pertahankan pilihan kalau masih ada. */
         if(menuCategory && !cats.includes(menuCategory)){
@@ -85,12 +88,10 @@
             html += `<div class="group-label">${escapeHtml(cat)} <span class="muted">· ${items.length}</span></div>`;
 
             html += items.map(m => `
-                <div class="row" data-id="${escapeHtml(m.id)}">
-                    <div class="thumb">${m.gambar
-                        ? `<img src="${escapeHtml(m.gambar)}" alt="" loading="lazy" data-fallback="cookie">`
-                        : icon("cookie")}</div>
+                <div class="row${m.tersembunyi ? " is-hidden" : ""}" data-id="${escapeHtml(m.id)}">
+                    <div class="thumb">${thumb(m)}</div>
                     <div class="row-main">
-                        <span class="row-title">${escapeHtml(m.nama)}</span>
+                        <span class="row-title">${escapeHtml(m.nama)}${m.tersembunyi ? ` <span class="badge">${icon("eye-off", "i-sm")}Disembunyikan</span>` : ""}</span>
                         ${m.hargaKustom ? `<span class="row-sub">${icon("tag", "i-sm")} Harga custom, diisi kasir tiap jual</span>` : ""}
                         ${hasVariants(m) ? `<span class="row-sub">${icon("layers", "i-sm")} ${m.varian.length} varian: ${escapeHtml(m.varian.slice(0, 3).map(v => v.nama).join(", "))}${m.varian.length > 3 ? ", …" : ""}</span>` : ""}
                         ${grabStatus(m)}
@@ -101,6 +102,10 @@
                         ? (m.harga ? `<span class="muted small">saran</span> ${rupiah(m.harga)}` : `<span class="muted">—</span>`)
                         : rupiah(m.harga)}</span>
                     <div class="row-end">
+                        <button type="button" class="btn btn-ghost btn-icon hide-toggle" data-action="hide"
+                            aria-pressed="${!!m.tersembunyi}" aria-label="Sembunyikan dari kasir" title="${m.tersembunyi ? "Tampilkan lagi di kasir" : "Sembunyikan dari kasir"}">
+                            ${icon(m.tersembunyi ? "eye-off" : "eye")}
+                        </button>
                         <button type="button" class="btn btn-ghost btn-icon star-toggle" data-action="star"
                             aria-pressed="${m.unggulan}" aria-label="Best Seller" title="${m.unggulan ? "Hapus dari Best Seller" : "Jadikan Best Seller"}">
                             ${icon("star")}
@@ -115,6 +120,11 @@
         $("#menuRows").innerHTML = html;
 
     }
+
+
+    const thumb = m => m.gambar
+        ? `<img src="${escapeHtml(m.gambar)}" alt="" loading="lazy" data-fallback="cookie">`
+        : icon("cookie");
 
 
     function replaceMenu(updated){
@@ -143,6 +153,24 @@
             const updated = await api("/api/menu/" + id, { method: "PUT", body: { unggulan: !menu.unggulan } });
             replaceMenu(updated);
             toast(updated.unggulan ? `${updated.nama} jadi Best Seller` : `${updated.nama} bukan Best Seller lagi`);
+        }catch(error){
+            toast(error.message, "error");
+            button.disabled = false;
+        }
+
+    }
+
+
+    async function toggleHidden(id, button){
+
+        const menu = App.menus.find(m => m.id === id);
+
+        button.disabled = true;
+
+        try{
+            const updated = await api("/api/menu/" + id, { method: "PUT", body: { tersembunyi: !menu.tersembunyi } });
+            replaceMenu(updated);
+            toast(updated.tersembunyi ? `${updated.nama} disembunyikan dari kasir` : `${updated.nama} tampil lagi di kasir`);
         }catch(error){
             toast(error.message, "error");
             button.disabled = false;
@@ -226,6 +254,7 @@
         form.hargaGrab.value = menu?.hargaGrab ? numberFmt.format(menu.hargaGrab) : "";
         fillCategorySelect(menu?.kategori || menuCategory);
         form.unggulan.checked = !!menu?.unggulan;
+        form.tersembunyi.checked = !!menu?.tersembunyi;
         form.hargaKustom.checked = !!menu?.hargaKustom;
         form.adaVarian.checked = !!menu?.adaVarian;
 
@@ -302,6 +331,7 @@
             hargaGrab: parseNumber(form.hargaGrab.value) || null,
             kategori: form.kategori.value.trim(),
             unggulan: form.unggulan.checked,
+            tersembunyi: form.tersembunyi.checked,
             hargaKustom: form.hargaKustom.checked,
             adaVarian: form.adaVarian.checked,
             varian: variantDraft
@@ -463,6 +493,12 @@
 
             if(star){
                 return toggleStar(row.dataset.id, star);
+            }
+
+            const hide = e.target.closest("[data-action=hide]");
+
+            if(hide){
+                return toggleHidden(row.dataset.id, hide);
             }
 
             openProductDialog(row.dataset.id);
@@ -673,27 +709,18 @@
      * Urutkan dengan geser (sentuh & mouse) lewat pointer events —
      * drag-and-drop bawaan browser tidak jalan di layar sentuh.
      * Baris mengikuti jari; saat melewati titik tengah baris lain,
-     * posisinya ditukar di DOM. Saat dilepas, draf disusun ulang
-     * sesuai urutan baru. Keyboard: panah atas/bawah di pegangan.
+     * posisinya ditukar di DOM. Saat dilepas, onSort menerima
+     * data-i lama dalam urutan baru (lalu merender ulang), dan
+     * pegangan baris yang tadi digeser difokuskan lagi.
+     * Keyboard: panah atas/bawah di pegangan.
+     * Dipakai daftar kategori dan dialog Urutkan produk.
      */
-    function moveCategory(from, to){
+    function bindSortable(list, dialog, onSort){
 
-        if(to < 0 || to >= categoryDraft.length || to === from){
-            return;
-        }
-
-        const [item] = categoryDraft.splice(from, 1);
-        categoryDraft.splice(to, 0, item);
-
-        renderCategories();
-
-    }
-
-
-    function bindCategoryDrag(){
-
-        const list = $("#categoryList");
         let drag = null;
+
+        const focusGrip = (i, options) =>
+            list.querySelector(`.cat-row[data-i="${i}"] .cat-grip`)?.focus(options);
 
         /* offsetTop = posisi tata letak (tidak terpengaruh transform), sama acuannya untuk semua baris. */
         const follow = () => {
@@ -744,7 +771,6 @@
             follow();
 
             /* Dekat tepi dialog: gulir otomatis supaya daftar panjang tetap bisa diurutkan. */
-            const dialog = $("#categoryDialog");
             const box = dialog.getBoundingClientRect();
             const step = e.clientY < box.top + 60 ? -10 : e.clientY > box.bottom - 60 ? 10 : 0;
 
@@ -764,14 +790,12 @@
             const order = [...list.children].map(li => Number(li.dataset.i));
             const moved = Number(drag.row.dataset.i);
 
-            categoryDraft = order.map(i => categoryDraft[i]);
             drag = null;
             list.classList.remove("is-sorting");
 
-            renderCategories();
+            onSort(order);
 
-            /* Fokus kembali ke pegangan baris yang tadi digeser. */
-            $(`#categoryList .cat-row[data-i="${order.indexOf(moved)}"] .cat-grip`)?.focus({ preventScroll: true });
+            focusGrip(order.indexOf(moved), { preventScroll: true });
 
         };
 
@@ -790,10 +814,17 @@
 
             const from = Number(grip.closest(".cat-row").dataset.i);
             const to = from + (e.key === "ArrowUp" ? -1 : 1);
+            const order = [...list.children].map((li, i) => i);
 
-            moveCategory(from, to);
+            if(to < 0 || to >= order.length){
+                return;
+            }
 
-            $(`#categoryList .cat-row[data-i="${Math.max(0, Math.min(to, categoryDraft.length - 1))}"] .cat-grip`)?.focus();
+            order.splice(to, 0, order.splice(from, 1)[0]);
+
+            onSort(order);
+
+            focusGrip(to);
 
         });
 
@@ -823,7 +854,10 @@
 
         $("#categoryList").addEventListener("change", renderCategories);
 
-        bindCategoryDrag();
+        bindSortable($("#categoryList"), $("#categoryDialog"), order => {
+            categoryDraft = order.map(i => categoryDraft[i]);
+            renderCategories();
+        });
 
         $("#categoryList").addEventListener("click", e => {
 
@@ -832,6 +866,131 @@
             if(del && !del.disabled){
                 categoryDraft.splice(Number(del.closest(".cat-row").dataset.i), 1);
                 return renderCategories();
+            }
+
+        });
+
+    }
+
+
+    /* =================================================
+       URUTKAN PRODUK
+       Urutan tab Best Seller dan urutan produk per kategori
+       di layar kasir. Tiap geseran langsung disimpan.
+       ================================================= */
+
+    const FEATURED = "__unggulan";
+
+    let sortGroup = null;
+    let sortDraft = [];
+
+    function sortGroups(){
+
+        return [
+            ...(App.menus.some(m => m.unggulan) ? [[FEATURED, "Best Seller"]] : []),
+            ...App.categories().map(c => [c, c])
+        ];
+
+    }
+
+
+    function loadSortDraft(){
+
+        sortDraft = sortGroup === FEATURED
+            ? App.featuredMenus()
+            : App.menus.filter(m => (m.kategori || "Lainnya") === sortGroup);
+
+    }
+
+
+    function openSort(){
+
+        const groups = sortGroups();
+
+        if(groups.length === 0){
+            return toast("Belum ada produk untuk diurutkan.", "error");
+        }
+
+        /* Pertahankan pilihan terakhir; kalau tidak ada, ikut filter kategori, lalu Best Seller. */
+        if(!groups.some(([value]) => value === sortGroup)){
+            sortGroup = groups.some(([value]) => value === menuCategory) ? menuCategory : groups[0][0];
+        }
+
+        $("#sortGroup").innerHTML = groups.map(([value, label]) =>
+            `<option value="${escapeHtml(value)}" ${value === sortGroup ? "selected" : ""}>${value === FEATURED ? "★ " : ""}${escapeHtml(label)}</option>`
+        ).join("");
+
+        loadSortDraft();
+        renderSort();
+
+        $("#sortDialog").showModal();
+
+    }
+
+
+    function renderSort(){
+
+        const featured = sortGroup === FEATURED;
+
+        $("#sortList").innerHTML = sortDraft.map((m, i) => `
+            <li class="cat-row sort-row${m.tersembunyi ? " is-hidden" : ""}" data-i="${i}">
+                <button type="button" class="cat-grip" aria-label="Geser untuk mengurutkan ${escapeHtml(m.nama)} (atau tekan panah atas/bawah)" title="Geser untuk mengurutkan">${icon("grip")}</button>
+                <span class="sort-pos num">${i + 1}</span>
+                <div class="thumb">${thumb(m)}</div>
+                <div class="cat-main">
+                    <span class="row-title">${escapeHtml(m.nama)}</span>
+                    <span class="small muted">${[
+                        featured ? escapeHtml(m.kategori || "Lainnya") : "",
+                        m.tersembunyi ? "Disembunyikan dari kasir" : ""
+                    ].filter(Boolean).join(" · ")}</span>
+                </div>
+            </li>`).join("");
+
+    }
+
+
+    async function saveSort(previous){
+
+        try{
+
+            const data = await api("/api/menu/order", {
+                method: "PUT",
+                body: { ids: sortDraft.map(m => m.id), featured: sortGroup === FEATURED }
+            });
+
+            App.setMenus(data.menus, data.categories, data.featuredOrder);
+
+        }catch(error){
+
+            toast(error.message, "error");
+
+            sortDraft = previous;
+            renderSort();
+
+        }
+
+    }
+
+
+    function bindSort(){
+
+        $("#sortProducts").addEventListener("click", openSort);
+
+        $("#sortGroup").addEventListener("change", e => {
+            sortGroup = e.target.value;
+            loadSortDraft();
+            renderSort();
+        });
+
+        bindSortable($("#sortList"), $("#sortDialog"), order => {
+
+            const previous = sortDraft;
+
+            sortDraft = order.map(i => previous[i]);
+            renderSort();
+
+            if(order.some((from, to) => from !== to)){
+                saveSort(previous);
             }
 
         });
@@ -1362,6 +1521,7 @@
 
         bindMenu();
         bindCategories();
+        bindSort();
 
         $("#settingsForm").addEventListener("submit", saveSettings);
         $("#koreksiForm").addEventListener("submit", saveKoreksi);

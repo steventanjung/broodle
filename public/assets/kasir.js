@@ -180,31 +180,32 @@
        KATALOG
        ================================================= */
 
+    /* Produk yang disembunyikan admin tidak tampil di kasir sama sekali (juga di pencarian). */
+    const shownMenus = () => App.menus.filter(m => !m.tersembunyi);
+
+
     function visibleMenus(active){
 
         const q = query.trim().toLowerCase();
 
-        return App.menus.filter(m => {
+        if(q){
+            return shownMenus().filter(m => m.nama.toLowerCase().includes(q));
+        }
 
-            if(q){
-                return m.nama.toLowerCase().includes(q);
-            }
+        if(active === "__unggulan"){
+            return App.featuredMenus().filter(m => !m.tersembunyi);
+        }
 
-            if(active === "__unggulan"){
-                return m.unggulan;
-            }
-
-            return active === "__semua" || m.kategori === active;
-
-        });
+        return shownMenus().filter(m => active === "__semua" || m.kategori === active);
 
     }
 
 
     function renderCategories(){
 
-        const hasFeatured = App.menus.some(m => m.unggulan);
-        const cats = App.categories();
+        const shown = shownMenus();
+        const hasFeatured = shown.some(m => m.unggulan);
+        const cats = App.categories().filter(c => shown.some(m => (m.kategori || "Lainnya") === c));
 
         const valid =
             category === "__semua" ||

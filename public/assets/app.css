@@ -519,6 +519,10 @@ button.row{ width:100%; border:0; border-bottom:1px solid var(--border); backgro
 .star-toggle[aria-pressed="true"]{ color:#b7791f; }
 .star-toggle[aria-pressed="true"] .i{ fill:currentColor; }
 
+.hide-toggle{ color:var(--border-strong); }
+.hide-toggle[aria-pressed="true"]{ color:var(--text-2); }
+.row.is-hidden .thumb, .row.is-hidden .row-main > :not(.row-title), .row.is-hidden .row-price{ opacity:.5; }
+
 .group-label{
     padding:8px 16px; background:var(--surface-2);
     font-size:12px; font-weight:700; color:var(--text-2);
@@ -1009,6 +1013,12 @@ dialog:focus{ outline:none; }
 .cat-list.is-sorting{ user-select:none; }
 .cat-row .btn-danger:disabled{ opacity:.3; }
 @media (pointer:coarse){ .cat-grip{ width:44px; } }
+
+/* --- urutkan produk --- */
+.sort-row{ align-items:center; padding:6px 0; }
+.sort-row .thumb{ width:40px; height:40px; }
+.sort-row.is-hidden .thumb, .sort-row.is-hidden .row-title{ opacity:.5; }
+.sort-pos{ width:20px; flex:none; text-align:right; font-size:13px; color:var(--muted); }
 
 .label-row{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
 .link-btn{ border:0; background:none; padding:4px 0; color:var(--accent); font-size:13px; font-weight:600; }

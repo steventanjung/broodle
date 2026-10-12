@@ -604,6 +604,22 @@ async function handleMenuUpdate(req, res, user, id){
 }
 
 
+async function handleMenuSort(req, res, user){
+
+    const payload = await readJson(req);
+    const result = menu.sort(payload.ids, { featured: payload.featured === true });
+
+    if(!result.ok){
+        return json(res, 400, { error: result.error });
+    }
+
+    console.log(`[menu] urutan ${payload.featured === true ? "Best Seller" : "produk"} diatur oleh ${user.username}`);
+
+    json(res, 200, result.data);
+
+}
+
+
 function handleMenuDelete(req, res, user, id){
 
     const result = menu.remove(id);
@@ -1104,6 +1120,7 @@ const ROUTES = [
     ["POST",   /^\/api\/backup\/restore$/,              handleBackupRestore,      "superadmin"],
     ["PUT",    /^\/api\/categories$/,                   handleCategoriesSave,     "superadmin"],
     ["POST",   /^\/api\/menu$/,                          handleMenuCreate,         "superadmin"],
+    ["PUT",    /^\/api\/menu\/order$/,                    handleMenuSort,           "superadmin"],
     ["PUT",    /^\/api\/menu\/([\w-]{6,80})$/,           handleMenuUpdate,         "superadmin"],
     ["DELETE", /^\/api\/menu\/([\w-]{6,80})$/,           handleMenuDelete,         "superadmin"],
     ["POST",   /^\/api\/menu\/([\w-]{6,80})\/image$/,    handleMenuImage,          "superadmin"],

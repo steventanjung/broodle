@@ -472,6 +472,9 @@
                 <button id="manageCategories" type="button" class="btn">
                     <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#tag"/></svg>Kategori
                 </button>
+                <button id="sortProducts" type="button" class="btn">
+                    <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#grip"/></svg>Urutkan
+                </button>
                 <button id="addProduct" type="button" class="btn btn-primary">
                     <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#plus"/></svg>Tambah produk
                 </button>
@@ -492,7 +495,7 @@
         </div>
 
         <p class="hint" style="margin-top:10px">
-            Ketuk produk untuk mengubah. Bintang menandai produk di tab Best Seller pada layar kasir.
+            Ketuk produk untuk mengubah. Bintang menandai produk di tab Best Seller pada layar kasir; ikon mata menyembunyikan produk dari kasir. Atur urutan tampil lewat Urutkan.
         </p>
 
     </div>
@@ -809,6 +812,12 @@
             </label>
 
             <label class="switch">
+                <input type="checkbox" name="tersembunyi">
+                <span class="switch-track"></span>
+                <span class="switch-text">Sembunyikan dari kasir<small>Produk tidak tampil di layar kasir; data dan riwayat penjualan tetap tersimpan</small></span>
+            </label>
+
+            <label class="switch">
                 <input type="checkbox" name="adaVarian">
                 <span class="switch-track"></span>
                 <span class="switch-text">Punya varian<small>Untuk produk yang memiliki variasi</small></span>
@@ -878,6 +887,24 @@
             <button id="categorySave" type="submit" class="btn btn-primary">Simpan</button>
         </div>
     </form>
+</dialog>
+
+
+<dialog id="sortDialog" autofocus data-lock>
+    <div class="dialog-head">
+        <h2>Urutkan produk</h2>
+        <button type="button" class="btn btn-ghost btn-icon btn-sm" data-close aria-label="Tutup">
+            <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#x"/></svg>
+        </button>
+    </div>
+    <div class="dialog-body">
+        <select id="sortGroup" class="input" aria-label="Pilih daftar yang diurutkan"></select>
+        <p class="hint">Geser pegangan di kiri untuk mengatur urutan produk di layar kasir. Urutan langsung tersimpan.</p>
+        <ul id="sortList" class="cat-list"></ul>
+    </div>
+    <div class="dialog-foot">
+        <button type="button" class="btn btn-primary" data-close>Selesai</button>
+    </div>
 </dialog>
 
 

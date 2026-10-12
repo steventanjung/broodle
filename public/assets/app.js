@@ -209,16 +209,25 @@ const App = (() => {
 
     try{ categoryList = JSON.parse(localStorage.getItem("categoryCache")) || []; }catch(e){}
 
+    /* Urutan tab Best Seller (id produk), diatur admin lewat dialog Urutkan. */
+    let featuredOrder = [];
+
+    try{ featuredOrder = JSON.parse(localStorage.getItem("featuredCache")) || []; }catch(e){}
+
     /* "loading" hanya kalau belum ada salinan lokal sama sekali. */
     let menuStatus = menus.length ? "ready" : "loading";
     let lastMenuFetch = 0;
 
-    function setMenus(list, order){
+    function setMenus(list, order, featured){
         menus = list;
         localStorage.setItem("menuCache", JSON.stringify(list));
         if(Array.isArray(order)){
             categoryList = order;
             localStorage.setItem("categoryCache", JSON.stringify(order));
+        }
+        if(Array.isArray(featured)){
+            featuredOrder = featured;
+            localStorage.setItem("featuredCache", JSON.stringify(featured));
         }
         emit("menus", list);
     }
@@ -242,6 +251,7 @@ const App = (() => {
 
             /* Tidak ada yang berubah: jangan render ulang (kartu tidak berkedip). */
             const order = data.categories || [];
+            const featured = data.featuredOrder || [];
 
             if(data.settings && JSON.stringify({ ...settings, ...data.settings }) !== JSON.stringify(settings)){
                 setSettings(data.settings);
@@ -249,8 +259,9 @@ const App = (() => {
 
             if(hadNothing ||
                JSON.stringify(data.menus) !== JSON.stringify(menus) ||
-               JSON.stringify(order) !== JSON.stringify(categoryList)){
-                setMenus(data.menus, order);
+               JSON.stringify(order) !== JSON.stringify(categoryList) ||
+               JSON.stringify(featured) !== JSON.stringify(featuredOrder)){
+                setMenus(data.menus, order, featured);
             }
 
         }catch(error){
@@ -307,6 +318,18 @@ const App = (() => {
         const ordered = [...categoryList, ...used.filter(c => !categoryList.includes(c))];
 
         return all ? ordered : ordered.filter(c => used.includes(c));
+
+    }
+
+
+    /* Produk Best Seller sesuai urutan admin; yang belum ada di urutan (baru diberi bintang) di belakang. */
+    function featuredMenus(){
+
+        const rank = new Map(featuredOrder.map((id, i) => [id, i]));
+
+        return menus
+            .filter(m => m.unggulan)
+            .sort((a, b) => ((rank.get(a.id) ?? Infinity) - (rank.get(b.id) ?? Infinity)) || 0);
 
     }
 
@@ -579,7 +602,7 @@ const App = (() => {
         on, emit,
         get menus(){ return menus; }, get menuStatus(){ return menuStatus; },
         get settings(){ return settings; }, setSettings,
-        setMenus, refreshMenus, categories,
+        setMenus, refreshMenus, categories, featuredMenus,
         registerView, showView,
         toast, confirmDialog, busy,
         start

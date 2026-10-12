@@ -92,6 +92,7 @@ function load(){
 
             cache = parsed;
             ensureCategories(cache);
+            syncFeatured(cache);
             cacheMtime = fileMtime();
             return cache;
 
@@ -108,6 +109,7 @@ function load(){
     cache = { menus: DEFAULT_MENUS, updatedAt: Date.now() };
 
     ensureCategories(cache);
+    syncFeatured(cache);
 
     persist();
 
@@ -154,6 +156,24 @@ function addCategory(data, name){
 
 
 /*
+ * Urutan tab Best Seller di kasir, terpisah dari urutan menu
+ * (produk Best Seller berasal dari banyak kategori). Produk yang
+ * baru diberi bintang masuk paling belakang; yang dilepas bintangnya
+ * keluar dari daftar.
+ */
+
+function syncFeatured(data){
+
+    const featured = data.menus.filter(m => m.unggulan).map(m => m.id);
+    const kept = (Array.isArray(data.featuredOrder) ? data.featuredOrder : [])
+        .filter(id => featured.includes(id));
+
+    data.featuredOrder = [...new Set([...kept, ...featured])];
+
+}
+
+
+/*
  * Tulis ke file sementara lalu rename: kalau server
  * mati di tengah penulisan, menus.json lama tetap utuh.
  */
@@ -161,6 +181,8 @@ function addCategory(data, name){
 function persist(){
 
     cache.updatedAt = Date.now();
+
+    syncFeatured(cache);
 
     const tmp = MENU_FILE + ".tmp";
 
@@ -334,6 +356,8 @@ function sanitize(input, existing){
             harga,
             kategori,
             unggulan: Boolean(src.unggulan ?? base.unggulan),
+            /* Disembunyikan: tidak tampil di kasir, data & riwayat tetap ada. */
+            tersembunyi: Boolean(src.tersembunyi ?? base.tersembunyi),
             hargaKustom,
             hargaGrab: adaVarian ? null : grab.value,
             adaVarian,
@@ -507,6 +531,48 @@ function reorder(ids){
 }
 
 
+/*
+ * Urutan dari dialog Urutkan (geser):
+ *   featured: true   ids = urutan tab Best Seller
+ *   featured: false  ids = produk satu kategori dalam urutan baru;
+ *                    hanya posisi produk-produk itu yang ditukar,
+ *                    produk lain tidak bergeser.
+ */
+
+function sort(ids, { featured = false } = {}){
+
+    const data = load();
+    const byId = new Map(data.menus.map(m => [m.id, m]));
+
+    if(!Array.isArray(ids) || ids.length === 0 || ids.length > data.menus.length ||
+       new Set(ids).size !== ids.length){
+        return { ok: false, error: "Daftar urutan tidak valid." };
+    }
+
+    if(ids.some(id => !byId.has(id))){
+        return { ok: false, error: "Ada produk yang sudah berubah. Muat ulang halaman." };
+    }
+
+    if(featured){
+
+        data.featuredOrder = ids;
+
+    }else{
+
+        const picked = new Set(ids);
+        const queue = ids.map(id => byId.get(id));
+
+        data.menus = data.menus.map(m => picked.has(m.id) ? queue.shift() : m);
+
+    }
+
+    persist();
+
+    return { ok: true, data };
+
+}
+
+
 function remove(id){
 
     const data   = load();
@@ -531,6 +597,7 @@ module.exports = {
     create,
     update,
     reorder,
+    sort,
     saveCategories,
     remove
 };
