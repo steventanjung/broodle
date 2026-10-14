@@ -287,7 +287,7 @@
                     </ul>
                 </details>` : ""}`;
 
-            if(s.readonly){
+            if(s.readonly && s.status === "aktif"){
                 $("#saleFoot").innerHTML = `<span class="small muted" style="align-self:center">${s.utang ? "Nota utang: lunasi atau batalkan lewat tab Utang." : "Nota lama: ubah langsung di Google Sheets."}</span>
                     <button type="button" class="btn" data-close>Tutup</button>`;
                 return;

@@ -11,7 +11,7 @@
  * akun). Superadmin tidak diminta password.
  *
  * Penjualan utang tidak ada di sini: utang dibatalkan lewat tab Utang.
- * Utang yang dibatalkan ikut hilang dari Riwayat dan Laporan.
+ * Utang yang dibatalkan ikut tercatat "batal" di Riwayat dan hilang dari Laporan.
  */
 
 const fs   = require("node:fs");
@@ -93,8 +93,8 @@ const day = iso => new Date(iso).toLocaleDateString("sv-SE", { timeZone: "Asia/M
 
 const clean = value => String(value ?? "").trim();
 
-/* id utang yang dibatalkan = transactionId penjualannya. */
-const voidedDebtIds = () => new Set(debts.list().filter(d => d.void).map(d => d.id));
+/* Utang yang dibatalkan per id; id utang = transactionId penjualannya. */
+const voidedDebts = () => new Map(debts.list().filter(d => d.void).map(d => [d.id, d.void]));
 
 /*
  * Sheets menyimpan nota sebagai angka dan membuang nol di depan:
@@ -333,13 +333,7 @@ function view(sale){
  */
 function list({ user, setoran, from, to }){
 
-    const voided = voidedDebtIds();
-
     const sales = load().sales.filter(s => {
-
-        if(voided.has(s.id)){
-            return false;
-        }
 
         if(user.role !== "superadmin"){
             return s.kasir === user.username && !!setoran && s.setoran === setoran;
@@ -350,9 +344,17 @@ function list({ user, setoran, from, to }){
 
     });
 
+    const voided = voidedDebts();
+
+    /* Utang yang dibatalkan di tab Utang tampil sebagai nota batal. */
+    const withVoid = s => {
+        const v = voided.get(s.id);
+        return v ? { ...s, status: "batal", cancelledAt: v.at, cancelledBy: v.oleh, cancelReason: v.alasan } : s;
+    };
+
     return sales
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-        .map(view);
+        .map(s => view(withVoid(s)));
 
 }
 
@@ -628,7 +630,7 @@ async function edit(id, user, { password, alasan, qty, pembayaran, cashReceived 
 function applyToReport(text){
 
     const corrected = new Map(load().sales.filter(s => s.status === "batal" || s.history.length).map(s => [s.id, s]));
-    const voided = voidedDebtIds();
+    const voided = voidedDebts();
 
     if(corrected.size === 0 && voided.size === 0){
         return text;
