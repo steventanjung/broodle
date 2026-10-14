@@ -22,7 +22,7 @@
 
 <!-- =====================================================
      TOPBAR
-     Tab selain Kasir hanya tampil untuk superadmin.
+     Tab Menu untuk admin & owner; Laporan, Pengaturan, Akun hanya owner.
      Di HP, tab pindah ke bar bawah layar.
      ===================================================== -->
 
@@ -45,16 +45,16 @@
         <a class="tab" href="#totalan" data-view="totalan" hidden>
             <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#cash"/></svg>Totalan
         </a>
-        <a class="tab" href="#menu" data-view="menu" data-admin hidden>
+        <a class="tab" href="#menu" data-view="menu" data-staff hidden>
             <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#package"/></svg>Menu
         </a>
-        <a class="tab" href="#laporan" data-view="laporan" data-admin hidden>
+        <a class="tab" href="#laporan" data-view="laporan" data-owner hidden>
             <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#chart"/></svg>Laporan
         </a>
-        <a class="tab" href="#pengaturan" data-view="pengaturan" data-admin hidden>
+        <a class="tab" href="#pengaturan" data-view="pengaturan" data-owner hidden>
             <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#settings"/></svg>Pengaturan
         </a>
-        <a class="tab" href="#akun" data-view="akun" data-admin hidden>
+        <a class="tab" href="#akun" data-view="akun" data-owner hidden>
             <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#users"/></svg>Akun
         </a>
     </nav>
@@ -260,7 +260,7 @@
 
 
 <!-- =====================================================
-     UTANG (kasir & superadmin)
+     UTANG (semua peran)
      ===================================================== -->
 
 <main id="view-utang" class="view">
@@ -379,7 +379,7 @@
 
 
 <!-- =====================================================
-     PENGATURAN (superadmin)
+     PENGATURAN (owner)
      ===================================================== -->
 
 <main id="view-pengaturan" class="view">
@@ -401,7 +401,7 @@
                     <div class="set-row">
                         <div class="set-text">
                             <span class="set-label">Password koreksi kasir</span>
-                            <p class="set-help">Kasir wajib mengisi password ini untuk mengubah atau membatalkan nota yang sudah lunas. Superadmin tidak diminta. Kasih tahu password hanya ke yang dipercaya.</p>
+                            <p class="set-help">Kasir wajib mengisi password ini untuk mengubah atau membatalkan nota yang sudah lunas. Admin & owner tidak diminta. Kasih tahu password hanya ke yang dipercaya.</p>
                             <p id="koreksiStatus" class="set-help"></p>
                         </div>
                         <div class="set-control">
@@ -704,7 +704,7 @@
                 <p id="accountSummary"></p>
             </div>
             <button id="addAccount" type="button" class="btn btn-primary">
-                <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#plus"/></svg>Tambah kasir
+                <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#plus"/></svg>Tambah akun
             </button>
         </div>
 
@@ -712,8 +712,8 @@
 
         <div class="notice notice-info" style="margin-top:12px">
             <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#shield"/></svg>
-            <span>Demi keamanan, akun superadmin baru hanya bisa dibuat dari terminal server:
-                <code>node scripts/user.js add &lt;nama&gt; superadmin</code></span>
+            <span>Demi keamanan, akun owner baru hanya bisa dibuat dari terminal server:
+                <code>node scripts/user.js add &lt;nama&gt; owner</code></span>
         </div>
 
     </div>
@@ -911,7 +911,7 @@
 <dialog id="accountDialog" autofocus data-lock>
     <form id="accountForm" autocomplete="off">
         <div class="dialog-head">
-            <h2>Tambah akun kasir</h2>
+            <h2>Tambah akun</h2>
             <button type="button" class="btn btn-ghost btn-icon btn-sm" data-close aria-label="Tutup">
                 <svg class="i" aria-hidden="true"><use href="/assets/icons.svg#x"/></svg>
             </button>
@@ -927,6 +927,14 @@
                 <label class="label" for="aPass">Password</label>
                 <input id="aPass" name="password" class="input" type="password" required minlength="8" autocomplete="new-password">
                 <span class="hint">Minimal 8 karakter.</span>
+            </div>
+            <div class="field">
+                <label class="label" for="aRole">Peran</label>
+                <select id="aRole" name="role" class="input">
+                    <option value="kasir" selected>Kasir</option>
+                    <option value="admin">Admin</option>
+                </select>
+                <span class="hint">Admin: seperti kasir + tab Menu, bisa ubah / batalkan nota dan utang tanpa password koreksi.</span>
             </div>
         </div>
         <div class="dialog-foot">
@@ -976,7 +984,7 @@
                 <div class="avatar" id="profileAvatar"></div>
                 <div class="row-main">
                     <span class="row-title" id="profileName"></span>
-                    <span class="row-sub"><svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#shield"/></svg> Superadmin</span>
+                    <span class="row-sub"><svg class="i i-sm" aria-hidden="true"><use href="/assets/icons.svg#shield"/></svg> Owner</span>
                 </div>
             </div>
             <h3 style="font-size:14px">Ganti password</h3>

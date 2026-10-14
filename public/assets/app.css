@@ -922,7 +922,7 @@ a.badge{ text-decoration:none; }
 @media (max-width:900px){ .kpis.kpis-6{ grid-template-columns:1fr 1fr; } }
 
 /*
- * Tablet potret dengan semua tab superadmin: nama pengguna disembunyikan
+ * Tablet potret dengan semua tab owner: nama pengguna disembunyikan
  * (ada di dialog Profil) dan tab dirapatkan supaya topbar tidak melebar.
  */
 @media (max-width:1100px) and (min-width:761px){

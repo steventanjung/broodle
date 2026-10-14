@@ -23,7 +23,8 @@
 
     let shift = read(SHIFT_KEY, null);
 
-    const isKasir = () => App.session?.role === "kasir";
+    /* Kasir & admin buka / tutup setoran; owner tidak. */
+    const isKasir = () => App.session?.role === "kasir" || App.session?.role === "admin";
     const isOpen = () => !!shift && !shift.closedAt;
 
     const emptyTotals = () => ({ cash: 0, qris: 0, transfer: 0, debit: 0, grab: 0, utang: 0, cashPay: 0, qrisPay: 0, transferPay: 0, debitPay: 0, count: 0 });
@@ -359,7 +360,7 @@
 
     App.on("ready", () => {
 
-        /* Setoran tertunda dari kasir lain di tablet ini ikut terkirim walau yang login superadmin. */
+        /* Setoran tertunda dari kasir lain di tablet ini ikut terkirim walau yang login owner. */
         flush();
 
         $(".tab[data-view=totalan]").hidden = !isKasir();

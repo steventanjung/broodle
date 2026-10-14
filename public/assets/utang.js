@@ -1,9 +1,9 @@
 /* =====================================================
    UTANG
    Daftar utang pelanggan, pelunasan (sekaligus, tidak dicicil),
-   cetak ulang nota & bukti bayar. Kasir dan superadmin
-   sama-sama bisa mencatat pembayaran; hanya superadmin
-   yang bisa membatalkan utang (dijaga juga di server).
+   cetak ulang nota & bukti bayar. Semua peran bisa
+   mencatat pembayaran; hanya admin & owner yang bisa
+   membatalkan utang (dijaga juga di server).
    ===================================================== */
 
 (() => {
@@ -294,7 +294,7 @@
         const canPay = d.status === "belum";
 
         $("#debtPayForm").hidden = !canPay;
-        $("#debtVoid").hidden = !App.isSuperadmin();
+        $("#debtVoid").hidden = !App.isStaff();
 
         if(canPay){
             renderPayButton();

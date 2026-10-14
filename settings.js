@@ -1,5 +1,5 @@
 /*
- * Pengaturan toko (data/settings.json), diubah superadmin di tab
+ * Pengaturan toko (data/settings.json), diubah owner di tab
  * Pengaturan. Setiap pengaturan didefinisikan sekali di SCHEMA —
  * menambah pengaturan baru cukup menambah satu entri di sini dan
  * satu di SETTINGS (public/assets/admin.js).

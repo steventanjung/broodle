@@ -3,11 +3,13 @@
 A web-based point of sale (kasir) for Kukikoe. Transactions go to Google Sheets through an Apps Script, receipts print to a Bluetooth thermal printer through Cleanter, and the kasir keeps working offline (unsent transactions are queued on the device and uploaded when the connection returns).
 
 - **Kasir** — product grid, cart, payment by Cash, QRIS, Transfer BCA, Debit, Grab (Grab prices) or Utang (credit), receipt printing, receipt preview
-- **Menu** (superadmin) — products, prices, Best Seller, photos, optional variants (e.g. flavors) each with their own price, and categories (create — even before any product uses them — rename, merge, delete empty ones, and set the order of the category buttons on the kasir; the product form picks from this list)
-- **Utang** (kasir & superadmin) — sales on credit: list of unpaid invoices, paid off in full in one payment (no installments), reprints
-- **Laporan** (superadmin) — sales report from Google Sheets
-- **Riwayat** (kasir & superadmin) — paid invoices; edit or cancel them (kasir needs the superadmin's correction password)
-- **Akun** (superadmin) — kasir accounts
+- **Menu** (admin & owner) — products, prices, Best Seller, photos, optional variants (e.g. flavors) each with their own price, and categories (create — even before any product uses them — rename, merge, delete empty ones, and set the order of the category buttons on the kasir; the product form picks from this list)
+- **Utang** (all roles) — sales on credit: list of unpaid invoices, paid off in full in one payment (no installments), reprints
+- **Laporan** (owner) — sales report from Google Sheets
+- **Riwayat** (all roles) — paid invoices; edit or cancel them (kasir needs the owner's correction password)
+- **Akun** (owner) — kasir & admin accounts
+
+**Roles:** **kasir** sells, handles Utang and its own Riwayat. **admin** = kasir + the Menu tab, sees all invoices in Riwayat, and edits/cancels invoices and debts without the correction password. **owner** has full access (Laporan, Pengaturan, Akun). Accounts created before this change with the old `superadmin` role are treated as `owner` automatically.
 
 No npm dependencies — only Node.js built-ins.
 
@@ -30,8 +32,8 @@ cp .env.example .env
 #    generate a secret with:
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
-# 2. Create the first superadmin (password is asked interactively)
-node scripts/user.js add admin superadmin
+# 2. Create the first owner (password is asked interactively)
+node scripts/user.js add owner owner
 
 # 3. Start
 npm start          # or: npm run dev   (restarts on file changes)
@@ -51,12 +53,12 @@ On first start the server creates `data/menus.json` with the default 14 products
 | `APPS_SCRIPT_SUBMIT_URL` | yes | Apps Script web app URL (`doPost`) that receives transactions. |
 | `APPS_SCRIPT_REPORT_URL` | yes | Apps Script URL (`doGet`) that returns the sales rows for the report. |
 | `SESSION_SECRET` | yes | At least 32 characters. Changing it logs everyone out. |
-| `ADMIN_SESSION_MINUTES` | no | Superadmin is logged out after this many minutes **without activity** (each action renews it; a warning appears one minute before). Default `15`. Kasir stay logged in until they log out themselves. |
+| `ADMIN_SESSION_MINUTES` | no | Owner is logged out after this many minutes **without activity** (each action renews it; a warning appears one minute before). Default `15`. Kasir & admin stay logged in until they log out themselves. |
 | `SECURE_COOKIE` | no | `true` when served over HTTPS (required in production). |
 | `TRUST_PROXY` | no | `true` **only** behind Nginx/Caddy, so login rate-limiting uses the real client IP. Leave `false` otherwise — the header can be spoofed. |
 | `DATA_DIR` | no | Where accounts and menu are stored. Default `./data`. |
 | `UPLOADS_DIR` | no | Where product photos are stored. Default `./uploads`. |
-| `INITIAL_ADMIN_USERNAME` / `INITIAL_ADMIN_PASSWORD` | no | Creates the first superadmin on startup **only if no account exists yet**. For hosts without an interactive terminal. Remove both after the first login. |
+| `INITIAL_ADMIN_USERNAME` / `INITIAL_ADMIN_PASSWORD` | no | Creates the first owner on startup **only if no account exists yet**. For hosts without an interactive terminal. Remove both after the first login. |
 
 Locally these come from `.env` (loaded automatically if the file exists). On a hosting platform, set them in its dashboard instead — `.env` is not needed there.
 
@@ -66,17 +68,18 @@ Locally these come from `.env` (loaded automatically if the file exists). On a h
 
 ## Managing accounts
 
-Kasir accounts can be created, reset and deleted from the **Akun** tab.
-Superadmin accounts can **only** be created from the server terminal, on purpose — a stolen browser session cannot create new superadmins.
+Kasir and admin accounts can be created, reset and deleted from the **Akun** tab.
+Owner accounts can **only** be created from the server terminal, on purpose — a stolen browser session cannot create new owners.
 
 ```bash
-node scripts/user.js add <username> <kasir|superadmin>
+node scripts/user.js add <username> <kasir|admin|owner>
 node scripts/user.js passwd <username>
 node scripts/user.js list
 node scripts/user.js remove <username>
+node scripts/user.js rename <username> <new-username>   # keeps role & password
 ```
 
-The last superadmin cannot be removed.
+The last owner cannot be removed.
 
 ---
 
@@ -152,10 +155,10 @@ SECURE_COOKIE=true
 TRUST_PROXY=true
 ```
 
-Create the superadmin:
+Create the owner:
 
 ```bash
-sudo -u broodle node scripts/user.js add admin superadmin
+sudo -u broodle node scripts/user.js add owner owner
 ```
 
 ### 2. Run it as a service (systemd)
@@ -242,7 +245,7 @@ Sessions survive restarts as long as `SESSION_SECRET` stays the same. Browsers p
 
 ## Grab orders
 
-- **Prices.** Each product (and each variant) has its own **Harga Grab**, set by the superadmin in the Menu tab. The form suggests "+25%" as a starting point; type the rounded price used in the Grab app. The menu list flags products that have no Grab price yet.
+- **Prices.** Each product (and each variant) has its own **Harga Grab**, set by an admin or owner in the Menu tab. The form suggests "+25%" as a starting point; type the rounded price used in the Grab app. The menu list flags products that have no Grab price yet.
 - **Selling.** Add products as usual, then choose **Grab** as the payment method. All prices in the cart switch to the Grab prices; switching back restores the normal prices. Bayar is blocked while any product in the cart has no Grab price.
 - **Invoice vs. sales.** The invoice prints the Grab prices. What is saved as the sale (Google Sheets, Laporan, setoran) is each Grab price **minus the Grab commission** — e.g. Grab Rp50.000 with 20% → Rp40.000. The gross total and the commission used are sent along (`grabTotal`, `grabPotongan`).
 - **Commission.** Set in the **Pengaturan** tab (default 20%). It applies to new sales only.
@@ -263,8 +266,8 @@ One sale paid in full with two methods, e.g. Rp50.000 = Rp25.000 Cash + Rp25.000
 
 The **Riwayat** tab lists paid invoices. Tap one to **Ubah nota** (change item quantities — 0 removes an item — and the payment method Cash / QRIS / Transfer BCA / Debit) or **Batalkan nota**. A reason is required, and every change is kept in the invoice's history. After an edit the corrected receipt can be reprinted.
 
-- **Kasir** only sees invoices from their own current setoran and must enter the **correction password**. Superadmin sees any date range and is never asked for a password.
-- **Setting the password.** Superadmin: **Pengaturan → Koreksi nota → Atur password** (min. 6 characters, use something different from the account password). Until it is set, kasir cannot correct anything. Five wrong attempts lock that kasir out for 5 minutes. The password is checked on the server and stored hashed.
+- **Kasir** only sees invoices from their own current setoran and must enter the **correction password**. Admin and owner see any date range and are never asked for a password.
+- **Setting the password.** Owner: **Pengaturan → Koreksi nota → Atur password** (min. 6 characters, use something different from the account password). Until it is set, kasir cannot correct anything. Five wrong attempts lock that kasir out for 5 minutes. The password is checked on the server and stored hashed.
 - **Not editable.** Grab and split-payment invoices can only be cancelled (then re-entered). Prices cannot be changed. Credit sales (Utang) are cancelled from the Utang tab.
 - **Totalan / Laporan.** The kasir's running Totalan is adjusted right away (only for the setoran in progress). Laporan applies the corrections on top of the Google Sheets rows. **The sheet itself is not changed**, so fix the row there if you need the sheet to match.
 - **Data.** Invoices are copied to `data/sales.json` (included in the backup) when they are submitted. Invoices from before this feature existed, or still waiting in the offline queue, are not listed. Editing / cancelling needs the internet.
@@ -273,14 +276,14 @@ The **Riwayat** tab lists paid invoices. Tap one to **Ubah nota** (change item q
 
 ## Setoran (kasir shifts)
 
-Only **kasir** accounts open and close a setoran; superadmin is never asked.
+Only **kasir** and **admin** accounts open and close a setoran; the owner is never asked.
 
 1. **Login → Buka kasir.** The kasir confirms the cash in the drawer (*uang modal*, pre-filled Rp300.000) and starts selling.
 2. **Totalan tab.** Shows the running total of the current setoran only: *Tunai di laci* (modal + cash sales + debt payments in cash), *QRIS*, *Transfer BCA* and *Debit* (sales + debt payments by that method).
 3. **Logout → Tutup kasir.** The same totals are shown so the kasir can match them with the physical cash and the QRIS / bank statements, then the setoran is closed and they are logged out. Nothing has to be typed. Logging in again starts a new setoran.
 4. **Left open?** Closing the browser during a setoran shows the browser's own "leave page?" warning (some tablets cannot show it). If a setoran is still open at the next login, the kasir must close it first before opening a new one.
 
-Every sale is tagged with the kasir and setoran (extra fields `kasir`, `setoran` sent to Google Sheets). Setoran records are saved in `data/shifts.json` and listed for the superadmin under **Laporan → Setoran kasir** for the selected dates. Totals are counted on the tablet, so sales made offline are included.
+Every sale is tagged with the kasir and setoran (extra fields `kasir`, `setoran` sent to Google Sheets). Setoran records are saved in `data/shifts.json` and listed for the owner under **Laporan → Setoran kasir** for the selected dates. Totals are counted on the tablet, so sales made offline are included.
 
 ---
 
@@ -289,7 +292,7 @@ Every sale is tagged with the kasir and setoran (extra fields `kasir`, `setoran`
 1. At the kasir, choose **Utang** as the payment method and press **Catat utang**. Enter the customer's name (required), and optionally a phone number, due date and note. The invoice prints immediately, marked **UTANG – BELUM LUNAS** with the balance.
 2. The debt appears in the **Utang** tab (the tab shows how many are open). Tap one to see the invoice, then pick the method (Cash, QRIS, Transfer BCA or Debit) and press **Lunasi**. A debt is always paid off in full in one payment — no installments (the server rejects any other amount). A payment receipt prints and the debt becomes **Lunas**. Debts that were partly paid before this rule keep their history; the remaining balance is paid in one go.
 3. **Cetak ulang nota** reprints the invoice with the latest paid/remaining amounts. Each payment in the history has its own reprint button.
-4. Only a superadmin can **cancel** a debt (a reason is required). It is kept, marked *Dibatalkan*, and can no longer be paid.
+4. Only an admin or owner can **cancel** a debt (a reason is required). It is kept, marked *Dibatalkan*, and can no longer be paid.
 
 **Where the data lives.** The sale itself goes to Google Sheets like any other, with payment `Utang` (plus `pelanggan`, `telepon`, `jatuhTempo`, `catatan` fields your Apps Script may ignore). The debt and its payments live in `data/debts.json` on the server — **back this file up**; it is the only record of who still owes what. Debt payments are not sent to Google Sheets.
 
@@ -341,7 +344,7 @@ Everything that matters at runtime lives in two folders, both outside git:
 
 Transactions themselves are in Google Sheets.
 
-**From the app (any host, any plan):** as superadmin, open **Pengaturan → Data → Unduh**. You get one file, `broodle-cadangan-YYYY-MM-DD.json`, with everything in `data/` plus the product photos. Keep it private: it contains password hashes and customer debts. **Pulihkan** uploads such a file and replaces all data with it. Before replacing, the server saves the current data to `data/backups/sebelum-pulihkan-*.json` (last 3 kept), so a wrong restore can be undone by restoring that file. A backup must contain at least one superadmin account.
+**From the app (any host, any plan):** as owner, open **Pengaturan → Data → Unduh**. You get one file, `broodle-cadangan-YYYY-MM-DD.json`, with everything in `data/` plus the product photos. Keep it private: it contains password hashes and customer debts. **Pulihkan** uploads such a file and replaces all data with it. Before replacing, the server saves the current data to `data/backups/sebelum-pulihkan-*.json` (last 3 kept), so a wrong restore can be undone by restoring that file. A backup must contain at least one owner account (old backups with a `superadmin` account still work).
 
 **From the server shell:**
 
@@ -440,7 +443,7 @@ data/               runtime data (gitignored)
 uploads/            uploaded product photos (gitignored)
 ```
 
-Access rules are enforced in `server.js`: everything except the login page and static assets requires a session, and menu changes, reports and account management require `superadmin`. Hiding tabs in the UI is only cosmetic.
+Access rules are enforced in `server.js`: everything except the login page and static assets requires a session, menu changes and cancelling debts require `admin` or `owner`, and reports, settings, backups and account management require `owner`. Hiding tabs in the UI is only cosmetic.
 
 ---
 
@@ -450,7 +453,7 @@ Access rules are enforced in `server.js`: everything except the login page and s
 |---|---|
 | Server exits with "ENV belum lengkap" | Fill both `APPS_SCRIPT_*` URLs in `.env`. |
 | Server exits about `SESSION_SECRET` | Must be at least 32 characters. |
-| "Belum ada akun" warning | Run `node scripts/user.js add admin superadmin`. |
+| "Belum ada akun" warning | Run `node scripts/user.js add owner owner`. |
 | Login works locally but not on the domain | Over HTTPS set `SECURE_COOKIE=true`; over plain HTTP it must be `false`. |
 | "Terlalu banyak percobaan" for everyone | Behind a proxy without `TRUST_PROXY=true`, all users share the proxy's IP. Set it to `true`. |
 | "Printer tidak terhubung" | Check Bluetooth pairing, that Cleanter is running, and RPP02N is selected in Cleanter. |

@@ -26,7 +26,16 @@ const USERS_FILE =
     path.join(DATA_DIR, "users.json");
 
 
-const ROLES = ["kasir", "superadmin"];
+/*
+ * kasir : tab Kasir, Utang, Riwayat (setoran sendiri, koreksi pakai password).
+ * admin : seperti kasir + tab Menu, semua nota di Riwayat, koreksi nota &
+ *         batal utang tanpa password.
+ * owner : semua akses (dulu bernama "superadmin").
+ */
+const ROLES = ["kasir", "admin", "owner"];
+
+/* Nama peran lama di users.json / sesi / cadangan. */
+const normalizeRole = role => role === "superadmin" ? "owner" : role;
 
 
 /* =====================================================
@@ -166,7 +175,8 @@ function loadUsers(){
 
             const parsed = JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
 
-            usersCache = Array.isArray(parsed.users) ? parsed.users : [];
+            usersCache = (Array.isArray(parsed.users) ? parsed.users : [])
+                .map(u => ({ ...u, role: normalizeRole(u.role) }));
             usersMtime = mtime;
 
         }catch(error){
@@ -212,8 +222,8 @@ function findUser(username){
    KELOLA AKUN
    -----------------------------------------------------
    Dipakai bersama oleh scripts/user.js (CLI) dan
-   server.js (panel akun superadmin), supaya aturannya
-   (panjang password, tidak boleh hapus superadmin
+   server.js (panel akun owner), supaya aturannya
+   (panjang password, tidak boleh hapus owner
    terakhir, dst) hanya didefinisikan satu kali.
    ===================================================== */
 
@@ -313,26 +323,26 @@ function createUser(username, password, role){
 
 
 /*
- * Tidak boleh menyisakan 0 superadmin — kalau itu
+ * Tidak boleh menyisakan 0 owner — kalau itu
  * terjadi, tidak ada lagi yang bisa login ke halaman
  * Kelola Akun untuk memperbaikinya.
  */
 
-function wouldRemoveLastSuperadmin(users, usernameToRemove){
+function wouldRemoveLastOwner(users, usernameToRemove){
 
     const wanted =
         String(usernameToRemove || "")
         .trim()
         .toLowerCase();
 
-    const remainingSuperadmins =
+    const remainingOwners =
         users.filter(
             u =>
-                u.role === "superadmin" &&
+                u.role === "owner" &&
                 u.username.toLowerCase() !== wanted
         ).length;
 
-    return remainingSuperadmins === 0;
+    return remainingOwners === 0;
 
 }
 
@@ -351,11 +361,11 @@ function removeUser(username){
         };
     }
 
-    if(wouldRemoveLastSuperadmin(users, target.username)){
+    if(wouldRemoveLastOwner(users, target.username)){
         return {
             ok:false,
             error:
-                "Tidak boleh menghapus superadmin terakhir."
+                "Tidak boleh menghapus owner terakhir."
         };
     }
 
@@ -365,6 +375,54 @@ function removeUser(username){
         );
 
     saveUsers(kept);
+
+    return { ok:true };
+
+}
+
+
+/*
+ * Ganti username; peran & password tetap. Riwayat lama
+ * (nota, setoran, utang, Sheets) tetap atas nama lama —
+ * itu catatan siapa yang mengerjakan saat itu.
+ * Sesi nama lama otomatis tidak berlaku (akunnya tidak ada lagi).
+ */
+
+function renameUser(username, newUsername){
+
+    const target = findUser(username);
+
+    if(!target){
+        return {
+            ok:false,
+            error:`Akun "${username}" tidak ditemukan.`
+        };
+    }
+
+    const trimmed =
+        String(newUsername || "").trim();
+
+    const usernameError =
+        validateUsername(trimmed);
+
+    if(usernameError){
+        return { ok:false, error:usernameError };
+    }
+
+    const taken = findUser(trimmed);
+
+    if(taken && taken.username !== target.username){
+        return {
+            ok:false,
+            error:`Akun "${trimmed}" sudah ada.`
+        };
+    }
+
+    const users = loadUsers();
+
+    users.find(u => u.username === target.username).username = trimmed;
+
+    saveUsers(users);
 
     return { ok:true };
 
@@ -585,13 +643,15 @@ function readSession(token, secret){
         return null;
     }
 
-    if(!ROLES.includes(data.r)){
+    const role = normalizeRole(data.r);
+
+    if(!ROLES.includes(role)){
         return null;
     }
 
     return {
         username: data.u,
-        role: data.r,
+        role,
         expiresAt: data.e,
         issuedAt: Number(data.i) || 0
     };
@@ -671,7 +731,9 @@ module.exports = {
     validatePassword,
     createUser,
     removeUser,
+    renameUser,
     resetPassword,
     changePassword,
-    wouldRemoveLastSuperadmin
+    wouldRemoveLastOwner,
+    normalizeRole
 };

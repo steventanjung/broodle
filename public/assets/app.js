@@ -161,7 +161,9 @@ const App = (() => {
 
     }
 
-    const isSuperadmin = () => session?.role === "superadmin";
+    /* owner: semua akses. staff: admin & owner (tab Menu, koreksi nota & batal utang tanpa password). */
+    const isOwner = () => session?.role === "owner";
+    const isStaff = () => isOwner() || session?.role === "admin";
 
     /* true saat keluar lewat tombol Keluar: peringatan "tinggalkan halaman" tidak perlu muncul. */
     let leaving = false;
@@ -339,13 +341,16 @@ const App = (() => {
     const views = {};
     let currentView = null;
 
-    function registerView(name, { adminOnly = false, onShow } = {}){
-        views[name] = { adminOnly, onShow };
+    /* access: "owner" | "staff" | kosong (semua peran). */
+    function registerView(name, { access = null, onShow } = {}){
+        views[name] = { access, onShow };
     }
+
+    const canSee = view => view.access === "owner" ? isOwner() : view.access === "staff" ? isStaff() : true;
 
     function showView(name){
 
-        if(!views[name] || (views[name].adminOnly && !isSuperadmin())){
+        if(!views[name] || !canSee(views[name])){
             name = "kasir";
         }
 
@@ -485,7 +490,7 @@ const App = (() => {
     }
 
 
-    /* --- sesi superadmin: keluar otomatis kalau tidak aktif --- */
+    /* --- sesi owner: keluar otomatis kalau tidak aktif --- */
 
     /*
      * Server memperpanjang sesi tiap ada permintaan. Mengetik di form
@@ -539,7 +544,7 @@ const App = (() => {
 
                 const stay = await confirmDialog({
                     title: "Masih di sini?",
-                    message: `Demi keamanan, akun superadmin keluar otomatis setelah ${minutes} menit tidak aktif.`,
+                    message: `Demi keamanan, akun owner keluar otomatis setelah ${minutes} menit tidak aktif.`,
                     confirmText: "Tetap masuk"
                 });
 
@@ -568,19 +573,18 @@ const App = (() => {
             return;
         }
 
-        const admin = isSuperadmin();
-
         $("#whoName").textContent = session.username;
-        $("#whoRole").textContent = admin ? "Superadmin" : "Kasir";
+        $("#whoRole").textContent = isOwner() ? "Owner" : isStaff() ? "Admin" : "Kasir";
 
-        /* Kasir melihat tab Kasir & Utang; superadmin melihat semua. */
-        $$(".tab[data-admin]").forEach(t => t.hidden = !admin);
+        /* Kasir: Kasir, Utang, Riwayat. Admin: + Menu. Owner: semua. */
+        $$(".tab[data-owner]").forEach(t => t.hidden = !isOwner());
+        $$(".tab[data-staff]").forEach(t => t.hidden = !isStaff());
         document.body.classList.add("has-tabs");
         $(".tabs").hidden = false;
 
         $("#logoutButton").addEventListener("click", () => emit("logout-request"));
 
-        if(admin && session.sessionMinutes){
+        if(isOwner() && session.sessionMinutes){
             watchIdle(session.sessionMinutes);
         }
 
@@ -598,7 +602,7 @@ const App = (() => {
     return {
         STORE, SHOP_TZ, shopTime,
         $, $$, isTouchDevice, icon, escapeHtml, rupiah, parseNumber, numberFmt,
-        api, isSuperadmin, logout, get session(){ return session; }, get leaving(){ return leaving; },
+        api, isOwner, isStaff, logout, get session(){ return session; }, get leaving(){ return leaving; },
         on, emit,
         get menus(){ return menus; }, get menuStatus(){ return menuStatus; },
         get settings(){ return settings; }, setSettings,

@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 
 /*
- * Kelola akun kasir / superadmin.
+ * Kelola akun kasir / admin / owner.
  *
  *   node scripts/user.js add <username> <role>
  *   node scripts/user.js passwd <username>
  *   node scripts/user.js list
  *   node scripts/user.js remove <username>
+ *   node scripts/user.js rename <username> <username-baru>
  *
  * Password diminta lewat prompt, tidak lewat
  * argumen — argumen tersimpan di shell history.
@@ -143,8 +144,11 @@ async function askPassword(){
 
 async function main(){
 
-    const [command, username, role] =
+    const [command, username, roleArg] =
         process.argv.slice(2);
+
+    /* "superadmin" = nama lama untuk owner. */
+    const role = roleArg && auth.normalizeRole(roleArg);
 
 
     if(command === "list"){
@@ -155,7 +159,7 @@ async function main(){
 
             console.log(
                 "Belum ada akun. Buat dulu:\n" +
-                "  node scripts/user.js add admin superadmin"
+                "  node scripts/user.js add owner owner"
             );
 
             return;
@@ -186,7 +190,7 @@ async function main(){
         if(!username || !role){
 
             console.error(
-                "Pemakaian: node scripts/user.js add <username> <kasir|superadmin>"
+                "Pemakaian: node scripts/user.js add <username> <kasir|admin|owner>"
             );
 
             process.exit(1);
@@ -315,12 +319,48 @@ async function main(){
     }
 
 
+    if(command === "rename"){
+
+        const newUsername = roleArg;
+
+        if(!username || !newUsername){
+
+            console.error(
+                "Pemakaian: node scripts/user.js rename <username> <username-baru>"
+            );
+
+            process.exit(1);
+
+        }
+
+        const result =
+            auth.renameUser(username, newUsername);
+
+        if(!result.ok){
+
+            console.error(result.error);
+
+            process.exit(1);
+
+        }
+
+        console.log(
+            `Akun "${username}" sekarang bernama "${newUsername.trim()}". ` +
+            "Masuk ulang dengan nama baru (password tetap)."
+        );
+
+        return;
+
+    }
+
+
     console.log(
         "\nKelola akun Broodle\n\n" +
-        "  node scripts/user.js add <username> <kasir|superadmin>\n" +
+        "  node scripts/user.js add <username> <kasir|admin|owner>\n" +
         "  node scripts/user.js passwd <username>\n" +
         "  node scripts/user.js list\n" +
-        "  node scripts/user.js remove <username>\n"
+        "  node scripts/user.js remove <username>\n" +
+        "  node scripts/user.js rename <username> <username-baru>\n"
     );
 
 }

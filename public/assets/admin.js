@@ -1,5 +1,5 @@
 /* =====================================================
-   ADMIN: KELOLA MENU & KELOLA AKUN (superadmin)
+   ADMIN: KELOLA MENU (admin & owner), AKUN & PENGATURAN (owner)
    Tombol & tab disembunyikan untuk kasir hanya demi
    kerapian — penjaga aksesnya tetap server.js.
    ===================================================== */
@@ -1271,9 +1271,9 @@
 
     /* =================================================
        KELOLA AKUN
-       Akun superadmin baru hanya lewat CLI di server,
+       Akun owner baru hanya lewat CLI di server,
        supaya satu sesi browser yang disalahgunakan
-       tidak bisa mencetak superadmin sendiri.
+       tidak bisa mencetak owner sendiri.
        ================================================= */
 
     const dateFmt = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" });
@@ -1302,13 +1302,16 @@
 
         const me = App.session.username.toLowerCase();
 
-        /* Superadmin dulu, lalu kasir; masing-masing urut nama. */
+        /* Owner dulu, lalu admin, lalu kasir; masing-masing urut nama. */
+        const rank = { owner: 0, admin: 1, kasir: 2 };
+
         users.sort((a, b) =>
-            (a.role === b.role ? 0 : a.role === "superadmin" ? -1 : 1) ||
+            (rank[a.role] - rank[b.role]) ||
             a.username.localeCompare(b.username));
 
-        $("#accountSummary").textContent =
-            `${users.filter(u => u.role === "kasir").length} kasir · ${users.filter(u => u.role === "superadmin").length} superadmin`;
+        const count = role => users.filter(u => u.role === role).length;
+
+        $("#accountSummary").textContent = `${count("kasir")} kasir · ${count("admin")} admin · ${count("owner")} owner`;
 
         $("#accountRows").innerHTML = users.map(u => {
 
@@ -1321,7 +1324,7 @@
                     <div class="row-main">
                         <span class="row-title">${name}${self ? ` <span class="badge">Anda</span>` : ""}</span>
                         <span class="row-sub">
-                            ${u.role === "superadmin" ? `${icon("shield", "i-sm")} Superadmin` : "Kasir"}
+                            ${u.role === "owner" ? `${icon("shield", "i-sm")} Owner` : u.role === "admin" ? "Admin" : "Kasir"}
                             ${u.createdAt ? ` · dibuat ${dateFmt.format(new Date(u.createdAt))}` : ""}
                         </span>
                     </div>
@@ -1343,13 +1346,14 @@
 
         const form = event.target;
         const username = form.username.value.trim();
+        const role = form.role.value;
 
         await busy($("#accountSave"), "Membuat...", async () => {
 
             try{
-                await api("/api/users", { method: "POST", body: { username, password: form.password.value } });
+                await api("/api/users", { method: "POST", body: { username, password: form.password.value, role } });
                 $("#accountDialog").close();
-                toast(`Akun kasir ${username} dibuat`);
+                toast(`Akun ${role} ${username} dibuat`);
                 loadAccounts();
             }catch(error){
                 toast(error.message, "error");
@@ -1502,9 +1506,9 @@
        MULAI
        ================================================= */
 
-    App.registerView("menu", { adminOnly: true, onShow: renderMenuAdmin });
-    App.registerView("akun", { adminOnly: true, onShow: loadAccounts });
-    App.registerView("pengaturan", { adminOnly: true, onShow: () => { renderSettings(); renderBackupLast(); loadKoreksi(); } });
+    App.registerView("menu", { access: "staff", onShow: renderMenuAdmin });
+    App.registerView("akun", { access: "owner", onShow: loadAccounts });
+    App.registerView("pengaturan", { access: "owner", onShow: () => { renderSettings(); renderBackupLast(); loadKoreksi(); } });
 
     /* Nilai terbaru dari server (setelah memuat / diubah perangkat lain): tampilkan, kecuali sedang diedit. */
     App.on("settings", () => {
@@ -1515,13 +1519,23 @@
 
     App.on("ready", () => {
 
-        if(!App.isSuperadmin()){
+        if(!App.isStaff()){
             return;
         }
 
         bindMenu();
         bindCategories();
         bindSort();
+
+        App.on("menus", () => {
+            if($("#view-menu").classList.contains("active")){
+                renderMenuAdmin();
+            }
+        });
+
+        if(!App.isOwner()){
+            return;
+        }
 
         $("#settingsForm").addEventListener("submit", saveSettings);
         $("#koreksiForm").addEventListener("submit", saveKoreksi);
@@ -1536,12 +1550,6 @@
         $("#backupFile").addEventListener("change", restoreBackup);
         bindAccounts();
         bindProfile();
-
-        App.on("menus", () => {
-            if($("#view-menu").classList.contains("active")){
-                renderMenuAdmin();
-            }
-        });
 
     });
 

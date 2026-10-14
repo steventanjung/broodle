@@ -326,7 +326,7 @@
     const cheapest = m => Math.min(...m.varian.map(v => v.harga));
 
     /*
-     * GRAB: tiap produk / varian punya harga Grab sendiri (diisi superadmin).
+     * GRAB: tiap produk / varian punya harga Grab sendiri (diisi admin / owner).
      * Saat metode Grab dipilih, harga di layar & nota = harga Grab;
      * yang tercatat sebagai penjualan = harga Grab dikurangi potongan Grab.
      */
@@ -1390,8 +1390,8 @@
 
     App.on("logout-request", async () => {
 
-        /* Akun kasir keluar lewat Tutup kasir (setoran.js). */
-        if(App.session?.role === "kasir"){
+        /* Akun kasir & admin keluar lewat Tutup kasir (setoran.js). */
+        if(App.session?.role !== "owner"){
             return;
         }
 

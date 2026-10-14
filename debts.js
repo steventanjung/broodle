@@ -280,7 +280,7 @@ function addPayment(id, input, username){
 }
 
 
-/* Hanya superadmin (dicek di server.js). Tidak dihapus: tetap ada sebagai jejak. */
+/* Hanya admin & owner (dicek di server.js). Tidak dihapus: tetap ada sebagai jejak. */
 function voidDebt(id, alasan, username){
 
     const data = load();

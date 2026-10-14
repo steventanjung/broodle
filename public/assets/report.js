@@ -1,5 +1,5 @@
 /* =====================================================
-   LAPORAN (superadmin)
+   LAPORAN (owner)
    ===================================================== */
 
 (() => {
@@ -1075,7 +1075,7 @@
 
 
     App.registerView("laporan", {
-        adminOnly: true,
+        access: "owner",
         onShow(first){
             if(first && !rows){
                 applyPreset(preset || "30");
@@ -1085,7 +1085,7 @@
     });
 
     App.on("ready", () => {
-        if(App.isSuperadmin()){
+        if(App.isOwner()){
             bind();
         }
     });

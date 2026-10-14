@@ -41,15 +41,15 @@ const REPORT_URL    = process.env.APPS_SCRIPT_REPORT_URL;
 const SESSION_SECRET = process.env.SESSION_SECRET;
 /*
  * Lama sesi per peran:
- *   superadmin: berakhir setelah N menit TIDAK aktif (tiap permintaan memperpanjang).
- *   kasir: tidak dibatasi — cookie 400 hari (batas maksimal browser) yang terus
+ *   owner: berakhir setelah N menit TIDAK aktif (tiap permintaan memperpanjang).
+ *   kasir & admin: tidak dibatasi — cookie 400 hari (batas maksimal browser) yang terus
  *          diperpanjang; hanya berakhir kalau kasir keluar sendiri.
  */
 const ADMIN_SESSION_MINUTES = Number(process.env.ADMIN_SESSION_MINUTES) || 15;
 const KASIR_SESSION_SECONDS = 400 * 24 * 3600;
 
 const sessionTtl = role =>
-    role === "superadmin" ? ADMIN_SESSION_MINUTES * 60 : KASIR_SESSION_SECONDS;
+    role === "owner" ? ADMIN_SESSION_MINUTES * 60 : KASIR_SESSION_SECONDS;
 
 /* true kalau dilayani lewat HTTPS (mis. di belakang Nginx / Caddy). */
 const SECURE_COOKIE = process.env.SECURE_COOKIE === "true";
@@ -91,7 +91,7 @@ if(!SESSION_SECRET || SESSION_SECRET.length < 32){
 
 /*
  * Hosting tanpa terminal interaktif (Railway, dll):
- * superadmin pertama dibuat dari env, HANYA kalau belum
+ * owner pertama dibuat dari env, HANYA kalau belum
  * ada akun sama sekali. Hapus kedua variabel ini setelah
  * berhasil login.
  */
@@ -103,21 +103,21 @@ if(
     const result = auth.createUser(
         process.env.INITIAL_ADMIN_USERNAME,
         process.env.INITIAL_ADMIN_PASSWORD,
-        "superadmin"
+        "owner"
     );
 
     console.log(
         result.ok
-            ? `[akun] superadmin "${process.env.INITIAL_ADMIN_USERNAME}" dibuat dari env. ` +
+            ? `[akun] owner "${process.env.INITIAL_ADMIN_USERNAME}" dibuat dari env. ` +
               "Hapus INITIAL_ADMIN_USERNAME & INITIAL_ADMIN_PASSWORD sekarang."
-            : "[akun] gagal membuat superadmin dari env: " + result.error
+            : "[akun] gagal membuat owner dari env: " + result.error
     );
 }
 
 if(auth.loadUsers().length === 0){
     console.warn(
-        "\n[!] Belum ada akun. Buat superadmin dulu:\n" +
-        "    node scripts/user.js add admin superadmin\n"
+        "\n[!] Belum ada akun. Buat owner dulu:\n" +
+        "    node scripts/user.js add owner owner\n"
     );
 }
 
@@ -344,7 +344,7 @@ async function handleLogin(req, res){
 
     console.log(`[login] ${user.username} (${user.role}) dari ${ip}`);
 
-    json(res, 200, { ...user, sessionMinutes: user.role === "superadmin" ? ttl / 60 : null });
+    json(res, 200, { ...user, sessionMinutes: user.role === "owner" ? ttl / 60 : null });
 
 }
 
@@ -361,8 +361,8 @@ function handleMe(req, res, user){
     json(res, 200, {
         username: user.username,
         role: user.role,
-        /* Superadmin: dipakai halaman untuk logout otomatis saat tidak aktif. */
-        sessionMinutes: user.role === "superadmin" ? ADMIN_SESSION_MINUTES : null,
+        /* Owner: dipakai halaman untuk logout otomatis saat tidak aktif. */
+        sessionMinutes: user.role === "owner" ? ADMIN_SESSION_MINUTES : null,
         /* Untuk uji lokal: SETORAN_ASK_MODAL=false melewati form "Buka kasir". */
         askModal: process.env.SETORAN_ASK_MODAL !== "false"
     });
@@ -371,13 +371,13 @@ function handleMe(req, res, user){
 
 
 /* =====================================================
-   KELOLA AKUN (superadmin)
+   KELOLA AKUN (owner)
    -----------------------------------------------------
-   Akun superadmin HANYA bisa dibuat lewat CLI
-   (node scripts/user.js add <user> superadmin) —
+   Akun owner HANYA bisa dibuat lewat CLI
+   (node scripts/user.js add <user> owner) —
    sengaja tidak diekspos lewat endpoint ini, supaya
    satu sesi web yang bocor tidak bisa mencetak
-   superadmin baru. Panel ini cuma bisa bikin akun kasir.
+   owner baru. Panel ini cuma bisa bikin akun kasir & admin.
    ===================================================== */
 
 function handleUsersList(req, res){
@@ -397,13 +397,15 @@ async function handleUsersCreate(req, res, user){
 
     const payload = await readJson(req);
 
-    const result = auth.createUser(payload.username, payload.password, "kasir");
+    const role = payload.role === "admin" ? "admin" : "kasir";
+
+    const result = auth.createUser(payload.username, payload.password, role);
 
     if(!result.ok){
         return json(res, 400, { error: result.error });
     }
 
-    console.log(`[akun] kasir baru oleh ${user.username}: ${payload.username}`);
+    console.log(`[akun] ${role} baru oleh ${user.username}: ${payload.username}`);
 
     json(res, 201, { ok: true });
 
@@ -497,7 +499,7 @@ async function handleChangePassword(req, res, user){
 
 /* =====================================================
    MENU
-   Semua user boleh membaca; hanya superadmin mengubah.
+   Semua user boleh membaca; hanya admin & owner mengubah.
    ===================================================== */
 
 function handleMenuList(req, res){
@@ -745,7 +747,7 @@ async function handleSubmit(req, res, user){
 
 /* =====================================================
    SETORAN KASIR
-   Tablet mengirim catatan setoran (buka / tutup); superadmin
+   Tablet mengirim catatan setoran (buka / tutup); owner
    melihat daftarnya di Laporan.
    ===================================================== */
 
@@ -782,8 +784,8 @@ function handleShiftList(req, res){
 
 /* =====================================================
    UTANG
-   Kasir & superadmin: lihat dan catat pembayaran.
-   Hanya superadmin: membatalkan utang.
+   Semua peran: lihat dan catat pembayaran.
+   Admin & owner: membatalkan utang.
    ===================================================== */
 
 function handleDebtsList(req, res){
@@ -856,8 +858,8 @@ async function handleDebtVoid(req, res, user, id){
 /* =====================================================
    KOREKSI NOTA
    Nota yang sudah lunas bisa diubah / dibatalkan. Kasir wajib
-   password koreksi dari superadmin (dicek di sini, bukan di
-   browser); superadmin tidak diminta password.
+   password koreksi dari owner (dicek di sini, bukan di
+   browser); admin & owner tidak diminta password.
    ===================================================== */
 
 async function handleSalesList(req, res, user){
@@ -1103,7 +1105,7 @@ async function serveStatic(req, res, pathname){
    ROUTER
    -----------------------------------------------------
    [method, pola, handler, akses]
-   akses: "public" | "user" | "superadmin"
+   akses: "public" | "user" | "staff" (admin & owner) | "owner"
    Grup dari pola (mis. :id) dioper sebagai argumen
    setelah (req, res, user).
    ===================================================== */
@@ -1112,34 +1114,34 @@ const ROUTES = [
     ["POST",   /^\/api\/login$/,                         handleLogin,              "public"],
     ["POST",   /^\/api\/logout$/,                        handleLogout,             "public"],
     ["GET",    /^\/api\/me$/,                            handleMe,                 "user"],
-    ["POST",   /^\/api\/me\/password$/,                  handleChangePassword,     "superadmin"],
+    ["POST",   /^\/api\/me\/password$/,                  handleChangePassword,     "owner"],
     ["POST",   /^\/api\/submit$/,                        handleSubmit,             "user"],
     ["GET",    /^\/api\/menu$/,                          handleMenuList,           "user"],
-    ["PUT",    /^\/api\/settings$/,                     handleSettingsSave,       "superadmin"],
-    ["GET",    /^\/api\/backup$/,                       handleBackupDownload,     "superadmin"],
-    ["POST",   /^\/api\/backup\/restore$/,              handleBackupRestore,      "superadmin"],
-    ["PUT",    /^\/api\/categories$/,                   handleCategoriesSave,     "superadmin"],
-    ["POST",   /^\/api\/menu$/,                          handleMenuCreate,         "superadmin"],
-    ["PUT",    /^\/api\/menu\/order$/,                    handleMenuSort,           "superadmin"],
-    ["PUT",    /^\/api\/menu\/([\w-]{6,80})$/,           handleMenuUpdate,         "superadmin"],
-    ["DELETE", /^\/api\/menu\/([\w-]{6,80})$/,           handleMenuDelete,         "superadmin"],
-    ["POST",   /^\/api\/menu\/([\w-]{6,80})\/image$/,    handleMenuImage,          "superadmin"],
+    ["PUT",    /^\/api\/settings$/,                     handleSettingsSave,       "owner"],
+    ["GET",    /^\/api\/backup$/,                       handleBackupDownload,     "owner"],
+    ["POST",   /^\/api\/backup\/restore$/,              handleBackupRestore,      "owner"],
+    ["PUT",    /^\/api\/categories$/,                   handleCategoriesSave,     "staff"],
+    ["POST",   /^\/api\/menu$/,                          handleMenuCreate,         "staff"],
+    ["PUT",    /^\/api\/menu\/order$/,                    handleMenuSort,           "staff"],
+    ["PUT",    /^\/api\/menu\/([\w-]{6,80})$/,           handleMenuUpdate,         "staff"],
+    ["DELETE", /^\/api\/menu\/([\w-]{6,80})$/,           handleMenuDelete,         "staff"],
+    ["POST",   /^\/api\/menu\/([\w-]{6,80})\/image$/,    handleMenuImage,          "staff"],
     ["PUT",    /^\/api\/shifts\/([\w.-]{6,80})$/,       handleShiftSave,          "user"],
-    ["GET",    /^\/api\/shifts$/,                       handleShiftList,          "superadmin"],
+    ["GET",    /^\/api\/shifts$/,                       handleShiftList,          "owner"],
     ["GET",    /^\/api\/debts$/,                        handleDebtsList,          "user"],
     ["GET",    /^\/api\/debts\/([\w.-]{6,80})$/,        handleDebtGet,            "user"],
     ["POST",   /^\/api\/debts\/([\w.-]{6,80})\/payments$/, handleDebtPayment,     "user"],
-    ["POST",   /^\/api\/debts\/([\w.-]{6,80})\/void$/,   handleDebtVoid,           "superadmin"],
+    ["POST",   /^\/api\/debts\/([\w.-]{6,80})\/void$/,   handleDebtVoid,           "staff"],
     ["GET",    /^\/api\/sales$/,                        handleSalesList,          "user"],
     ["POST",   /^\/api\/sales\/([\w.-]{6,80})\/cancel$/, handleSaleCancel,        "user"],
     ["POST",   /^\/api\/sales\/([\w.-]{6,80})\/edit$/,   handleSaleEdit,          "user"],
-    ["GET",    /^\/api\/koreksi$/,                      handleKoreksiStatus,      "superadmin"],
-    ["PUT",    /^\/api\/koreksi$/,                      handleKoreksiPassword,    "superadmin"],
-    ["GET",    /^\/api\/report$/,                        handleReport,             "superadmin"],
-    ["GET",    /^\/api\/users$/,                         handleUsersList,          "superadmin"],
-    ["POST",   /^\/api\/users$/,                         handleUsersCreate,        "superadmin"],
-    ["DELETE", /^\/api\/users\/([^/]+)$/,                handleUsersDelete,        "superadmin"],
-    ["POST",   /^\/api\/users\/([^/]+)\/reset-password$/, handleUsersResetPassword, "superadmin"]
+    ["GET",    /^\/api\/koreksi$/,                      handleKoreksiStatus,      "owner"],
+    ["PUT",    /^\/api\/koreksi$/,                      handleKoreksiPassword,    "owner"],
+    ["GET",    /^\/api\/report$/,                        handleReport,             "owner"],
+    ["GET",    /^\/api\/users$/,                         handleUsersList,          "owner"],
+    ["POST",   /^\/api\/users$/,                         handleUsersCreate,        "owner"],
+    ["DELETE", /^\/api\/users\/([^/]+)$/,                handleUsersDelete,        "owner"],
+    ["POST",   /^\/api\/users\/([^/]+)\/reset-password$/, handleUsersResetPassword, "owner"]
 ];
 
 
@@ -1202,7 +1204,7 @@ async function route(req, res){
                 return json(res, 401, { error: "Sesi habis. Masuk ulang.", login: "/login.html" });
             }
 
-            if(access === "superadmin" && user.role !== "superadmin"){
+            if(access === "owner" ? user.role !== "owner" : access === "staff" && user.role === "kasir"){
                 return json(res, 403, { error: "Akses ditolak." });
             }
 
@@ -1306,7 +1308,7 @@ server.listen(PORT, () => {
 
     console.log(
         `Broodle jalan di http://localhost:${PORT}\n` +
-        `  sesi superadmin: ${ADMIN_SESSION_MINUTES} menit tidak aktif | kasir: sampai keluar` +
+        `  sesi owner: ${ADMIN_SESSION_MINUTES} menit tidak aktif | kasir & admin: sampai keluar` +
         (SECURE_COOKIE ? " | cookie Secure aktif" : "") +
         (TRUST_PROXY ? " | trust proxy" : "")
     );

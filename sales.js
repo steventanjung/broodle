@@ -7,8 +7,8 @@
  * koreksi di sini (applyToReport).
  *
  * Kasir hanya boleh mengoreksi dengan password koreksi buatan
- * superadmin (disimpan sebagai hash scrypt, sama seperti password
- * akun). Superadmin tidak diminta password.
+ * owner (disimpan sebagai hash scrypt, sama seperti password
+ * akun). Admin & owner tidak diminta password.
  *
  * Penjualan utang tidak ada di sini: utang dibatalkan lewat tab Utang.
  * Utang yang dibatalkan ikut tercatat "batal" di Riwayat dan hilang dari Laporan.
@@ -329,13 +329,13 @@ function view(sale){
 
 /*
  * kasir: hanya penjualan miliknya di setoran tertentu.
- * superadmin: rentang tanggal (WITA), semua kasir.
+ * admin & owner: rentang tanggal (WITA), semua kasir.
  */
 function list({ user, setoran, from, to }){
 
     const sales = load().sales.filter(s => {
 
-        if(user.role !== "superadmin"){
+        if(user.role === "kasir"){
             return s.kasir === user.username && !!setoran && s.setoran === setoran;
         }
 
@@ -401,17 +401,17 @@ function clearPassword(){
 }
 
 
-/* Superadmin langsung lolos; kasir wajib password koreksi. */
+/* Admin & owner langsung lolos; kasir wajib password koreksi. */
 async function authorize(user, password){
 
-    if(user.role === "superadmin"){
+    if(user.role !== "kasir"){
         return { ok: true };
     }
 
     const hash = load().koreksiHash;
 
     if(!hash){
-        return { ok: false, status: 403, error: "Password koreksi belum diatur. Minta superadmin mengaturnya di Pengaturan." };
+        return { ok: false, status: 403, error: "Password koreksi belum diatur. Minta owner mengaturnya di Pengaturan." };
     }
 
     const state = fails.get(user.username);
@@ -460,7 +460,7 @@ function findFor(id, user){
 
     const sale = load().sales.find(s => s.id === id);
 
-    if(!sale || (user.role !== "superadmin" && sale.kasir !== user.username)){
+    if(!sale || (user.role === "kasir" && sale.kasir !== user.username)){
         return { error: "Nota tidak ditemukan." };
     }
 

@@ -1,5 +1,5 @@
 /*
- * Cadangan data (tab Pengaturan, superadmin).
+ * Cadangan data (tab Pengaturan, owner).
  *
  * Satu file JSON berisi semua isi DATA_DIR (akun, menu, utang,
  * setoran, pengaturan) plus foto produk. Penjualan tidak ikut:
@@ -12,7 +12,7 @@
 const fs   = require("node:fs");
 const path = require("node:path");
 
-const { DATA_DIR, ROLES } = require("./auth.js");
+const { DATA_DIR, normalizeRole } = require("./auth.js");
 
 
 const FORMAT  = "broodle-backup";
@@ -97,11 +97,11 @@ function validate(backup){
         }
     }
 
-    /* Tanpa akun superadmin, tidak ada yang bisa masuk ke tab ini lagi. */
+    /* Tanpa akun owner, tidak ada yang bisa masuk ke tab ini lagi. Cadangan lama: "superadmin" = owner. */
     const users = backup.data["users.json"]?.users;
 
-    if(!Array.isArray(users) || !users.some(u => isObject(u) && u.role === "superadmin" && u.username && ROLES.includes(u.role))){
-        return "Cadangan tidak berisi akun superadmin, tidak bisa dipulihkan.";
+    if(!Array.isArray(users) || !users.some(u => isObject(u) && u.username && normalizeRole(u.role) === "owner")){
+        return "Cadangan tidak berisi akun owner, tidak bisa dipulihkan.";
     }
 
     for(const [name, b64] of Object.entries(backup.photos || {})){

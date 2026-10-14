@@ -62,7 +62,7 @@ const form = document.getElementById("loginForm");
 const errorBox = document.getElementById("errorBox");
 const button = document.getElementById("submitButton");
 
-/* Dikeluarkan otomatis karena tidak aktif (superadmin). */
+/* Dikeluarkan otomatis karena tidak aktif (owner). */
 if(new URLSearchParams(location.search).get("expired")){
     errorBox.textContent = "Sesi berakhir karena tidak aktif. Silakan masuk lagi.";
     errorBox.className = "info";

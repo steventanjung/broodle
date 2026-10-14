@@ -2,7 +2,7 @@
    RIWAYAT NOTA
    Nota yang sudah lunas: lihat, ubah (jumlah item / metode bayar)
    dan batalkan. Kasir hanya melihat nota setorannya sendiri dan
-   wajib password koreksi dari superadmin; superadmin melihat semua
+   wajib password koreksi dari owner; admin & owner melihat semua
    tanggal tanpa password. Semua dijaga juga di server.
    ===================================================== */
 
@@ -244,7 +244,7 @@
             return "";
         }
 
-        return `<div class="notice notice-info">${icon("lock")}<span>Password koreksi belum diatur. Minta superadmin mengaturnya di Pengaturan.</span></div>`;
+        return `<div class="notice notice-info">${icon("lock")}<span>Password koreksi belum diatur. Minta owner mengaturnya di Pengaturan.</span></div>`;
 
     }
 
@@ -330,7 +330,7 @@
                 : draft.qty.reduce((sum, n, i) => sum + n * s.items[i].harga, 0);
 
             $("#saleBody").innerHTML = `
-                <div class="notice notice-info">${icon("lock")}<span>Minta superadmin memasukkan password koreksi untuk menyetujui.</span></div>
+                <div class="notice notice-info">${icon("lock")}<span>Minta admin / owner memasukkan password koreksi untuk menyetujui.</span></div>
                 <ul class="debt-list">
                     <li><span>${returnMode === "cancel" ? "Batalkan nota" : "Ubah nota"}</span><span class="num">${rupiah(newTotal)}</span></li>
                     <li><span>Alasan</span><span>${escapeHtml(reason)}</span></li>
@@ -477,7 +477,7 @@
 
         }
 
-        /* Kasir: setelah isian lengkap, dialog yang sama pindah ke langkah persetujuan superadmin. */
+        /* Kasir: setelah isian lengkap, dialog yang sama pindah ke langkah persetujuan admin / owner. */
         if(isKasir() && !approving){
 
             reason = alasan;
