@@ -70,6 +70,7 @@ const Printer = (() => {
             ...(t.reprint ? [text("CETAK ULANG", { align: "center" })] : []),
             text("No Nota : " + t.nota, { align: "center", bold: true }),
             text(t.tanggal + " • " + t.jam, { align: "center" }),
+            ...(t.kasir && t.kasir !== "-" ? [text("Kasir : " + t.kasir, { align: "center" })] : []),
             divider,
             ...itemLines(grab ? t.grabItems : t.items),
             divider,
@@ -120,6 +121,7 @@ const Printer = (() => {
             items: debt.items,
             total: debt.total,
             pembayaran: payment.metode,
+            kasir: payment.oleh,
             reprint
         });
 
@@ -137,6 +139,7 @@ const Printer = (() => {
 
         return saleReceipt({
             ...debt,
+            kasir: debt.createdBy,
             pembayaran: "Utang",
             reprint: true
         });
@@ -165,7 +168,8 @@ const Printer = (() => {
             jam: at.jam,
             items: debt.items,
             total: debt.total,
-            pembayaran: "Utang"
+            pembayaran: "Utang",
+            kasir: payment.oleh
         });
 
     }
