@@ -11,12 +11,14 @@
  * akun). Superadmin tidak diminta password.
  *
  * Penjualan utang tidak ada di sini: utang dibatalkan lewat tab Utang.
+ * Utang yang dibatalkan ikut hilang dari Riwayat dan Laporan.
  */
 
 const fs   = require("node:fs");
 const path = require("node:path");
 
-const auth = require("./auth.js");
+const auth  = require("./auth.js");
+const debts = require("./debts.js");
 
 
 const SALES_FILE = path.join(auth.DATA_DIR, "sales.json");
@@ -90,6 +92,9 @@ function persist(){
 const day = iso => new Date(iso).toLocaleDateString("sv-SE", { timeZone: "Asia/Makassar" });
 
 const clean = value => String(value ?? "").trim();
+
+/* id utang yang dibatalkan = transactionId penjualannya. */
+const voidedDebtIds = () => new Set(debts.list().filter(d => d.void).map(d => d.id));
 
 /*
  * Sheets menyimpan nota sebagai angka dan membuang nol di depan:
@@ -328,7 +333,13 @@ function view(sale){
  */
 function list({ user, setoran, from, to }){
 
+    const voided = voidedDebtIds();
+
     const sales = load().sales.filter(s => {
+
+        if(voided.has(s.id)){
+            return false;
+        }
 
         if(user.role !== "superadmin"){
             return s.kasir === user.username && !!setoran && s.setoran === setoran;
@@ -610,15 +621,16 @@ async function edit(id, user, { password, alasan, qty, pembayaran, cashReceived 
 
 /* =====================================================
    LAPORAN
-   Sheet tidak diubah; baris nota yang dibatalkan dibuang, nota
+   Sheet tidak diubah; baris nota (dan utang) yang dibatalkan dibuang, nota
    yang diubah diganti isinya. Nota tanpa koreksi lewat apa adanya.
    ===================================================== */
 
 function applyToReport(text){
 
     const corrected = new Map(load().sales.filter(s => s.status === "batal" || s.history.length).map(s => [s.id, s]));
+    const voided = voidedDebtIds();
 
-    if(corrected.size === 0){
+    if(corrected.size === 0 && voided.size === 0){
         return text;
     }
 
@@ -640,6 +652,10 @@ function applyToReport(text){
     const emitted = new Set();
 
     for(const row of rows){
+
+        if(voided.has(row?.transactionId)){
+            continue;
+        }
 
         const sale = corrected.get(row?.transactionId);
 
