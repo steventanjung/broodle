@@ -57,10 +57,8 @@ const Printer = (() => {
 
 
     /*
-     * Nota penjualan. Untuk pembayaran "Utang", bagian bawahnya
-     * berisi nama pelanggan & sisa utang, bukan uang diterima.
-     * t.dibayar / t.sisa / t.reprint diisi saat cetak ulang dari
-     * tab Utang.
+     * Nota penjualan. Untuk pembayaran "Utang", nota hanya berisi
+     * item & total — tanpa tulisan utang, nama, atau sisa.
      */
     function saleReceipt(t){
 
@@ -80,29 +78,7 @@ const Printer = (() => {
         ];
 
         if(t.pembayaran === "Utang"){
-
-            const dibayar = t.dibayar || 0;
-            const sisa = t.sisa ?? t.total;
-
-            content.push(
-                text("UTANG - BELUM LUNAS", { align: "center", bold: true }),
-                text("Atas nama : " + t.pelanggan)
-            );
-
-            if(t.jatuhTempo){
-                content.push(text("Jatuh tempo : " + isoDate(t.jatuhTempo)));
-            }
-
-            if(dibayar > 0){
-                content.push(row("Sudah dibayar", rupiah(dibayar)));
-            }
-
-            content.push(row("Sisa utang", rupiah(sisa), { bold: true }));
-
-            return content.concat(footer(
-                [text("Simpan nota ini untuk pelunasan", { align: "center" })]
-            ));
-
+            return content.concat(footer());
         }
 
         /* Dibagi 2 metode: satu baris per metode. */
@@ -168,36 +144,29 @@ const Printer = (() => {
     }
 
 
-    /* Bukti satu pembayaran utang; angka "sudah dibayar" dihitung sampai pembayaran ini. */
+    /*
+     * Nota setelah pembayaran utang. Lunas: nota biasa dengan metode
+     * bayar. Belum lunas: nota dengan total saja, tanpa rincian utang.
+     */
     function paymentReceipt(debt, payment){
 
         const upTo = debt.payments.slice(0, debt.payments.findIndex(p => p.id === payment.id) + 1);
         const paid = upTo.reduce((sum, p) => sum + p.jumlah, 0);
-        const sisa = Math.max(debt.total - paid, 0);
 
-        /* Pembayaran yang melunasi: cukup nota dengan total. */
-        if(sisa === 0){
+        if(paid >= debt.total){
             return paidInvoice(debt, payment, false);
         }
 
-        return [
-            ...header(),
-            text("BUKTI PEMBAYARAN UTANG", { align: "center", bold: true }),
-            divider,
-            text("Nota asal : " + debt.nota),
-            text("Tanggal utang : " + debt.tanggal),
-            text("Atas nama : " + debt.pelanggan),
-            text("Dibayar : " + stamp(payment.at)),
-            divider,
-            row("Total utang", rupiah(debt.total)),
-            row("Bayar (" + payment.metode + ")", rupiah(payment.jumlah), { bold: true }),
-            row("Sudah dibayar", rupiah(paid)),
-            divider,
-            sisa === 0
-                ? text("LUNAS", { align: "center", bold: true, size: "large" })
-                : row("Sisa utang", rupiah(sisa), { bold: true }),
-            ...footer()
-        ];
+        const at = App.shopTime(payment.at);
+
+        return saleReceipt({
+            nota: debt.nota,
+            tanggal: at.tanggal,
+            jam: at.jam,
+            items: debt.items,
+            total: debt.total,
+            pembayaran: "Utang"
+        });
 
     }
 
