@@ -363,6 +363,10 @@
         /* Setoran tertunda dari kasir lain di tablet ini ikut terkirim walau yang login owner. */
         flush();
 
+        /* Kirim ulang saat internet kembali, dan berkala (Wi-Fi tersambung tapi internet mati tidak memicu "online"). */
+        window.addEventListener("online", flush);
+        setInterval(flush, 30000);
+
         $(".tab[data-view=totalan]").hidden = !isKasir();
 
         if(!isKasir()){

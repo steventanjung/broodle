@@ -102,7 +102,9 @@
                 const response = await fetch("/api/submit", {
                     method: "POST",
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify(pending[0])
+                    body: JSON.stringify(pending[0]),
+                    /* Koneksi menggantung jangan menahan antrean selamanya; longgar karena Apps Script bisa lambat. */
+                    signal: AbortSignal.timeout(60000)
                 });
 
                 if(response.status === 401){
@@ -156,6 +158,23 @@
 
     window.addEventListener("online", syncPending);
     window.addEventListener("offline", renderStatus);
+
+    /*
+     * Wi-Fi tersambung tapi internet mati: browser tetap "online",
+     * jadi event "online" tidak muncul saat internet kembali.
+     * Coba kirim ulang berkala & saat tablet dibuka lagi.
+     */
+    setInterval(() => {
+        if(pending.length > 0){
+            syncPending();
+        }
+    }, 30000);
+
+    document.addEventListener("visibilitychange", () => {
+        if(document.visibilityState === "visible"){
+            syncPending();
+        }
+    });
 
 
     function renderStatus(){
