@@ -50,7 +50,7 @@ const Printer = (() => {
 
     function itemLines(items){
         return items.flatMap(item => [
-            text(item.nama, { bold: true }),
+            text(item.nama),
             row(item.qty + " x " + rupiah(item.harga), rupiah(item.subtotal))
         ]);
     }
@@ -68,13 +68,13 @@ const Printer = (() => {
         const content = [
             ...header(),
             ...(t.reprint ? [text("CETAK ULANG", { align: "center" })] : []),
-            text("No Nota : " + t.nota, { align: "center", bold: true }),
+            text("No Nota : " + t.nota, { align: "center" }),
             text(t.tanggal + " • " + t.jam, { align: "center" }),
             ...(t.kasir && t.kasir !== "-" ? [text("Kasir : " + t.kasir, { align: "center" })] : []),
             divider,
             ...itemLines(grab ? t.grabItems : t.items),
             divider,
-            row("TOTAL", rupiah(grab ? t.grabTotal : t.total), { bold: true }),
+            row("TOTAL", rupiah(grab ? t.grabTotal : t.total)),
             divider
         ];
 
