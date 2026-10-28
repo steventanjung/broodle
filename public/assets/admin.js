@@ -1214,6 +1214,139 @@
     }
 
 
+    /* Sama dengan batas di server.js (MAX_BACKUP_BYTES). */
+    const MAX_BACKUP_MB = 200;
+
+    const megabytes = bytes => (bytes / 1024 / 1024).toLocaleString("id-ID", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + " MB";
+
+
+    /*
+     * fetch() tidak bisa melaporkan kemajuan unggah, jadi pakai XHR.
+     * onProgress(terkirim, total) selama mengunggah; onUploaded() saat
+     * file sudah sampai dan server mulai memulihkan.
+     */
+    function uploadBackup(file, { onProgress, onUploaded }){
+
+        return new Promise((resolve, reject) => {
+
+            const xhr = new XMLHttpRequest();
+
+            xhr.open("POST", "/api/backup/restore");
+            xhr.setRequestHeader("Content-Type", "application/json");
+
+            xhr.upload.onprogress = e => onProgress(e.loaded, e.lengthComputable ? e.total : file.size);
+            xhr.upload.onload = onUploaded;
+
+            xhr.onerror = () => reject(new Error("Koneksi ke server terputus saat mengunggah. Periksa internet lalu coba lagi."));
+
+            xhr.onload = () => {
+
+                let data = {};
+                try{ data = JSON.parse(xhr.responseText); }catch(e){}
+
+                if(xhr.status >= 200 && xhr.status < 300){
+                    return resolve(data);
+                }
+
+                reject(new Error(restoreErrorMessage(xhr.status, data, file.size)));
+
+            };
+
+            xhr.send(file);
+
+        });
+
+    }
+
+
+    function restoreErrorMessage(status, data, size){
+
+        /* Pesan dari server.js sendiri sudah jelas. */
+        if(data.error){
+            return data.error;
+        }
+
+        /* Ditolak sebelum sampai ke aplikasi, biasanya batas unggah Nginx (client_max_body_size). */
+        if(status === 413){
+            return `File cadangan ini ${megabytes(size)}, lebih besar dari batas unggah di server. ` +
+                `Jika server memakai Nginx, naikkan client_max_body_size untuk /api/backup/restore (lihat README, bagian Nginx), lalu coba lagi.`;
+        }
+
+        if(status === 401){
+            return "Sesi sudah berakhir. Masuk lagi sebagai owner, lalu coba lagi.";
+        }
+
+        if(status === 502 || status === 504){
+            return "Server tidak menjawab. Muat ulang halaman untuk melihat apakah data sudah terpulihkan; jika belum, coba lagi.";
+        }
+
+        return `Pulihkan gagal (${status}).`;
+
+    }
+
+
+    /* Dialog kemajuan: tidak bisa ditutup selama berjalan. */
+    function restoreProgress(){
+
+        const dlg = $("#restoreDialog");
+        const step = $("[data-step]", dlg);
+        const bar = $("[data-bar]", dlg);
+        const meta = $("[data-meta]", dlg);
+        const foot = $("[data-foot]", dlg);
+        let running = true;
+
+        const blockClose = e => { if(running){ e.preventDefault(); } };
+        const blockLeave = e => { e.preventDefault(); e.returnValue = ""; };
+
+        dlg.addEventListener("cancel", blockClose);
+        window.addEventListener("beforeunload", blockLeave);
+
+        const set = (text, { percent = null, state = "", detail = "" } = {}) => {
+            step.textContent = text;
+            step.classList.toggle("is-error-text", state === "error");
+            bar.className = "progress" + (state ? " is-" + state : "");
+            $("span", bar).style.width = percent === null ? "" : percent + "%";
+            if(percent === null){ bar.removeAttribute("aria-valuenow"); }else{ bar.setAttribute("aria-valuenow", String(Math.round(percent))); }
+            meta.textContent = detail;
+        };
+
+        const stop = () => {
+            running = false;
+            window.removeEventListener("beforeunload", blockLeave);
+        };
+
+        foot.hidden = true;
+        set("Mengunggah file…", { percent: 0 });
+        dlg.showModal();
+
+        return {
+            uploading(sent, total){
+                const percent = total ? Math.min(100, (sent / total) * 100) : 0;
+                set(`Mengunggah… ${Math.floor(percent)}%`, { percent, detail: `${megabytes(sent)} dari ${megabytes(total)}` });
+            },
+            working(){
+                set("Memulihkan data di server…", { state: "working", detail: "Jangan tutup halaman ini." });
+            },
+            done(summary){
+                stop();
+                const parts = [
+                    `${summary.produk ?? 0} produk`, `${summary.akun ?? 0} akun`,
+                    `${summary.utang ?? 0} utang`, `${summary.setoran ?? 0} setoran`, `${summary.foto ?? 0} foto`
+                ];
+                set("Data dipulihkan. Memuat ulang…", { percent: 100, state: "done", detail: parts.join(" · ") });
+            },
+            failed(message){
+                stop();
+                set(message, { percent: 100, state: "error" });
+                foot.hidden = false;
+                $("[data-close]", foot).focus();
+                dlg.removeEventListener("cancel", blockClose);
+            }
+        };
+
+    }
+
+
     async function restoreBackup(event){
 
         const file = event.target.files[0];
@@ -1223,12 +1356,14 @@
             return;
         }
 
-        const text = await file.text();
+        if(file.size > MAX_BACKUP_MB * 1024 * 1024){
+            return toast(`File cadangan ini ${megabytes(file.size)}, lebih dari batas ${MAX_BACKUP_MB} MB.`, "error");
+        }
 
         let parsed;
 
         try{
-            parsed = JSON.parse(text);
+            parsed = JSON.parse(await file.text());
         }catch(error){
             return toast("File ini bukan cadangan Broodle.", "error");
         }
@@ -1239,12 +1374,14 @@
 
         const d = new Date(parsed.createdAt);
         const count = (name, key) => parsed.data[name]?.[key]?.length ?? 0;
+        const contents = `${count("menus.json", "menus")} produk, ${count("users.json", "users")} akun, ` +
+            `${count("debts.json", "debts")} utang, ${count("shifts.json", "shifts")} setoran, ` +
+            `${Object.keys(parsed.photos || {}).length} foto`;
+        parsed = null; // file besar: jangan simpan salinan kedua di memori selama mengunggah
 
         const ok = await App.confirmDialog({
             title: "Pulihkan cadangan?",
-            message: `Cadangan ${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}: ` +
-                `${count("menus.json", "menus")} produk, ${count("users.json", "users")} akun, ` +
-                `${count("debts.json", "debts")} utang, ${count("shifts.json", "shifts")} setoran. ` +
+            message: `Cadangan ${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} (${megabytes(file.size)}): ${contents}. ` +
                 `Semua data sekarang akan diganti isi cadangan ini.`,
             confirmText: "Pulihkan",
             danger: true
@@ -1254,17 +1391,18 @@
             return;
         }
 
-        await busy($("#backupRestore"), "Memulihkan…", async () => {
+        const progress = restoreProgress();
 
-            try{
-                await api("/api/backup/restore", { method: "POST", body: new Blob([text], { type: "application/json" }) });
-                toast("Data dipulihkan. Memuat ulang…");
-                setTimeout(() => location.reload(), 1200);
-            }catch(error){
-                toast(error.message, "error");
-            }
-
-        });
+        try{
+            const summary = await uploadBackup(file, {
+                onProgress: (sent, total) => progress.uploading(sent, total),
+                onUploaded: () => progress.working()
+            });
+            progress.done(summary);
+            setTimeout(() => location.reload(), 1500);
+        }catch(error){
+            progress.failed(error.message);
+        }
 
     }
 

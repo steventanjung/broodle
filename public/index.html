@@ -1187,6 +1187,18 @@
 </dialog>
 
 
+<dialog id="restoreDialog" class="restore-dialog" aria-labelledby="restoreTitle">
+    <div class="dialog-head"><h2 id="restoreTitle">Memulihkan cadangan</h2></div>
+    <div class="dialog-body">
+        <p class="dialog-msg" data-step aria-live="polite">Mengunggah file…</p>
+        <div class="progress" data-bar role="progressbar" aria-labelledby="restoreTitle" aria-valuemin="0" aria-valuemax="100"><span></span></div>
+        <p class="restore-meta" data-meta></p>
+    </div>
+    <div class="dialog-foot" data-foot hidden>
+        <button type="button" class="btn" data-close>Tutup</button>
+    </div>
+</dialog>
+
 <dialog id="confirmDialog" autofocus>
     <div class="dialog-head"><h2></h2></div>
     <div class="dialog-body"><p class="dialog-msg"></p></div>

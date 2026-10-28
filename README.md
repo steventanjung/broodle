@@ -223,8 +223,21 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
+
+    # Pulihkan: the backup file carries every product photo, so it is far bigger than 4 MB.
+    # Without this block nginx answers 413 and the restore never reaches the app.
+    location = /api/backup/restore {
+        client_max_body_size 200m;   # same limit as MAX_BACKUP_BYTES in server.js
+        proxy_read_timeout 300s;
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
 }
 ```
+
+After editing: `sudo nginx -t && sudo systemctl reload nginx`. Caddy has no upload limit, so it needs nothing extra.
 
 Then `sudo certbot --nginx -d kasir.example.com`.
 </details>
@@ -458,4 +471,5 @@ Access rules are enforced in `server.js`: everything except the login page and s
 | "Terlalu banyak percobaan" for everyone | Behind a proxy without `TRUST_PROXY=true`, all users share the proxy's IP. Set it to `true`. |
 | "Printer tidak terhubung" | Check Bluetooth pairing, that Cleanter is running, and RPP02N is selected in Cleanter. |
 | Pending count never goes down | Check internet, then that the session is still valid (log in again), then the Apps Script deployment/permissions. |
+| Pulihkan says the file is bigger than the server's upload limit (413) | Behind Nginx, add the `location = /api/backup/restore` block with `client_max_body_size 200m` (see the Nginx config above), then `sudo nginx -t && sudo systemctl reload nginx`. |
 | Report says failed to fetch data | Check `APPS_SCRIPT_REPORT_URL` opens in a browser and returns JSON. |
