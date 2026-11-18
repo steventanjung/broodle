@@ -51,7 +51,8 @@ const Printer = (() => {
     function itemLines(items){
         return items.flatMap(item => [
             text(item.nama),
-            row(item.qty + " x " + rupiah(item.harga), rupiah(item.subtotal))
+            row(item.qty + " x " + rupiah(item.harga), rupiah(item.subtotal)),
+            ...(item.keterangan ? [text("  * " + item.keterangan)] : [])
         ]);
     }
 
@@ -108,13 +109,15 @@ const Printer = (() => {
     /* Yang dicetak untuk satu penjualan: nota pelanggan, ditambah satu nota yang sama untuk bar kalau ada minuman. */
     function saleSlips(t){
 
-        const slips = [{ key: "nota", content: saleReceipt(t) }];
-
-        if(t.items.some(item => item.minuman)){
-            slips.push({ key: "minuman", content: saleReceipt(t) });
+        if(!t.items.some(item => item.minuman)){
+            return [{ key: "nota", content: saleReceipt(t) }];
         }
 
-        return slips;
+        /* Seperti menekan tombol cetak dua kali: nota yang sama dikirim dua kali, masing-masing satu kali cetak. */
+        return [
+            { key: "nota", content: saleReceipt(t) },
+            { key: "minuman", content: saleReceipt(t), delay: 2000 }
+        ];
 
     }
 

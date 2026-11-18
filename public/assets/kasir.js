@@ -402,7 +402,7 @@
     }
 
 
-    function addLine(menu, harga, qty, custom, variant){
+    function addLine(menu, harga, qty, custom, variant, note = ""){
 
         /*
          * Varian disalin ke baris (nama & harga saat dipilih),
@@ -411,7 +411,7 @@
          */
         const key =
             variant ? `${menu.id}:v:${variant.id}`
-            : custom ? `${menu.id}:${harga}`
+            : custom ? `${menu.id}:${harga}${note ? ":" + note : ""}`
             : menu.id;
 
         const line = cart.get(key);
@@ -422,6 +422,7 @@
             cart.set(key, {
                 key, menuId: menu.id, nama: menu.nama, harga, qty, custom,
                 minuman: Boolean(menu.minuman),
+                keterangan: note,
                 varian: variant ? variant.nama : null,
                 hargaGrab: (variant ? variant.hargaGrab : menu.hargaGrab) || null
             });
@@ -575,7 +576,8 @@
 
         $("#variantRows").innerHTML = variantMenu.varian.map(v => {
 
-            const qty = cart.get(variantKey(variantMenu, v))?.qty || 0;
+            const line = cart.get(variantKey(variantMenu, v));
+            const qty = line?.qty || 0;
 
             picked += qty;
 
@@ -590,6 +592,7 @@
                         <span class="variant-qty num">${qty}</span>
                         <button type="button" data-vstep="1" aria-label="Tambah ${escapeHtml(v.nama)}">${icon("plus", "i-sm")}</button>
                     </div>
+                    ${qty ? `<input type="text" class="input variant-note" maxlength="80" value="${escapeHtml(line.keterangan || "")}" placeholder="Keterangan: Less ice, Less sugar" aria-label="Keterangan ${escapeHtml(v.nama)}">` : ""}
                 </div>`;
 
         }).join("");
@@ -639,6 +642,7 @@
         $("h2", dlg).textContent = menu.nama;
         $("#customPrice").value = menu.harga > 0 ? numberFmt.format(menu.harga) : "";
         $("#customQty").value = 1;
+        $("#customNote").value = "";
 
         dlg.showModal();
         $("#customPrice").select();
@@ -652,6 +656,7 @@
 
         const harga = parseNumber($("#customPrice").value);
         const qty = parseInt($("#customQty").value, 10);
+        const note = $("#customNote").value.trim().slice(0, 80);
 
         if(harga <= 0){
             return toast("Isi harga lebih dari 0.", "error");
@@ -663,7 +668,7 @@
 
         $("#customDialog").close();
 
-        addLine(customMenu, harga, qty, true);
+        addLine(customMenu, harga, qty, true, undefined, note);
 
     }
 
@@ -924,7 +929,8 @@
                     qty: l.qty,
                     harga,
                     subtotal: harga * l.qty,
-                    ...(l.minuman ? { minuman: true } : {})
+                    ...(l.minuman ? { minuman: true } : {}),
+                    ...(l.keterangan ? { keterangan: l.keterangan } : {})
                 };
             }),
             /* Grab: harga Grab asli untuk dicetak di nota. */
@@ -935,7 +941,8 @@
                     nama: l.varian ? `${l.nama} (${l.varian})` : l.nama,
                     qty: l.qty,
                     harga: l.hargaGrab,
-                    subtotal: l.hargaGrab * l.qty
+                    subtotal: l.hargaGrab * l.qty,
+                    ...(l.keterangan ? { keterangan: l.keterangan } : {})
                 }))
             } : {}),
             kasir: App.session?.username,
@@ -1028,6 +1035,11 @@
 
             if(printedSlips.has(id)){
                 continue;
+            }
+
+            /* Jeda supaya nota pertama selesai tercetak dan bisa disobek sebelum yang kedua. */
+            if(slip.delay){
+                await new Promise(resolve => setTimeout(resolve, slip.delay));
             }
 
             const result = await Printer.send(slip.content);
@@ -1408,6 +1420,21 @@
         });
 
         $("#variantDialog").addEventListener("close", () => { variantMenu = null; });
+
+        /* Keterangan per varian: langsung disimpan ke baris pesanan varian itu. */
+        $("#variantRows").addEventListener("input", e => {
+
+            if(!e.target.matches(".variant-note") || !variantMenu){
+                return;
+            }
+
+            const line = cart.get(`${variantMenu.id}:v:${e.target.closest(".variant-row").dataset.vid}`);
+
+            if(line){
+                line.keterangan = e.target.value.trim().slice(0, 80);
+            }
+
+        });
 
         $("#customForm").addEventListener("submit", submitCustomPrice);
 

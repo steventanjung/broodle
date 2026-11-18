@@ -131,7 +131,8 @@ function record(tx, username){
             nama: clean(i.nama).slice(0, 120),
             qty: Number(i.qty),
             harga: Number(i.harga),
-            subtotal: Number(i.subtotal)
+            subtotal: Number(i.subtotal),
+            ...(clean(i.keterangan) ? { keterangan: clean(i.keterangan).slice(0, 80) } : {})
         }))
         .filter(i => i.nama && Number.isInteger(i.qty) && i.qty > 0 && Number.isFinite(i.harga) && Number.isFinite(i.subtotal));
 
@@ -559,7 +560,7 @@ async function edit(id, user, { password, alasan, qty, pembayaran, cashReceived 
 
         if(n > 0){
             const old = sale.items[i];
-            items.push({ nama: old.nama, qty: n, harga: old.harga, subtotal: old.harga * n });
+            items.push({ nama: old.nama, qty: n, harga: old.harga, subtotal: old.harga * n, ...(old.keterangan ? { keterangan: old.keterangan } : {}) });
         }
 
     }

@@ -773,8 +773,9 @@ th[aria-sort="ascending"], th[aria-sort="descending"]{ color:var(--text); }
 /* --- varian --- */
 
 .variant-rows{ padding:4px 18px 8px; max-height:60vh; overflow-y:auto; }
+.variant-note{ flex:1 0 100%; }
 .variant-row{
-    display:flex; align-items:center; gap:12px; padding:12px 0;
+    display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 0;
     border-bottom:1px solid var(--border);
 }
 .variant-row:last-child{ border-bottom:0; }
