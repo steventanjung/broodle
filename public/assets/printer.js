@@ -105,6 +105,20 @@ const Printer = (() => {
     }
 
 
+    /* Yang dicetak untuk satu penjualan: nota pelanggan, ditambah satu nota yang sama untuk bar kalau ada minuman. */
+    function saleSlips(t){
+
+        const slips = [{ key: "nota", content: saleReceipt(t) }];
+
+        if(t.items.some(item => item.minuman)){
+            slips.push({ key: "minuman", content: saleReceipt(t) });
+        }
+
+        return slips;
+
+    }
+
+
     /*
      * Nota utang yang sudah lunas: seperti nota penjualan biasa
      * (item, total, metode bayar), tanpa status / rincian utang.
@@ -241,6 +255,6 @@ const Printer = (() => {
     }
 
 
-    return { send, saleReceipt, debtInvoice, paymentReceipt, toHtml, isoDate, stamp };
+    return { send, saleReceipt, saleSlips, debtInvoice, paymentReceipt, toHtml, isoDate, stamp };
 
 })();

@@ -356,6 +356,8 @@ function sanitize(input, existing){
             harga,
             kategori,
             unggulan: Boolean(src.unggulan ?? base.unggulan),
+            /* Minuman: pesanan yang berisi produk ini mencetak slip tambahan untuk bar. */
+            minuman: Boolean(src.minuman ?? base.minuman),
             /* Disembunyikan: tidak tampil di kasir, data & riwayat tetap ada. */
             tersembunyi: Boolean(src.tersembunyi ?? base.tersembunyi),
             hargaKustom,

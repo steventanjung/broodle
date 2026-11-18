@@ -421,6 +421,7 @@
         }else{
             cart.set(key, {
                 key, menuId: menu.id, nama: menu.nama, harga, qty, custom,
+                minuman: Boolean(menu.minuman),
                 varian: variant ? variant.nama : null,
                 hargaGrab: (variant ? variant.hargaGrab : menu.hargaGrab) || null
             });
@@ -922,7 +923,8 @@
                     nama: l.varian ? `${l.nama} (${l.varian})` : l.nama,
                     qty: l.qty,
                     harga,
-                    subtotal: harga * l.qty
+                    subtotal: harga * l.qty,
+                    ...(l.minuman ? { minuman: true } : {})
                 };
             }),
             /* Grab: harga Grab asli untuk dicetak di nota. */
@@ -1007,6 +1009,10 @@
     }
 
 
+    /* Slip yang sudah tercetak untuk transaksi ini, supaya cetak ulang tidak mengulang nota pelanggan. */
+    const printedSlips = new Set();
+
+
     async function printAndFinish(transaction){
 
         processing = true;
@@ -1015,19 +1021,33 @@
         button.disabled = true;
         button.innerHTML = icon("printer") + "Mencetak nota...";
 
-        const result = await Printer.send(Printer.saleReceipt(transaction));
+        /* Nota pelanggan dulu, lalu slip minuman (kalau ada) untuk bar. */
+        for(const slip of Printer.saleSlips(transaction)){
 
-        processing = false;
+            const id = transaction.transactionId + ":" + slip.key;
 
-        if(!result.ok){
+            if(printedSlips.has(id)){
+                continue;
+            }
 
-            awaitingReprint = transaction;
-            $("#reprintMessage").textContent = result.message;
-            renderPayment();
-            return;
+            const result = await Printer.send(slip.content);
+
+            if(!result.ok){
+
+                processing = false;
+                awaitingReprint = transaction;
+                $("#reprintMessage").textContent =
+                    (slip.key === "minuman" ? "Nota pelanggan sudah tercetak, slip minuman belum. " : "") + result.message;
+                renderPayment();
+                return;
+
+            }
+
+            printedSlips.add(id);
 
         }
 
+        processing = false;
         finish(transaction);
 
     }

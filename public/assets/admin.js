@@ -254,6 +254,7 @@
         form.hargaGrab.value = menu?.hargaGrab ? numberFmt.format(menu.hargaGrab) : "";
         fillCategorySelect(menu?.kategori || menuCategory);
         form.unggulan.checked = !!menu?.unggulan;
+        form.minuman.checked = !!menu?.minuman;
         form.tersembunyi.checked = !!menu?.tersembunyi;
         form.hargaKustom.checked = !!menu?.hargaKustom;
         form.adaVarian.checked = !!menu?.adaVarian;
@@ -331,6 +332,7 @@
             hargaGrab: parseNumber(form.hargaGrab.value) || null,
             kategori: form.kategori.value.trim(),
             unggulan: form.unggulan.checked,
+            minuman: form.minuman.checked,
             tersembunyi: form.tersembunyi.checked,
             hargaKustom: form.hargaKustom.checked,
             adaVarian: form.adaVarian.checked,
